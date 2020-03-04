@@ -23,7 +23,10 @@ type serviceTaskEntry struct {
 	task serviceTask
 }
 
-var serviceTasks []serviceTaskEntry
+var serviceTasks = []serviceTaskEntry{
+	serviceTaskEntry{"Configuration", &configTask{}},
+}
+
 var serviceTaskCtx serviceTaskContext
 var syncTaskOp sync.Mutex
 var taskStopping bool = false
