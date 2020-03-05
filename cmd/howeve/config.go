@@ -32,7 +32,14 @@ func addConfigWriter(w configWriter) {
 }
 
 type configTask struct {
+	stopCh  chan struct{}
 	watcher *fsnotify.Watcher
+}
+
+func newConfigTask() *configTask {
+	return &configTask{
+		stopCh: make(chan struct{}),
+	}
 }
 
 func (t *configTask) start(ctx *serviceTaskContext) error {
@@ -42,13 +49,26 @@ func (t *configTask) start(ctx *serviceTaskContext) error {
 	cfgFile := ctx.args[0]
 
 	workingDirectory := ""
+	errMsg := ""
 	for {
 		config, err := readConfig(cfgFile)
 		if err == nil {
 			workingDirectory = config.WorkingDirectory
 			break
 		}
-		time.Sleep(time.Second * 5)
+
+		msg := err.Error()
+		if msg != errMsg {
+			errMsg = msg
+			ctx.log.Print(errMsg)
+		}
+
+		select {
+		case <-t.stopCh:
+			fmt.Print("here N")
+			return err
+		case <-time.After(time.Second * 5):
+		}
 	}
 
 	var err error
@@ -112,6 +132,8 @@ func (t *configTask) stop(ctx *serviceTaskContext) error {
 		t.watcher = nil
 		ctx.wg.Done()
 	}
+	fmt.Print("here A")
+	t.stopCh <- struct{}{}
 	return nil
 }
 
@@ -137,12 +159,12 @@ func readConfig(cfgFile string) (*Config, error) {
 	err := func() error {
 		file, err := os.Open(cfgFile)
 		if err != nil {
-			return fmt.Errorf("unable to open configuration file '%v': %v", cfgFile, err)
+			return fmt.Errorf("unable to open configuration file: %v", err)
 		}
 		defer file.Close()
 		err = yaml.NewDecoder(file).Decode(&config)
 		if err != nil {
-			return fmt.Errorf("unable to parse configuration file '%v': %v", cfgFile, err)
+			return fmt.Errorf("unable to parse configuration file: %v", err)
 		}
 		return nil
 	}()
@@ -152,7 +174,7 @@ func readConfig(cfgFile string) (*Config, error) {
 
 	if config.WorkingDirectory != "" {
 		if err := os.Chdir(config.WorkingDirectory); err != nil {
-			return nil, fmt.Errorf("unable to change working directory to '%v': %v", config.WorkingDirectory, err)
+			return nil, fmt.Errorf("unable to change working directory: %v", err)
 		}
 	}
 
