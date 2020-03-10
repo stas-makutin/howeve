@@ -55,9 +55,11 @@ func runServiceTasks(errorLog *log.Logger, cfgFile string) {
 			}
 			index = i
 		}
-		if errorMsg != "" && prevErrorMsg != errorMsg {
-			prevErrorMsg = errorMsg
-			serviceTaskCtx.log.Print(errorMsg)
+		if errorMsg != "" {
+			if prevErrorMsg != errorMsg {
+				prevErrorMsg = errorMsg
+				serviceTaskCtx.log.Print(errorMsg)
+			}
 		} else {
 			prevErrorMsg = ""
 		}
