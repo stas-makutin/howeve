@@ -110,7 +110,8 @@ func (app *application) Start(s service.Service) error {
 
 func (app *application) Stop(s service.Service) error {
 	app.stopping = true
-	return stopServiceTasks(false)
+	endServiceTasks()
+	return nil
 }
 
 func main() {
@@ -157,11 +158,13 @@ func main() {
 			}
 			app.stopped.Lock()
 			os.Exit(0)
-		} else {
+		} else if action != "" {
 			err = service.Control(svc, action)
 			if err != nil {
 				fmt.Println(err)
 			}
+		} else {
+			fmt.Println("Please specify the Action. Run with --help for details.")
 		}
 		return
 	}

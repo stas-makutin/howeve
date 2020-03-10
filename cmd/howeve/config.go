@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,7 +21,6 @@ type configWriter func(cfg *Config)
 var configReaders []configReader
 var configWriters []configWriter
 
-var writeConfigurationLock int32
 var writeConfiguration func(restart bool) bool
 
 func addConfigReader(r configReader) {
@@ -32,8 +32,9 @@ func addConfigWriter(w configWriter) {
 }
 
 type configTask struct {
-	stopCh  chan struct{}
-	watcher *fsnotify.Watcher
+	stopCh     chan struct{}
+	watcher    *fsnotify.Watcher
+	updateLock uint32
 }
 
 func newConfigTask() *configTask {
@@ -42,7 +43,7 @@ func newConfigTask() *configTask {
 	}
 }
 
-func (t *configTask) start(ctx *serviceTaskContext) error {
+func (t *configTask) open(ctx *serviceTaskContext) error {
 	if len(ctx.args) <= 0 {
 		return fmt.Errorf("the path to configuration file is not specified")
 	}
@@ -53,6 +54,7 @@ func (t *configTask) start(ctx *serviceTaskContext) error {
 	for {
 		config, err := readConfig(cfgFile)
 		if err == nil {
+			ctx.log.Print("configuration file loaded successfully")
 			workingDirectory = config.WorkingDirectory
 			break
 		}
@@ -65,7 +67,6 @@ func (t *configTask) start(ctx *serviceTaskContext) error {
 
 		select {
 		case <-t.stopCh:
-			fmt.Print("here N")
 			return err
 		case <-time.After(time.Second * 5):
 		}
@@ -76,19 +77,19 @@ func (t *configTask) start(ctx *serviceTaskContext) error {
 		t.watcher = nil
 		ctx.log.Printf("unable to create config file watcher, reason: %v", err)
 	} else {
-		go t.watch()
+		ctx.wg.Add(1)
+		go t.watch(&ctx.wg)
 		if err = t.watcher.Add(cfgFile); err != nil {
 			t.watcher.Close()
 			t.watcher = nil
 			ctx.log.Printf("unable to start config file watcher, reason: %v", err)
-		} else {
-			ctx.wg.Add(1)
 		}
 	}
 
 	writeConfiguration = func(restart bool) bool {
 		// block file watcher
-		atomic.CompareAndSwapInt32(&writeConfigurationLock, 0, 1)
+		atomic.StoreUint32(&t.updateLock, 1)
+		defer atomic.StoreUint32(&t.updateLock, 0)
 
 		var cfg = Config{
 			WorkingDirectory: workingDirectory,
@@ -115,9 +116,7 @@ func (t *configTask) start(ctx *serviceTaskContext) error {
 		}
 
 		if restart {
-			go func() {
-				stopServiceTasks(true)
-			}()
+			stopServiceTasks()
 		}
 
 		return true
@@ -126,18 +125,27 @@ func (t *configTask) start(ctx *serviceTaskContext) error {
 	return nil
 }
 
-func (t *configTask) stop(ctx *serviceTaskContext) error {
-	if t.watcher != nil {
-		t.watcher.Close()
-		t.watcher = nil
-		ctx.wg.Done()
+func (t *configTask) close(ctx *serviceTaskContext) error {
+	select {
+	case <-t.stopCh:
+	default:
 	}
-	fmt.Print("here A")
-	t.stopCh <- struct{}{}
 	return nil
 }
 
-func (t *configTask) watch() {
+func (t *configTask) stop(ctx *serviceTaskContext) {
+	select {
+	case t.stopCh <- struct{}{}:
+	default:
+	}
+	if t.watcher != nil {
+		t.watcher.Close()
+		t.watcher = nil
+	}
+}
+
+func (t *configTask) watch(wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case event, ok := <-t.watcher.Events:
@@ -145,8 +153,10 @@ func (t *configTask) watch() {
 				return
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				if !atomic.CompareAndSwapInt32(&writeConfigurationLock, 1, 0) {
-					stopServiceTasks(true)
+				if atomic.LoadUint32(&t.updateLock) == 0 {
+					fmt.Println("watch - event")
+					stopServiceTasks()
+					return
 				}
 			}
 		}

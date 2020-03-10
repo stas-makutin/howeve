@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type serviceTaskContext struct {
@@ -14,8 +15,9 @@ type serviceTaskContext struct {
 }
 
 type serviceTask interface {
-	start(ctx *serviceTaskContext) error
-	stop(ctx *serviceTaskContext) error
+	open(ctx *serviceTaskContext) error
+	close(ctx *serviceTaskContext) error
+	stop(ctx *serviceTaskContext)
 }
 
 type serviceTaskEntry struct {
@@ -28,80 +30,62 @@ var serviceTasks = []serviceTaskEntry{
 }
 
 var serviceTaskCtx serviceTaskContext
-var syncTaskOp sync.Mutex
-var taskStopping bool = false
+var serviceTaskStop uint32
+var serviceTaskClose uint32
 
-func runServiceTasks(errorLog *log.Logger, cfgFile string) error {
+func runServiceTasks(errorLog *log.Logger, cfgFile string) {
+
 	// initialize the context
 	serviceTaskCtx.log = errorLog
 	serviceTaskCtx.args = []string{cfgFile}
 
 	// run tasks
-	run := true
-	for run {
-		var failure error = nil
+	for atomic.LoadUint32(&serviceTaskClose) == 0 {
+		var emsg strings.Builder
+		var index int = -1
+		var wait bool = true
 
-		syncTaskOp.Lock()
-		run = func() bool {
-			defer syncTaskOp.Unlock()
-
-			if taskStopping {
-				return false
+		for i, te := range serviceTasks {
+			for atomic.LoadUint32(&serviceTaskStop) != 0 {
+				wait = false
+				break
 			}
-
-			var errStr strings.Builder
-			for i, te := range serviceTasks {
-				failure = te.task.start(&serviceTaskCtx)
-				if failure != nil {
-					writeStringln(&errStr, fmt.Sprintf("%v task failed to start: %v", te.name, failure))
-					for j := i - 1; j >= 0; j-- {
-						ste := serviceTasks[j]
-						if es := ste.task.stop(&serviceTaskCtx); es != nil {
-							writeStringln(&errStr, fmt.Sprintf("%v task failed to stop: %v", ste.name, es))
-						}
-					}
-				}
+			if err := te.task.open(&serviceTaskCtx); err != nil {
+				writeStringln(&emsg, fmt.Sprintf("%v task failed to open: %v", te.name, err))
+				wait = false
+				break
 			}
-			if errStr.Len() > 0 {
-				serviceTaskCtx.log.Print(errStr.String())
+			index = i
+		}
+
+		if wait {
+			serviceTaskCtx.wg.Wait()
+		}
+
+		atomic.StoreUint32(&serviceTaskStop, 0)
+
+		for ; index >= 0; index-- {
+			te := serviceTasks[index]
+			if err := te.task.close(&serviceTaskCtx); err != nil {
+				writeStringln(&emsg, fmt.Sprintf("%v task failed to close: %v", te.name, err))
 			}
+		}
 
-			return true
-		}()
-
-		serviceTaskCtx.wg.Wait()
-
-		if failure != nil {
-			return failure
+		if emsg.Len() > 0 {
+			serviceTaskCtx.log.Print(emsg.String())
+			return
 		}
 	}
-
-	return nil
 }
 
-func stopServiceTasks(restart bool) error {
-	syncTaskOp.Lock()
-	return func() error {
-		defer syncTaskOp.Unlock()
+func stopServiceTasks() {
+	atomic.StoreUint32(&serviceTaskStop, 1)
+	for _, te := range serviceTasks {
+		te.task.stop(&serviceTaskCtx)
+	}
+}
 
-		var failure error = nil
-
-		taskStopping = !restart
-
-		var errStr strings.Builder
-		for j := len(serviceTasks) - 1; j >= 0; j-- {
-			te := serviceTasks[j]
-			if err := te.task.stop(&serviceTaskCtx); err != nil {
-				if failure == nil {
-					failure = err
-				}
-				writeStringln(&errStr, fmt.Sprintf("%v task failed to stop: %v", te.name, err))
-			}
-		}
-		if errStr.Len() > 0 {
-			serviceTaskCtx.log.Print(errStr.String())
-		}
-
-		return failure
-	}()
+func endServiceTasks() {
+	atomic.StoreUint32(&serviceTaskClose, 1)
+	stopServiceTasks()
 }
