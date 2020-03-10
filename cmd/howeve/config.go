@@ -48,35 +48,26 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 		return fmt.Errorf("the path to configuration file is not specified")
 	}
 	cfgFile := ctx.args[0]
-
 	workingDirectory := ""
-	errMsg := ""
-	for {
-		config, err := readConfig(cfgFile)
-		if err == nil {
-			ctx.log.Print("configuration file loaded successfully")
-			workingDirectory = config.WorkingDirectory
-			break
-		}
+	var failure error
 
-		msg := err.Error()
-		if msg != errMsg {
-			errMsg = msg
-			ctx.log.Print(errMsg)
-		}
+	if config, err := readConfig(cfgFile); err == nil {
+		ctx.log.Print("configuration file loaded successfully")
 
-		select {
-		case <-t.stopCh:
-			return err
-		case <-time.After(time.Second * 5):
+		workingDirectory = config.WorkingDirectory
+		if workingDirectory != "" {
+			if err := os.Chdir(workingDirectory); err != nil {
+				failure = fmt.Errorf("unable to change working directory, reason: %v", err)
+			}
 		}
+	} else {
+		failure = err
 	}
 
-	var err error
-	if t.watcher, err = fsnotify.NewWatcher(); err != nil {
-		t.watcher = nil
+	if watcher, err := fsnotify.NewWatcher(); err != nil {
 		ctx.log.Printf("unable to create config file watcher, reason: %v", err)
 	} else {
+		t.watcher = watcher
 		ctx.wg.Add(1)
 		go t.watch(&ctx.wg)
 		if err = t.watcher.Add(cfgFile); err != nil {
@@ -84,6 +75,10 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 			t.watcher = nil
 			ctx.log.Printf("unable to start config file watcher, reason: %v", err)
 		}
+	}
+	if t.watcher == nil {
+		ctx.wg.Add(1)
+		go t.watchFallback(&ctx.wg, cfgFile)
 	}
 
 	writeConfiguration = func(restart bool) bool {
@@ -122,7 +117,7 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 		return true
 	}
 
-	return nil
+	return failure
 }
 
 func (t *configTask) close(ctx *serviceTaskContext) error {
@@ -154,11 +149,44 @@ func (t *configTask) watch(wg *sync.WaitGroup) {
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				if atomic.LoadUint32(&t.updateLock) == 0 {
-					fmt.Println("watch - event")
 					stopServiceTasks()
 					return
 				}
 			}
+		}
+	}
+}
+
+func (t *configTask) watchFallback(wg *sync.WaitGroup, cfgFile string) {
+	defer wg.Done()
+	mt := time.Time{}
+	init := true
+	for {
+		trigger := false
+		if fi, err := os.Stat(cfgFile); err == nil {
+			if !init && !mt.Equal(fi.ModTime()) {
+				trigger = true
+			}
+			mt = fi.ModTime()
+		} else {
+			if !init && !mt.Equal(time.Time{}) {
+				trigger = true
+			}
+			mt = time.Time{}
+		}
+		init = false
+
+		if trigger {
+			if atomic.LoadUint32(&t.updateLock) == 0 {
+				stopServiceTasks()
+				return
+			}
+		}
+
+		select {
+		case <-t.stopCh:
+			return
+		case <-time.After(time.Second * 5):
 		}
 	}
 }
@@ -180,12 +208,6 @@ func readConfig(cfgFile string) (*Config, error) {
 	}()
 	if err != nil {
 		return nil, err
-	}
-
-	if config.WorkingDirectory != "" {
-		if err := os.Chdir(config.WorkingDirectory); err != nil {
-			return nil, fmt.Errorf("unable to change working directory: %v", err)
-		}
 	}
 
 	var errStr strings.Builder

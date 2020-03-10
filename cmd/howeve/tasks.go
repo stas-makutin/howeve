@@ -40,40 +40,42 @@ func runServiceTasks(errorLog *log.Logger, cfgFile string) {
 	serviceTaskCtx.args = []string{cfgFile}
 
 	// run tasks
+	prevErrorMsg := ""
 	for atomic.LoadUint32(&serviceTaskClose) == 0 {
-		var emsg strings.Builder
 		var index int = -1
-		var wait bool = true
 
+		errorMsg := ""
 		for i, te := range serviceTasks {
 			for atomic.LoadUint32(&serviceTaskStop) != 0 {
-				wait = false
 				break
 			}
 			if err := te.task.open(&serviceTaskCtx); err != nil {
-				writeStringln(&emsg, fmt.Sprintf("%v task failed to open: %v", te.name, err))
-				wait = false
+				errorMsg = fmt.Sprintf("%v task failed to open: %v", te.name, err)
 				break
 			}
 			index = i
 		}
-
-		if wait {
-			serviceTaskCtx.wg.Wait()
+		if errorMsg != "" && prevErrorMsg != errorMsg {
+			prevErrorMsg = errorMsg
+			serviceTaskCtx.log.Print(errorMsg)
+		} else {
+			prevErrorMsg = ""
 		}
+
+		serviceTaskCtx.wg.Wait()
 
 		atomic.StoreUint32(&serviceTaskStop, 0)
 
+		var closeErrorMsg strings.Builder
 		for ; index >= 0; index-- {
 			te := serviceTasks[index]
 			if err := te.task.close(&serviceTaskCtx); err != nil {
-				writeStringln(&emsg, fmt.Sprintf("%v task failed to close: %v", te.name, err))
+				writeStringln(&closeErrorMsg, fmt.Sprintf("%v task failed to close: %v", te.name, err))
 			}
 		}
-
-		if emsg.Len() > 0 {
-			serviceTaskCtx.log.Print(emsg.String())
-			return
+		if closeErrorMsg.Len() > 0 {
+			serviceTaskCtx.log.Print(closeErrorMsg.String())
+			break // fatal error, stopping
 		}
 	}
 }
