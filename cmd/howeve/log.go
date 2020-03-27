@@ -132,7 +132,7 @@ func (t *logTask) open(ctx *serviceTaskContext) error {
 			_, err = f.Write(record.Bytes())
 		}
 		if err != nil {
-			ctx.log.Printf("Unable to log the record:%v%v%vreason: %v", NewLine, string(record.Bytes()), NewLine, err)
+			ctx.log.Printf("unable to log the record:%v%v%vreason: %v", NewLine, string(record.Bytes()), NewLine, err)
 		}
 	}
 	return nil
@@ -390,7 +390,7 @@ func (f *backupFiles) deleteListForDaysBackup(backupDays uint32, backupsPerDays 
 	if backupsPerDays == 0 {
 		backupsPerDays = 1
 	}
-	prevDate, daysCount, perDayCount := "", uint32(0), uint32(1)
+	prevDate, daysCount, perDayCount := "", uint32(1), uint32(1)
 	return f.enumFilesForDelete(currentDate, func(file backupFileInfo, files *[]string) (keep bool) {
 		if prevDate == file.date {
 			if perDayCount >= backupsPerDays {
