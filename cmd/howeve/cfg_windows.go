@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 )
 
+// NewLine is platform-specific new line character sequence
 const NewLine = "\r\n"
 
 func defaultConfigFile() string {

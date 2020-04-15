@@ -26,8 +26,9 @@ type serviceTaskEntry struct {
 }
 
 var serviceTasks = []serviceTaskEntry{
-	serviceTaskEntry{"Configuration", newConfigTask()},
-	serviceTaskEntry{"Log", newLogTask()},
+	{"Configuration", newConfigTask()},
+	{"Log", newLogTask()},
+	{"HTTP server", newHTTPServerTask()},
 }
 
 var serviceTaskCtx serviceTaskContext

@@ -18,6 +18,8 @@ import (
 
 var logWrite func(fields ...string)
 
+var logEnabled func() bool = func() bool { return false }
+
 func logr(fields ...string) {
 	if logWrite != nil {
 		logWrite(fields...)
@@ -134,6 +136,9 @@ func (t *logTask) open(ctx *serviceTaskContext) error {
 		if err != nil {
 			ctx.log.Printf("unable to log the record:%v%v%vreason: %v", NewLine, string(record.Bytes()), NewLine, err)
 		}
+	}
+	logEnabled = func() bool {
+		return t.cfg != nil
 	}
 	return nil
 }
