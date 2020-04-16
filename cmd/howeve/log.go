@@ -16,9 +16,14 @@ import (
 	"time"
 )
 
+// log sources
+const logSourceHTTP = "H"
+
 var logWrite func(fields ...string)
 
-var logEnabled func() bool = func() bool { return false }
+func logEnabled() bool {
+	return logWrite != nil
+}
 
 func logr(fields ...string) {
 	if logWrite != nil {
@@ -109,7 +114,7 @@ func (t *logTask) open(ctx *serviceTaskContext) error {
 		ctx.wg.Add(1)
 		defer ctx.wg.Done()
 
-		fields = append(append([]string{time.Now().Local().Format("2006-01-02T15:04:05.999")}, fields...), NewLine)
+		fields = append([]string{time.Now().Local().Format("2006-01-02T15:04:05.999")}, fields...)
 
 		var record bytes.Buffer
 		csvw := csv.NewWriter(&record)
@@ -136,9 +141,6 @@ func (t *logTask) open(ctx *serviceTaskContext) error {
 		if err != nil {
 			ctx.log.Printf("unable to log the record:%v%v%vreason: %v", NewLine, string(record.Bytes()), NewLine, err)
 		}
-	}
-	logEnabled = func() bool {
-		return t.cfg != nil
 	}
 	return nil
 }
