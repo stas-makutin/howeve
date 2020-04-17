@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"net"
@@ -9,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 	"golang.org/x/net/netutil"
 )
 
@@ -60,8 +63,25 @@ func (t *httpServerTask) open(ctx *serviceTaskContext) error {
 
 	router := http.NewServeMux()
 
-	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Test")
+	router.Handle("/socket", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, _, _, err := ws.UpgradeHTTP(r, w)
+		if err != nil {
+			// handle error
+		}
+		go func() {
+			defer conn.Close()
+
+			for {
+				msg, op, err := wsutil.ReadClientData(conn)
+				if err != nil {
+					// handle error
+				}
+				err = wsutil.WriteServerMessage(conn, op, msg)
+				if err != nil {
+					// handle error
+				}
+			}
+		}()
 	}))
 
 	var handler http.Handler = router
@@ -148,6 +168,13 @@ func (w *httpLogResponseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
+func (w *httpLogResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hj, ok := w.ResponseWriter.(http.Hijacker); ok {
+		return hj.Hijack()
+	}
+	return nil, nil, fmt.Errorf("the instance of http.ResponseWriter is not http.Hijacker")
+}
+
 type httpContextKey int
 
 const httpLogFieldsKey httpContextKey = 0
@@ -156,9 +183,9 @@ type httpLogFields struct {
 	fields []string
 }
 
-func httpAppendLogField(r *http.Request, val string) {
-	if fields, ok := r.Context().Value(httpLogFieldsKey).(httpLogFields); ok {
-		fields.fields = append(fields.fields, val)
+func httpAppendLogFields(r *http.Request, vals ...string) {
+	if fields, ok := r.Context().Value(httpLogFieldsKey).(*httpLogFields); ok {
+		fields.fields = append(fields.fields, vals...)
 	}
 }
 
@@ -167,7 +194,7 @@ func httpLogHandler() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().Local()
 			lrw := &httpLogResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-			fields := httpLogFields{}
+			fields := &httpLogFields{}
 			ctx := context.WithValue(r.Context(), httpLogFieldsKey, fields)
 			defer func() {
 				logr(append([]string{
