@@ -1,7 +1,6 @@
-package main
+package httpsrv
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net"
@@ -10,6 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/stas-makutin/howeve/howeve/config"
+	"github.com/stas-makutin/howeve/howeve/log"
+	"github.com/stas-makutin/howeve/howeve/tasks"
+
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"golang.org/x/net/netutil"
@@ -17,21 +20,23 @@ import (
 
 const defaultHTTPPort = 8180
 
-type httpServerTask struct {
-	cfg      *HTTPServerConfig
+// Task struct
+type Task struct {
+	cfg      *config.HTTPServerConfig
 	listener *net.Listener
 	server   *http.Server
 	stopWg   sync.WaitGroup
 }
 
-func newHTTPServerTask() *httpServerTask {
-	t := &httpServerTask{}
-	addConfigReader(t.readConfig)
-	addConfigWriter(t.writeConfig)
+// NewTask func
+func NewTask() *Task {
+	t := &Task{}
+	config.AddReader(t.readConfig)
+	config.AddWriter(t.writeConfig)
 	return t
 }
 
-func (t *httpServerTask) readConfig(cfg *Config, cfgError configError) {
+func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 	t.cfg = cfg.HTTPServer
 	if t.cfg == nil {
 		return
@@ -41,11 +46,12 @@ func (t *httpServerTask) readConfig(cfg *Config, cfgError configError) {
 	}
 }
 
-func (t *httpServerTask) writeConfig(cfg *Config) {
+func (t *Task) writeConfig(cfg *config.Config) {
 	cfg.HTTPServer = t.cfg
 }
 
-func (t *httpServerTask) open(ctx *serviceTaskContext) error {
+// Open func
+func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 	port := defaultHTTPPort
 	var readTimeout, readHeaderTimeout, writeTimeout, idleTimeout uint
@@ -62,6 +68,8 @@ func (t *httpServerTask) open(ctx *serviceTaskContext) error {
 	}
 
 	router := http.NewServeMux()
+
+	setupRoutes(router)
 
 	router.Handle("/socket", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
@@ -85,7 +93,7 @@ func (t *httpServerTask) open(ctx *serviceTaskContext) error {
 	}))
 
 	var handler http.Handler = router
-	if logEnabled() {
+	if log.Enabled() {
 		handler = httpLogHandler()(handler)
 	}
 
@@ -96,7 +104,7 @@ func (t *httpServerTask) open(ctx *serviceTaskContext) error {
 		WriteTimeout:      time.Millisecond * time.Duration(writeTimeout),
 		IdleTimeout:       time.Millisecond * time.Duration(idleTimeout),
 		MaxHeaderBytes:    maxHeaderBytes,
-		ErrorLog:          ctx.log,
+		ErrorLog:          ctx.Log,
 	}
 
 	// create TCP listener
@@ -117,27 +125,29 @@ func (t *httpServerTask) open(ctx *serviceTaskContext) error {
 		restart := false
 		err = t.server.Serve(*t.listener)
 		if err != nil && err != http.ErrServerClosed {
-			ctx.log.Printf("HTTP server failure: %v", err)
+			ctx.Log.Printf("HTTP server failure: %v", err)
 			restart = true
 		}
 		t.stopWg.Done()
 		if restart {
-			stopServiceTasks()
+			tasks.StopServiceTasks()
 		}
 	}()
 
 	return nil
 }
 
-func (t *httpServerTask) close(ctx *serviceTaskContext) error {
+// Close func
+func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
 	return nil
 }
 
-func (t *httpServerTask) stop(ctx *serviceTaskContext) {
+// Stop func
+func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 	if t.server != nil {
 		err := t.server.Shutdown(context.Background())
 		if err != nil {
-			ctx.log.Printf("HTTP server stopping failure: %v", err)
+			ctx.Log.Printf("HTTP server stopping failure: %v", err)
 		}
 		t.server = nil
 	}
@@ -145,73 +155,8 @@ func (t *httpServerTask) stop(ctx *serviceTaskContext) {
 	if t.listener != nil {
 		err := (*t.listener).Close()
 		if err != nil {
-			ctx.log.Printf("HTTP server listener closing failure: %v", err)
+			ctx.Log.Printf("HTTP server listener closing failure: %v", err)
 		}
 		t.listener = nil
-	}
-}
-
-type httpLogResponseWriter struct {
-	http.ResponseWriter
-	statusCode    int
-	contentLength int64
-}
-
-func (w *httpLogResponseWriter) WriteHeader(status int) {
-	w.statusCode = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *httpLogResponseWriter) Write(b []byte) (int, error) {
-	n, err := w.ResponseWriter.Write(b)
-	w.contentLength += int64(n)
-	return n, err
-}
-
-func (w *httpLogResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if hj, ok := w.ResponseWriter.(http.Hijacker); ok {
-		return hj.Hijack()
-	}
-	return nil, nil, fmt.Errorf("the instance of http.ResponseWriter is not http.Hijacker")
-}
-
-type httpContextKey int
-
-const httpLogFieldsKey httpContextKey = 0
-
-type httpLogFields struct {
-	fields []string
-}
-
-func httpAppendLogFields(r *http.Request, vals ...string) {
-	if fields, ok := r.Context().Value(httpLogFieldsKey).(*httpLogFields); ok {
-		fields.fields = append(fields.fields, vals...)
-	}
-}
-
-func httpLogHandler() func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now().Local()
-			lrw := &httpLogResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-			fields := &httpLogFields{}
-			ctx := context.WithValue(r.Context(), httpLogFieldsKey, fields)
-			defer func() {
-				logr(append([]string{
-					logSourceHTTP,
-					strconv.FormatInt(int64(time.Now().Local().Sub(start)/time.Millisecond), 10),
-					r.RemoteAddr,
-					r.Host,
-					r.Proto,
-					r.Method,
-					r.RequestURI,
-					strconv.FormatInt(r.ContentLength, 10),
-					r.Header.Get("X-Request-Id"),
-					strconv.Itoa(lrw.statusCode),
-					strconv.FormatInt(lrw.contentLength, 10),
-				}, fields.fields...)...)
-			}()
-			next.ServeHTTP(lrw, r.WithContext(ctx))
-		})
 	}
 }

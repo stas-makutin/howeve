@@ -1,8 +1,6 @@
-package main
+package log
 
 import (
-	"bytes"
-	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
@@ -14,18 +12,19 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-)
 
-// log sources
-const logSourceHTTP = "H"
+	"github.com/stas-makutin/howeve/howeve/utils"
+)
 
 var logWrite func(fields ...string)
 
-func logEnabled() bool {
+// Enabled func
+func Enabled() bool {
 	return logWrite != nil
 }
 
-func logr(fields ...string) {
+// Report func
+func Report(fields ...string) {
 	if logWrite != nil {
 		logWrite(fields...)
 	}
@@ -33,126 +32,7 @@ func logr(fields ...string) {
 
 var logRotatePattern = regexp.MustCompile(`^-(\d{4}-\d{2}-\d{2})(_(\d+))*$`)
 
-type logTask struct {
-	cfg            *LogConfig
-	fileName       string
-	fileMode       os.FileMode
-	maxSizeBytes   int64
-	maxAgeDuration time.Duration
-	archive        bool
-	rotateLock     uint32
-}
-
-func newLogTask() *logTask {
-	t := &logTask{}
-	addConfigReader(t.readConfig)
-	addConfigWriter(t.writeConfig)
-	return t
-}
-
-func (t *logTask) readConfig(cfg *Config, cfgError configError) {
-	t.cfg = cfg.Log
-	t.fileName = ""
-	if t.cfg == nil {
-		return
-	}
-
-	if t.cfg.Dir == "" {
-		cfgError("log.dir is required")
-	}
-	t.fileName = t.cfg.File
-	if t.fileName == "" {
-		t.fileName = appName + ".log"
-	}
-	dirMode := t.cfg.DirMode
-	if dirMode == 0 {
-		dirMode = 0755
-	}
-	t.fileMode = t.cfg.FileMode
-	if t.fileMode == 0 {
-		t.fileMode = 0644
-	}
-	err := os.MkdirAll(t.cfg.Dir, dirMode)
-	if err != nil {
-		cfgError("log.dir is not valid")
-	}
-
-	size, err := parseSizeString(t.cfg.MaxSize)
-	if err == nil && size < 0 {
-		err = fmt.Errorf("negative value not allowed")
-	}
-	if err != nil {
-		cfgError(fmt.Sprintf("log.maxSize is not valid: %v", err))
-	}
-	t.maxSizeBytes = size
-
-	duration, err := parseTimeDuration(t.cfg.MaxAge)
-	if err == nil && duration < 0 {
-		err = fmt.Errorf("negative value not allowed")
-	}
-	if err != nil {
-		cfgError(fmt.Sprintf("log.maxAge is not valid: %v", err))
-	}
-	t.maxAgeDuration = duration
-
-	archive := strings.ToLower(t.cfg.Archive)
-	if !(archive == "" || archive == "zip") {
-		cfgError("log.archive could be either empty or has \"zip\" value")
-	}
-	t.archive = archive == "zip"
-}
-
-func (t *logTask) writeConfig(cfg *Config) {
-	cfg.Log = t.cfg
-}
-
-func (t *logTask) open(ctx *serviceTaskContext) error {
-	logWrite = func(fields ...string) {
-		if t.cfg == nil {
-			return
-		}
-		ctx.wg.Add(1)
-		defer ctx.wg.Done()
-
-		fields = append([]string{time.Now().Local().Format("2006-01-02T15:04:05.999")}, fields...)
-
-		var record bytes.Buffer
-		csvw := csv.NewWriter(&record)
-		csvw.Write(fields)
-		csvw.Flush()
-
-		logFile := filepath.Join(t.cfg.Dir, t.fileName)
-
-		t.rotate(logFile, &ctx.wg, ctx.log)
-
-		var f *os.File
-		var err error
-		for i := 0; i < 6; i++ {
-			f, err = os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, t.fileMode)
-			if err == nil {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-		if err == nil {
-			defer f.Close()
-			_, err = f.Write(record.Bytes())
-		}
-		if err != nil {
-			ctx.log.Printf("unable to log the record:%v%v%vreason: %v", NewLine, string(record.Bytes()), NewLine, err)
-		}
-	}
-	return nil
-}
-
-func (t *logTask) close(ctx *serviceTaskContext) error {
-	return nil
-}
-
-func (t *logTask) stop(ctx *serviceTaskContext) {
-}
-
-func (t *logTask) rotate(logFile string, wg *sync.WaitGroup, errorLog *log.Logger) {
+func (t *Task) rotate(logFile string, wg *sync.WaitGroup, errorLog *log.Logger) {
 	if !((t.cfg.Backups > 0 || t.cfg.BackupDays > 0) && (t.maxSizeBytes > 0 || t.maxAgeDuration > 0)) {
 		return // rotation is not enabled
 	}
@@ -255,7 +135,7 @@ func (t *logTask) rotate(logFile string, wg *sync.WaitGroup, errorLog *log.Logge
 			historyFile += extension
 
 			if archive {
-				err = zipFilesToFile(historyFile, t.fileMode, []fileToArchive{{name: historyFileName, path: backupFile}})
+				err = utils.ZipFilesToFile(historyFile, t.fileMode, []utils.FileToArchive{{Name: historyFileName, Path: backupFile}})
 				if err == nil {
 					err = os.Remove(backupFile)
 				}
@@ -318,7 +198,7 @@ func (f *backupFiles) populate(logFile, extension string, errorLog *log.Logger) 
 	logDir := filepath.Dir(logFile)
 	err := filepath.Walk(logDir, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
-			errors.WriteString(NewLine + err.Error())
+			errors.WriteString(utils.NewLine + err.Error())
 			return nil
 		}
 		if fi.IsDir() {
@@ -344,7 +224,7 @@ func (f *backupFiles) populate(logFile, extension string, errorLog *log.Logger) 
 	})
 
 	if err != nil {
-		errors.WriteString(NewLine + err.Error())
+		errors.WriteString(utils.NewLine + err.Error())
 	}
 	if errors.Len() > 0 {
 		f.files = nil

@@ -1,58 +1,42 @@
-package main
+package config
 
 import (
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/stas-makutin/howeve/howeve/tasks"
 	"gopkg.in/yaml.v3"
 )
 
-type configError func(msg string)
-
-type configReader func(cfg *Config, cfgError configError)
-
-type configWriter func(cfg *Config)
-
-var configReaders []configReader
-var configWriters []configWriter
-
-var writeConfiguration func(restart bool) bool
-
-func addConfigReader(r configReader) {
-	configReaders = append(configReaders, r)
-}
-
-func addConfigWriter(w configWriter) {
-	configWriters = append(configWriters, w)
-}
-
-type configTask struct {
+// Task struct
+type Task struct {
 	stopCh     chan struct{}
 	watcher    *fsnotify.Watcher
 	updateLock uint32
 }
 
-func newConfigTask() *configTask {
-	return &configTask{
+// NewTask func
+func NewTask() *Task {
+	return &Task{
 		stopCh: make(chan struct{}),
 	}
 }
 
-func (t *configTask) open(ctx *serviceTaskContext) error {
-	if len(ctx.args) <= 0 {
+// Open - ServiceTask::Open method
+func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
+	if len(ctx.Args) <= 0 {
 		return fmt.Errorf("the path to configuration file is not specified")
 	}
-	cfgFile := ctx.args[0]
+	cfgFile := ctx.Args[0]
 	workingDirectory := ""
 	var failure error
 
 	if config, err := readConfig(cfgFile); err == nil {
-		ctx.log.Print("configuration file loaded successfully")
+		ctx.Log.Print("configuration file loaded successfully")
 
 		workingDirectory = config.WorkingDirectory
 		if workingDirectory != "" {
@@ -65,20 +49,20 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 	}
 
 	if watcher, err := fsnotify.NewWatcher(); err != nil {
-		ctx.log.Printf("unable to create config file watcher, reason: %v", err)
+		ctx.Log.Printf("unable to create config file watcher, reason: %v", err)
 	} else {
 		t.watcher = watcher
-		ctx.wg.Add(1)
-		go t.watch(&ctx.wg)
+		ctx.Wg.Add(1)
+		go t.watch(&ctx.Wg)
 		if err = t.watcher.Add(cfgFile); err != nil {
 			t.watcher.Close()
 			t.watcher = nil
-			ctx.log.Printf("unable to start config file watcher, reason: %v", err)
+			ctx.Log.Printf("unable to start config file watcher, reason: %v", err)
 		}
 	}
 	if t.watcher == nil {
-		ctx.wg.Add(1)
-		go t.watchFallback(&ctx.wg, cfgFile)
+		ctx.Wg.Add(1)
+		go t.watchFallback(&ctx.Wg, cfgFile)
 	}
 
 	writeConfiguration = func(restart bool) bool {
@@ -89,20 +73,20 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 		var cfg = Config{
 			WorkingDirectory: workingDirectory,
 		}
-		for _, w := range configWriters {
+		for _, w := range writers {
 			w(&cfg)
 		}
 
 		if !func() bool {
 			file, err := os.OpenFile(cfgFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 			if err != nil {
-				ctx.log.Printf("unable to open configuration file for writing: %v", err)
+				ctx.Log.Printf("unable to open configuration file for writing: %v", err)
 				return false
 			}
 			defer file.Close()
 			err = yaml.NewEncoder(file).Encode(&cfg)
 			if err != nil {
-				ctx.log.Printf("unable to write configuration file: %v", err)
+				ctx.Log.Printf("unable to write configuration file: %v", err)
 				return false
 			}
 			return true
@@ -111,7 +95,7 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 		}
 
 		if restart {
-			stopServiceTasks()
+			tasks.StopServiceTasks()
 		}
 
 		return true
@@ -120,7 +104,8 @@ func (t *configTask) open(ctx *serviceTaskContext) error {
 	return failure
 }
 
-func (t *configTask) close(ctx *serviceTaskContext) error {
+// Close - ServiceTask::Close method
+func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
 	select {
 	case <-t.stopCh:
 	default:
@@ -128,7 +113,8 @@ func (t *configTask) close(ctx *serviceTaskContext) error {
 	return nil
 }
 
-func (t *configTask) stop(ctx *serviceTaskContext) {
+// Stop - ServiceTask::Stop method
+func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 	select {
 	case t.stopCh <- struct{}{}:
 	default:
@@ -139,7 +125,7 @@ func (t *configTask) stop(ctx *serviceTaskContext) {
 	}
 }
 
-func (t *configTask) watch(wg *sync.WaitGroup) {
+func (t *Task) watch(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		select {
@@ -149,7 +135,7 @@ func (t *configTask) watch(wg *sync.WaitGroup) {
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				if atomic.LoadUint32(&t.updateLock) == 0 {
-					stopServiceTasks()
+					tasks.StopServiceTasks()
 					return
 				}
 			}
@@ -157,7 +143,7 @@ func (t *configTask) watch(wg *sync.WaitGroup) {
 	}
 }
 
-func (t *configTask) watchFallback(wg *sync.WaitGroup, cfgFile string) {
+func (t *Task) watchFallback(wg *sync.WaitGroup, cfgFile string) {
 	defer wg.Done()
 	mt := time.Time{}
 	init := true
@@ -178,7 +164,7 @@ func (t *configTask) watchFallback(wg *sync.WaitGroup, cfgFile string) {
 
 		if trigger {
 			if atomic.LoadUint32(&t.updateLock) == 0 {
-				stopServiceTasks()
+				tasks.StopServiceTasks()
 				return
 			}
 		}
@@ -189,45 +175,4 @@ func (t *configTask) watchFallback(wg *sync.WaitGroup, cfgFile string) {
 		case <-time.After(time.Second * 5):
 		}
 	}
-}
-
-func readConfig(cfgFile string) (*Config, error) {
-	var config Config
-
-	err := func() error {
-		file, err := os.Open(cfgFile)
-		if err != nil {
-			return fmt.Errorf("unable to open configuration file: %v", err)
-		}
-		defer file.Close()
-		err = yaml.NewDecoder(file).Decode(&config)
-		if err != nil {
-			return fmt.Errorf("unable to parse configuration file: %v", err)
-		}
-		return nil
-	}()
-	if err != nil {
-		return nil, err
-	}
-
-	var errStr strings.Builder
-	ce := func(msg string) {
-		errStr.WriteString(NewLine + msg)
-	}
-
-	for _, r := range configReaders {
-		r(&config, ce)
-	}
-	if errStr.Len() > 0 {
-		return nil, fmt.Errorf("the configuration file '%v' is invalid:%v", cfgFile, errStr.String())
-	}
-
-	return &config, nil
-}
-
-func writeConfig(restart bool) bool {
-	if writeConfiguration != nil {
-		return writeConfiguration(restart)
-	}
-	return false
 }

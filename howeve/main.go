@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/kardianos/service"
+	"github.com/stas-makutin/howeve/howeve/tasks"
 )
 
 const appName = "howeve"
@@ -88,7 +89,7 @@ func (app *application) parseCommandLine(interactive bool) (action string) {
 func (app *application) run() {
 	app.logger.Info(appName + " started with configuration file " + app.configFile)
 
-	runServiceTasks(log.New(app, "", 0), app.configFile)
+	tasks.RunServiceTasks(log.New(app, "", 0), app.configFile)
 
 	if !app.stopping {
 		app.stopService()
@@ -110,7 +111,7 @@ func (app *application) Start(s service.Service) error {
 
 func (app *application) Stop(s service.Service) error {
 	app.stopping = true
-	endServiceTasks()
+	tasks.EndServiceTasks()
 	return nil
 }
 

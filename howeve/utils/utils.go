@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"archive/zip"
@@ -9,12 +9,13 @@ import (
 	"time"
 )
 
-type suffixMultiplier struct {
-	suffix     string
-	multiplier float64
+// SuffixMultiplier struct
+type SuffixMultiplier struct {
+	Suffix     string
+	Multiplier float64
 }
 
-var sizeSuffixes []suffixMultiplier = []suffixMultiplier{
+var sizeSuffixes []SuffixMultiplier = []SuffixMultiplier{
 	{"kib", 1024}, {"kb", 1024}, {"ki", 1024}, {"k", 1024},
 	{"mib", 1024 * 1024}, {"mb", 1024 * 1024}, {"mi", 1024 * 1024}, {"m", 1024 * 1024},
 	{"gib", 1024 * 1024 * 1024}, {"gb", 1024 * 1024 * 1024}, {"gi", 1024 * 1024 * 1024}, {"g", 1024 * 1024 * 1024},
@@ -22,7 +23,7 @@ var sizeSuffixes []suffixMultiplier = []suffixMultiplier{
 	{"pib", 1024 * 1024 * 1024 * 1024 * 1024}, {"pb", 1024 * 1024 * 1024 * 1024 * 1024}, {"pi", 1024 * 1024 * 1024 * 1024 * 1024}, {"p", 1024 * 1024 * 1024 * 1024 * 1024},
 }
 
-var timeSuffixes []suffixMultiplier = []suffixMultiplier{
+var timeSuffixes []SuffixMultiplier = []SuffixMultiplier{
 	{"microseconds", float64(time.Microsecond)}, {"microsecond", float64(time.Microsecond)},
 	{"milliseconds", float64(time.Millisecond)}, {"millisecond", float64(time.Millisecond)},
 	{"minutes", float64(time.Minute)}, {"minute", float64(time.Minute)},
@@ -33,7 +34,8 @@ var timeSuffixes []suffixMultiplier = []suffixMultiplier{
 	{"m", float64(time.Minute)}, {"h", float64(time.Hour)}, {"d", float64(24 * time.Hour)}, {"s", float64(time.Second)},
 }
 
-func parseSuffixed(value string, suffixes []suffixMultiplier) (int64, error) {
+// ParseSuffixed func
+func ParseSuffixed(value string, suffixes []SuffixMultiplier) (int64, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return 0, nil
@@ -42,9 +44,9 @@ func parseSuffixed(value string, suffixes []suffixMultiplier) (int64, error) {
 
 	var multiplier float64 = 1
 	for _, v := range suffixes {
-		if strings.HasSuffix(value, v.suffix) {
-			value = strings.TrimSpace(value[0 : len(value)-len(v.suffix)])
-			multiplier = v.multiplier
+		if strings.HasSuffix(value, v.Suffix) {
+			value = strings.TrimSpace(value[0 : len(value)-len(v.Suffix)])
+			multiplier = v.Multiplier
 			break
 		}
 	}
@@ -55,29 +57,33 @@ func parseSuffixed(value string, suffixes []suffixMultiplier) (int64, error) {
 	return int64(v * multiplier), nil
 }
 
-func parseSizeString(size string) (int64, error) {
-	return parseSuffixed(size, sizeSuffixes)
+// ParseSizeString func
+func ParseSizeString(size string) (int64, error) {
+	return ParseSuffixed(size, sizeSuffixes)
 }
 
-func parseTimeDuration(duration string) (time.Duration, error) {
-	v, err := parseSuffixed(duration, timeSuffixes)
+// ParseTimeDuration func
+func ParseTimeDuration(duration string) (time.Duration, error) {
+	v, err := ParseSuffixed(duration, timeSuffixes)
 	return time.Duration(v), err
 }
 
-type fileToArchive struct {
-	name, path string
+// FileToArchive struct
+type FileToArchive struct {
+	Name, Path string
 }
 
-func zipFilesToWriter(w *zip.Writer, files []fileToArchive) error {
+// ZipFilesToWriter func
+func ZipFilesToWriter(w *zip.Writer, files []FileToArchive) error {
 	for _, file := range files {
 		err := func() error {
-			src, err := os.Open(file.path)
+			src, err := os.Open(file.Path)
 			if err != nil {
 				return err
 			}
 			defer src.Close()
 
-			dest, err := w.Create(file.name)
+			dest, err := w.Create(file.Name)
 			if err != nil {
 				return err
 			}
@@ -94,7 +100,8 @@ func zipFilesToWriter(w *zip.Writer, files []fileToArchive) error {
 	return nil
 }
 
-func zipFilesToFile(zipFile string, perm os.FileMode, files []fileToArchive) error {
+// ZipFilesToFile func
+func ZipFilesToFile(zipFile string, perm os.FileMode, files []FileToArchive) error {
 	f, err := os.OpenFile(zipFile, os.O_WRONLY|os.O_CREATE, perm)
 	if err != nil {
 		return err
@@ -102,7 +109,7 @@ func zipFilesToFile(zipFile string, perm os.FileMode, files []fileToArchive) err
 	err = func() error {
 		defer f.Close()
 		zw := zip.NewWriter(f)
-		err := zipFilesToWriter(zw, files)
+		err := ZipFilesToWriter(zw, files)
 		errClose := zw.Close()
 		if err != nil {
 			return err
@@ -115,7 +122,8 @@ func zipFilesToFile(zipFile string, perm os.FileMode, files []fileToArchive) err
 	return err
 }
 
-func writeStringln(sb *strings.Builder, s string) {
+// WriteStringln func
+func WriteStringln(sb *strings.Builder, s string) {
 	if sb.Len() > 0 {
 		sb.WriteString(NewLine)
 	}
