@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/stas-makutin/howeve/howeve/utils"
+	"github.com/stas-makutin/howeve/utils"
 )
 
 var logWrite func(fields ...string)

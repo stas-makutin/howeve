@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/kardianos/service"
-	"github.com/stas-makutin/howeve/howeve/tasks"
+	"github.com/stas-makutin/howeve/tasks"
 )
 
 const appName = "howeve"

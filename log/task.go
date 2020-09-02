@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stas-makutin/howeve/howeve/config"
-	"github.com/stas-makutin/howeve/howeve/tasks"
-	"github.com/stas-makutin/howeve/howeve/utils"
+	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/tasks"
+	"github.com/stas-makutin/howeve/utils"
 )
 
 // Task struct

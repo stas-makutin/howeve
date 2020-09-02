@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/stas-makutin/howeve/howeve/log"
+	"github.com/stas-makutin/howeve/log"
 )
 
 type httpLogResponseWriter struct {

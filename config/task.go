@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/stas-makutin/howeve/howeve/tasks"
+	"github.com/stas-makutin/howeve/tasks"
 	"gopkg.in/yaml.v3"
 )
 

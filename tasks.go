@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/stas-makutin/howeve/howeve/config"
-	"github.com/stas-makutin/howeve/howeve/httpsrv"
-	"github.com/stas-makutin/howeve/howeve/log"
-	"github.com/stas-makutin/howeve/howeve/tasks"
+	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/httpsrv"
+	"github.com/stas-makutin/howeve/log"
+	"github.com/stas-makutin/howeve/tasks"
 )
 
 func init() {

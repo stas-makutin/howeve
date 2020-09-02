@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/stas-makutin/howeve/howeve/utils"
+	"github.com/stas-makutin/howeve/utils"
 )
 
 // ServiceTaskContext struct

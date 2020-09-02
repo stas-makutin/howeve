@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/stas-makutin/howeve/howeve/config"
-	"github.com/stas-makutin/howeve/howeve/log"
-	"github.com/stas-makutin/howeve/howeve/tasks"
+	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/log"
+	"github.com/stas-makutin/howeve/tasks"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"

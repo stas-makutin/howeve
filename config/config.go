@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/stas-makutin/howeve/howeve/utils"
+	"github.com/stas-makutin/howeve/utils"
 	"gopkg.in/yaml.v3"
 )
 
