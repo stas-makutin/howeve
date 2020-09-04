@@ -5,37 +5,44 @@ import (
 	"reflect"
 )
 
-// TargetedEvents interface
-type TargetedEvents interface {
-	Receiver() SubscriberID
+// TargetedRequest interface
+type TargetedRequest interface {
 	SetReceiver(receiver SubscriberID)
 }
 
-// EventWithReceiver struct
-type EventWithReceiver struct {
-	receiver SubscriberID
-}
-
-// Receiver func
-func (e *EventWithReceiver) Receiver() SubscriberID {
-	return e.receiver
+// RequestTarget struct
+type RequestTarget struct {
+	ReceiverID SubscriberID
 }
 
 // SetReceiver func
-func (e *EventWithReceiver) SetReceiver(receiver SubscriberID) {
-	e.receiver = receiver
+func (e *RequestTarget) SetReceiver(receiver SubscriberID) {
+	e.ReceiverID = receiver
+}
+
+// TargetedResponse interface
+type TargetedResponse interface {
+	Receiver() SubscriberID
+}
+
+// ResponseTarget struct
+type ResponseTarget struct {
+	ReceiverID SubscriberID
+}
+
+// Receiver func
+func (e *ResponseTarget) Receiver() SubscriberID {
+	return e.ReceiverID
 }
 
 // RequestResponse func
-func (d *Dispatcher) RequestResponse(ctx context.Context, request TargetedEvents, responseType reflect.Type, receiveFn func(interface{})) bool {
+func (d *Dispatcher) RequestResponse(ctx context.Context, request TargetedRequest, responseType reflect.Type, receiveFn func(interface{})) bool {
 	ch := make(chan interface{}, 1)
 
 	var id SubscriberID
 	id = d.Receive(nil, ch, func(event interface{}) bool {
-		if event != request {
-			if te, ok := event.(TargetedEvents); ok && te.Receiver() == id {
-				return reflect.TypeOf(event) == responseType
-			}
+		if te, ok := event.(TargetedResponse); ok && te.Receiver() == id {
+			return reflect.TypeOf(event) == responseType
 		}
 		return false
 	})

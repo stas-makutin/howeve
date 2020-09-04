@@ -7,11 +7,11 @@ import (
 
 // ConfigGet - get config event
 type ConfigGet struct {
-	events.EventWithReceiver
+	events.RequestTarget
 }
 
 // ConfigData - config data event
 type ConfigData struct {
-	events.EventWithReceiver
+	events.ResponseTarget
 	config.Config
 }
