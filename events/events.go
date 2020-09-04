@@ -6,18 +6,22 @@ import (
 	"sync/atomic"
 )
 
-type eventSubscriberID uint64
+// SubscriberID identifier type for the subscriber
+type SubscriberID uint64
 
-type eventListenerFn func(event interface{})
+// SubscriberFn function signature for the subscriber
+type SubscriberFn func(event interface{})
 
-type eventDispatcher struct {
+// Dispatcher - event dispatcher struct
+type Dispatcher struct {
 	subscribers      sync.Map
-	lastSubscriberID eventSubscriberID
+	lastSubscriberID SubscriberID
 }
 
-func (d *eventDispatcher) subscribe(fn eventListenerFn) (id eventSubscriberID) {
+// Subscribe func
+func (d *Dispatcher) Subscribe(fn SubscriberFn) (id SubscriberID) {
 	for {
-		id = (eventSubscriberID)(atomic.AddUint64((*uint64)(&d.lastSubscriberID), 1))
+		id = (SubscriberID)(atomic.AddUint64((*uint64)(&d.lastSubscriberID), 1))
 		if _, exists := d.subscribers.LoadOrStore(id, fn); !exists {
 			break
 		}
@@ -25,24 +29,42 @@ func (d *eventDispatcher) subscribe(fn eventListenerFn) (id eventSubscriberID) {
 	return
 }
 
-func (d *eventDispatcher) unsubscribe(id eventSubscriberID) bool {
+// Unsubscribe func
+func (d *Dispatcher) Unsubscribe(id SubscriberID) bool {
 	_, exists := d.subscribers.LoadAndDelete(id)
 	return exists
 }
 
-func (d *eventDispatcher) send(event interface{}) {
-	d.subscribers.Range(func(key, value interface{}) bool {
-		value.(eventListenerFn)(event)
-		return true
-	})
+// Send func
+func (d *Dispatcher) Send(event interface{}, receivers ...SubscriberID) {
+	if len(receivers) > 0 {
+		for _, id := range receivers {
+			if fn, ok := d.subscribers.Load(id); ok {
+				fn.(SubscriberFn)(event)
+			}
+		}
+	} else {
+		d.subscribers.Range(func(key, value interface{}) bool {
+			value.(SubscriberFn)(event)
+			return true
+		})
+	}
 }
 
-func (d *eventDispatcher) receive(ctx context.Context, ch chan<- interface{}, fn func(event interface{}) bool) (id eventSubscriberID) {
-	id = d.subscribe(func(event interface{}) {
+// Receive func
+func (d *Dispatcher) Receive(ctx context.Context, ch chan<- interface{}, fn func(event interface{}) bool) (id SubscriberID) {
+	id = d.Subscribe(func(event interface{}) {
 		if fn == nil || fn(event) {
-			select {
-			case ch <- event:
-			case <-ctx.Done():
+			if ctx == nil {
+				select {
+				case ch <- event:
+				default:
+				}
+			} else {
+				select {
+				case ch <- event:
+				case <-ctx.Done():
+				}
 			}
 		}
 	})

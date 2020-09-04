@@ -13,8 +13,6 @@ import (
 	"github.com/stas-makutin/howeve/log"
 	"github.com/stas-makutin/howeve/tasks"
 
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"golang.org/x/net/netutil"
 )
 
@@ -70,27 +68,6 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	router := http.NewServeMux()
 
 	setupRoutes(router)
-
-	router.Handle("/socket", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, _, _, err := ws.UpgradeHTTP(r, w)
-		if err != nil {
-			// handle error
-		}
-		go func() {
-			defer conn.Close()
-
-			for {
-				msg, op, err := wsutil.ReadClientData(conn)
-				if err != nil {
-					// handle error
-				}
-				err = wsutil.WriteServerMessage(conn, op, msg)
-				if err != nil {
-					// handle error
-				}
-			}
-		}()
-	}))
 
 	var handler http.Handler = router
 	if log.Enabled() {
