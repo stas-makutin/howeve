@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/stas-makutin/howeve/config"
@@ -20,10 +19,9 @@ const defaultHTTPPort = 8180
 
 // Task struct
 type Task struct {
-	cfg      *config.HTTPServerConfig
 	listener *net.Listener
 	server   *http.Server
-	stopWg   sync.WaitGroup
+	hctx     handlerContext
 }
 
 // NewTask func
@@ -35,17 +33,17 @@ func NewTask() *Task {
 }
 
 func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
-	t.cfg = cfg.HTTPServer
-	if t.cfg == nil {
+	t.hctx.cfg = cfg.HTTPServer
+	if t.hctx.cfg == nil {
 		return
 	}
-	if t.cfg.Port != 0 && (t.cfg.Port < 1 || t.cfg.Port > 65535) {
+	if t.hctx.cfg.Port != 0 && (t.hctx.cfg.Port < 1 || t.hctx.cfg.Port > 65535) {
 		cfgError("httpServer.port must be between 1 and 65535.")
 	}
 }
 
 func (t *Task) writeConfig(cfg *config.Config) {
-	cfg.HTTPServer = t.cfg
+	cfg.HTTPServer = t.hctx.cfg
 }
 
 // Open func
@@ -54,15 +52,15 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	port := defaultHTTPPort
 	var readTimeout, readHeaderTimeout, writeTimeout, idleTimeout uint
 	var maxHeaderBytes int
-	if t.cfg != nil {
-		if t.cfg.Port != 0 {
-			port = t.cfg.Port
+	if t.hctx.cfg != nil {
+		if t.hctx.cfg.Port != 0 {
+			port = t.hctx.cfg.Port
 		}
-		readTimeout = t.cfg.ReadTimeout
-		readHeaderTimeout = t.cfg.ReadHeaderTimeout
-		writeTimeout = t.cfg.WriteTimeout
-		idleTimeout = t.cfg.IdleTimeout
-		maxHeaderBytes = int(t.cfg.MaxHeaderBytes)
+		readTimeout = t.hctx.cfg.ReadTimeout
+		readHeaderTimeout = t.hctx.cfg.ReadHeaderTimeout
+		writeTimeout = t.hctx.cfg.WriteTimeout
+		idleTimeout = t.hctx.cfg.IdleTimeout
+		maxHeaderBytes = int(t.hctx.cfg.MaxHeaderBytes)
 	}
 
 	router := http.NewServeMux()
@@ -74,6 +72,8 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 		handler = httpLogHandler()(handler)
 	}
 
+	baseCtx := context.WithValue(context.Background(), handlerContextKey, &t.hctx)
+
 	server := http.Server{
 		Handler:           handler,
 		ReadTimeout:       time.Millisecond * time.Duration(readTimeout),
@@ -82,6 +82,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 		IdleTimeout:       time.Millisecond * time.Duration(idleTimeout),
 		MaxHeaderBytes:    maxHeaderBytes,
 		ErrorLog:          ctx.Log,
+		BaseContext:       func(listener net.Listener) context.Context { return baseCtx },
 	}
 
 	// create TCP listener
@@ -91,13 +92,14 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	}
 
 	// apply concurrent connections limit
-	if t.cfg != nil && t.cfg.MaxConnections > 0 {
-		listener = netutil.LimitListener(listener, int(t.cfg.MaxConnections))
+	if t.hctx.cfg != nil && t.hctx.cfg.MaxConnections > 0 {
+		listener = netutil.LimitListener(listener, int(t.hctx.cfg.MaxConnections))
 	}
 
 	t.listener = &listener
 	t.server = &server
-	t.stopWg.Add(1)
+	ctx.Wg.Add(1)
+	t.hctx.stopWg.Add(1)
 	go func() {
 		restart := false
 		err = t.server.Serve(*t.listener)
@@ -105,7 +107,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 			ctx.Log.Printf("HTTP server failure: %v", err)
 			restart = true
 		}
-		t.stopWg.Done()
+		t.hctx.stopWg.Done()
 		if restart {
 			tasks.StopServiceTasks()
 		}
@@ -121,6 +123,8 @@ func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
 
 // Stop func
 func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
+	defer ctx.Wg.Done()
+
 	if t.server != nil {
 		err := t.server.Shutdown(context.Background())
 		if err != nil {
@@ -128,11 +132,14 @@ func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 		}
 		t.server = nil
 	}
-	t.stopWg.Wait()
+	t.hctx.stopWg.Wait()
+	t.hctx.handlerWg.Wait()
 	if t.listener != nil {
 		err := (*t.listener).Close()
 		if err != nil {
-			ctx.Log.Printf("HTTP server listener closing failure: %v", err)
+			if operr, ok := err.(*net.OpError); !ok || operr.Op != "close" {
+				ctx.Log.Printf("HTTP server listener closing failure: %v", err)
+			}
 		}
 		t.listener = nil
 	}

@@ -4,7 +4,7 @@ import "net/http"
 
 func setupRoutes(mux *http.ServeMux) {
 
-	mux.Handle("/socket", http.HandlerFunc(handleWebsocket))
+	mux.Handle("/socket", handlerCtxFunc(handleWebsocket))
 
-	mux.Handle("/cfg", http.HandlerFunc(handleConfig))
+	mux.Handle("/cfg", handlerFunc(handleConfig))
 }

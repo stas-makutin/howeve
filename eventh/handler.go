@@ -6,5 +6,5 @@ import (
 )
 
 func handleConfigGet(event *ConfigGet, cfg *config.Config) {
-	Dispatcher.Send(&ConfigData{Config: *cfg, ResponseTarget: events.ResponseTarget{event.ReceiverID}}, event.ReceiverID)
+	Dispatcher.Send(&ConfigData{Config: *cfg, ResponseTarget: events.ResponseTarget{ReceiverID: event.ReceiverID}}, event.ReceiverID)
 }
