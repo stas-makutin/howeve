@@ -13,77 +13,40 @@ import (
 	"github.com/stas-makutin/howeve/events"
 )
 
-type queryIDType uint16
-
-const (
-	queryGetConfig = queryIDType(iota)
-)
-
-// WebSocketQuery struct
-type WebSocketQuery struct {
-	QueryID queryIDType `json:"q"`
-	Payload interface{} `json:"p,omitempty"`
-}
-
-// UnmarshalJSON func
-func (c *WebSocketQuery) UnmarshalJSON(data []byte) error {
-	var env struct {
-		QueryID string          `json:"q"`
-		Payload json.RawMessage `json:"p,omitempty"`
-	}
-	err := json.Unmarshal(data, &env)
-	if err != nil {
-		return err
-	}
-	id, ok := map[string]queryIDType{
-		"getCfg": queryGetConfig, "getConfig": queryGetConfig,
-	}[env.QueryID]
-	if !ok {
-		return fmt.Errorf("Unknown query %v", env.QueryID)
-	}
-	c.QueryID = id
-	c.Payload = nil
-	/*
-		switch c.QueryID {
-		}
-	*/
-	return err
-}
-
-// WebSocketTextWriter struct
-type WebSocketTextWriter struct {
-	conn net.Conn
-}
-
-func (w WebSocketTextWriter) Write(p []byte) (n int, err error) {
-	n = 0
-	err = wsutil.WriteServerText(w.conn, p)
-	return
-}
-
 func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext) {
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
-		// todo handle error
+		appendLogFields(r, fmt.Sprintf("%T: %v", err, err.Error()))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
+	co := nextWsConnOrdinal()
+	co.logOpen()
+	closeCh := make(chan struct{})
 	go func() {
-		// closes connection on http server shutdown
-		hc.stopWg.Wait()
+		select {
+		case <-hc.stopCh: // closes connection on http server shutdown
+		case <-closeCh: // closes connection if it is terminated
+		}
 		conn.Close()
+		co.logClose()
 	}()
 	hc.handlerWg.Add(1)
-	go messageLoop(conn, hc)
+	go func() {
+		defer hc.handlerWg.Done()
+		defer close(closeCh)
+		messageLoop(conn, co)
+	}()
 }
 
-func messageLoop(conn net.Conn, hc *handlerContext) {
-	defer hc.handlerWg.Done()
-	defer conn.Close()
-
+func messageLoop(conn net.Conn, co wsConnOrdinal) {
 	var id events.SubscriberID
 	id = eventh.Dispatcher.Subscribe(func(event interface{}) {
 		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
 			switch te.(type) {
 			case *eventh.ConfigData:
+				co.logMsg(0, "", false, string(queryGetConfig), 0)
+
 				err := json.NewEncoder(WebSocketTextWriter{conn}).Encode(event.(*eventh.ConfigData).Config)
 				if err != nil {
 					// TODO
@@ -94,6 +57,8 @@ func messageLoop(conn net.Conn, hc *handlerContext) {
 	defer eventh.Dispatcher.Unsubscribe(id)
 
 	for {
+		mo := nextWsMsgOrdinal()
+
 		msg, _, err := wsutil.ReadClientData(conn)
 		if err != nil {
 			if err != io.EOF {
@@ -109,12 +74,23 @@ func messageLoop(conn net.Conn, hc *handlerContext) {
 			continue
 		}
 
+		co.logMsg(mo, q.ID, true, string(q.Type), int64(len(msg)))
+
 		// process message
-		switch q.QueryID {
+		switch q.Type {
 		case queryGetConfig:
 			eventh.Dispatcher.Send(&eventh.ConfigGet{RequestTarget: events.RequestTarget{ReceiverID: id}})
 		}
 	}
+}
 
-	fmt.Println("-- disconnected")
+// WebSocketTextWriter struct
+type WebSocketTextWriter struct {
+	conn net.Conn
+}
+
+func (w WebSocketTextWriter) Write(p []byte) (n int, err error) {
+	n = 0
+	err = wsutil.WriteServerText(w.conn, p)
+	return
 }

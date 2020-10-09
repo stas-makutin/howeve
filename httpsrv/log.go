@@ -12,24 +12,24 @@ import (
 	"github.com/stas-makutin/howeve/log"
 )
 
-type httpLogResponseWriter struct {
+type logResponseWriter struct {
 	http.ResponseWriter
 	statusCode    int
 	contentLength int64
 }
 
-func (w *httpLogResponseWriter) WriteHeader(status int) {
+func (w *logResponseWriter) WriteHeader(status int) {
 	w.statusCode = status
 	w.ResponseWriter.WriteHeader(status)
 }
 
-func (w *httpLogResponseWriter) Write(b []byte) (int, error) {
+func (w *logResponseWriter) Write(b []byte) (int, error) {
 	n, err := w.ResponseWriter.Write(b)
 	w.contentLength += int64(n)
 	return n, err
 }
 
-func (w *httpLogResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+func (w *logResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if hj, ok := w.ResponseWriter.(http.Hijacker); ok {
 		return hj.Hijack()
 	}
@@ -44,17 +44,17 @@ type httpLogFields struct {
 	fields []string
 }
 
-func httpAppendLogFields(r *http.Request, vals ...string) {
+func appendLogFields(r *http.Request, vals ...string) {
 	if fields, ok := r.Context().Value(httpLogFieldsKey).(*httpLogFields); ok {
 		fields.fields = append(fields.fields, vals...)
 	}
 }
 
-func httpLogHandler() func(http.Handler) http.Handler {
+func logHandler() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().Local()
-			lrw := &httpLogResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+			lrw := &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 			fields := &httpLogFields{}
 			ctx := context.WithValue(r.Context(), httpLogFieldsKey, fields)
 			defer func() {

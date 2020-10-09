@@ -16,8 +16,8 @@ const handlerContextKey handlerContextKeyType = 0
 // HandlerContext struct
 type handlerContext struct {
 	cfg       *config.HTTPServerConfig
-	stopWg    sync.WaitGroup
 	handlerWg sync.WaitGroup
+	stopCh    chan struct{}
 }
 
 type handlerCtxFunc func(http.ResponseWriter, *http.Request, *handlerContext)

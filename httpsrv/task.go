@@ -21,29 +21,31 @@ const defaultHTTPPort = 8180
 type Task struct {
 	listener *net.Listener
 	server   *http.Server
-	hctx     handlerContext
+	hc       handlerContext
 }
 
 // NewTask func
 func NewTask() *Task {
 	t := &Task{}
+	t.hc.stopCh = make(chan struct{})
+	close(t.hc.stopCh)
 	config.AddReader(t.readConfig)
 	config.AddWriter(t.writeConfig)
 	return t
 }
 
 func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
-	t.hctx.cfg = cfg.HTTPServer
-	if t.hctx.cfg == nil {
+	t.hc.cfg = cfg.HTTPServer
+	if t.hc.cfg == nil {
 		return
 	}
-	if t.hctx.cfg.Port != 0 && (t.hctx.cfg.Port < 1 || t.hctx.cfg.Port > 65535) {
+	if t.hc.cfg.Port != 0 && (t.hc.cfg.Port < 1 || t.hc.cfg.Port > 65535) {
 		cfgError("httpServer.port must be between 1 and 65535.")
 	}
 }
 
 func (t *Task) writeConfig(cfg *config.Config) {
-	cfg.HTTPServer = t.hctx.cfg
+	cfg.HTTPServer = t.hc.cfg
 }
 
 // Open func
@@ -52,15 +54,15 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	port := defaultHTTPPort
 	var readTimeout, readHeaderTimeout, writeTimeout, idleTimeout uint
 	var maxHeaderBytes int
-	if t.hctx.cfg != nil {
-		if t.hctx.cfg.Port != 0 {
-			port = t.hctx.cfg.Port
+	if t.hc.cfg != nil {
+		if t.hc.cfg.Port != 0 {
+			port = t.hc.cfg.Port
 		}
-		readTimeout = t.hctx.cfg.ReadTimeout
-		readHeaderTimeout = t.hctx.cfg.ReadHeaderTimeout
-		writeTimeout = t.hctx.cfg.WriteTimeout
-		idleTimeout = t.hctx.cfg.IdleTimeout
-		maxHeaderBytes = int(t.hctx.cfg.MaxHeaderBytes)
+		readTimeout = t.hc.cfg.ReadTimeout
+		readHeaderTimeout = t.hc.cfg.ReadHeaderTimeout
+		writeTimeout = t.hc.cfg.WriteTimeout
+		idleTimeout = t.hc.cfg.IdleTimeout
+		maxHeaderBytes = int(t.hc.cfg.MaxHeaderBytes)
 	}
 
 	router := http.NewServeMux()
@@ -69,10 +71,10 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 	var handler http.Handler = router
 	if log.Enabled() {
-		handler = httpLogHandler()(handler)
+		handler = logHandler()(handler)
 	}
 
-	baseCtx := context.WithValue(context.Background(), handlerContextKey, &t.hctx)
+	baseCtx := context.WithValue(context.Background(), handlerContextKey, &t.hc)
 
 	server := http.Server{
 		Handler:           handler,
@@ -92,14 +94,14 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	}
 
 	// apply concurrent connections limit
-	if t.hctx.cfg != nil && t.hctx.cfg.MaxConnections > 0 {
-		listener = netutil.LimitListener(listener, int(t.hctx.cfg.MaxConnections))
+	if t.hc.cfg != nil && t.hc.cfg.MaxConnections > 0 {
+		listener = netutil.LimitListener(listener, int(t.hc.cfg.MaxConnections))
 	}
 
 	t.listener = &listener
 	t.server = &server
 	ctx.Wg.Add(1)
-	t.hctx.stopWg.Add(1)
+	t.hc.stopCh = make(chan struct{})
 	go func() {
 		restart := false
 		err = t.server.Serve(*t.listener)
@@ -107,7 +109,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 			ctx.Log.Printf("HTTP server failure: %v", err)
 			restart = true
 		}
-		t.hctx.stopWg.Done()
+		close(t.hc.stopCh)
 		if restart {
 			tasks.StopServiceTasks()
 		}
@@ -132,8 +134,10 @@ func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 		}
 		t.server = nil
 	}
-	t.hctx.stopWg.Wait()
-	t.hctx.handlerWg.Wait()
+	select {
+	case <-t.hc.stopCh:
+	}
+	t.hc.handlerWg.Wait()
 	if t.listener != nil {
 		err := (*t.listener).Close()
 		if err != nil {
