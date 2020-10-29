@@ -9,8 +9,8 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/stas-makutin/howeve/eventh"
 	"github.com/stas-makutin/howeve/events"
+	"github.com/stas-makutin/howeve/events/handlers"
 )
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext) {
@@ -41,20 +41,20 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext)
 
 func messageLoop(conn net.Conn, co wsConnOrdinal) {
 	var id events.SubscriberID
-	id = eventh.Dispatcher.Subscribe(func(event interface{}) {
+	id = handlers.Dispatcher.Subscribe(func(event interface{}) {
 		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
 			switch te.(type) {
-			case *eventh.ConfigData:
+			case *handlers.ConfigData:
 				co.logMsg(0, "", false, string(queryGetConfig), 0)
 
-				err := json.NewEncoder(WebSocketTextWriter{conn}).Encode(event.(*eventh.ConfigData).Config)
+				err := json.NewEncoder(WebSocketTextWriter{conn}).Encode(event.(*handlers.ConfigData).Config)
 				if err != nil {
 					// TODO
 				}
 			}
 		}
 	})
-	defer eventh.Dispatcher.Unsubscribe(id)
+	defer handlers.Dispatcher.Unsubscribe(id)
 
 	for {
 		mo := nextWsMsgOrdinal()
@@ -79,7 +79,7 @@ func messageLoop(conn net.Conn, co wsConnOrdinal) {
 		// process message
 		switch q.Type {
 		case queryGetConfig:
-			eventh.Dispatcher.Send(&eventh.ConfigGet{RequestTarget: events.RequestTarget{ReceiverID: id}})
+			handlers.Dispatcher.Send(&handlers.ConfigGet{RequestTarget: events.RequestTarget{ReceiverID: id}})
 		}
 	}
 }

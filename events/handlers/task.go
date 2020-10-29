@@ -1,4 +1,4 @@
-package eventh
+package handlers
 
 import (
 	"github.com/stas-makutin/howeve/config"

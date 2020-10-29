@@ -20,6 +20,11 @@ func (e *RequestTarget) SetReceiver(receiver SubscriberID) {
 	e.ReceiverID = receiver
 }
 
+// ResponseTarget func
+func (e *RequestTarget) ResponseTarget() ResponseTarget {
+	return ResponseTarget{ReceiverID: e.ReceiverID}
+}
+
 // TargetedResponse interface
 type TargetedResponse interface {
 	Receiver() SubscriberID

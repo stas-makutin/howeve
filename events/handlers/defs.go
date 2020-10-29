@@ -1,17 +1,16 @@
-package eventh
+package handlers
 
 import (
 	"github.com/stas-makutin/howeve/config"
-	"github.com/stas-makutin/howeve/events"
 )
 
 // ConfigGet - get config event
 type ConfigGet struct {
-	events.RequestTarget
+	RequestHeader
 }
 
 // ConfigData - config data event
 type ConfigData struct {
-	events.ResponseTarget
+	ResponseHeader
 	config.Config
 }
