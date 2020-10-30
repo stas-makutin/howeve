@@ -2,25 +2,9 @@ package httpsrv
 
 import (
 	"strconv"
-	"sync/atomic"
 
 	"github.com/stas-makutin/howeve/log"
 )
-
-type wsOrdinal uint32
-type wsConnOrdinal wsOrdinal
-type wsMsgOrdinal wsOrdinal
-
-var wsCurrentConnOrdinal wsConnOrdinal
-var wsCurrentMsgOrdinal wsMsgOrdinal
-
-func nextWsConnOrdinal() wsConnOrdinal {
-	return wsConnOrdinal(atomic.AddUint32((*uint32)(&wsCurrentConnOrdinal), 1))
-}
-
-func nextWsMsgOrdinal() wsMsgOrdinal {
-	return wsMsgOrdinal(atomic.AddUint32((*uint32)(&wsCurrentMsgOrdinal), 1))
-}
 
 func (o wsConnOrdinal) logOpen() {
 	log.Report(log.SrcWS, "S", strconv.FormatUint(uint64(o), 36))

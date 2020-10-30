@@ -5,5 +5,5 @@ import (
 )
 
 func handleConfigGet(event *ConfigGet, cfg *config.Config) {
-	Dispatcher.Send(&ConfigData{Config: *cfg, ResponseHeader: event.Associate()})
+	Dispatcher.Send(&ConfigGetResult{Config: *cfg, ResponseHeader: event.Associate()})
 }
