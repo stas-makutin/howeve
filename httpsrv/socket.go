@@ -6,12 +6,28 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
+	"github.com/stas-makutin/howeve/log"
 )
+
+const wsopStart = "S"
+const wsopFinish = "F"
+const wsopOutbound = "O"
+const wsopInbound = "I"
+
+const wsocSuccess = "0"
+const wsocReadError = "1"
+const wsocWriteError = "2"
+const wsocUnexpectedRequest = "3"
+const wsocUnexpectedResponse = "4"
+const wsocNoRequestMapping = "5"
+
+var connectionOrdinal handlers.Ordinal
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext) {
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
@@ -20,8 +36,10 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	co := nextWsConnOrdinal()
-	co.logOpen()
+
+	co := connectionOrdinal.Next()
+	log.Report(log.SrcWS, wsopStart, co.String())
+
 	closeCh := make(chan struct{})
 	go func() {
 		select {
@@ -29,8 +47,9 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext)
 		case <-closeCh: // closes connection if it is terminated
 		}
 		conn.Close()
-		co.logClose()
+		log.Report(log.SrcWS, wsopFinish, co.String())
 	}()
+
 	hc.handlerWg.Add(1)
 	go func() {
 		defer hc.handlerWg.Done()
@@ -39,58 +58,88 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext)
 	}()
 }
 
-func messageLoop(conn net.Conn, co wsConnOrdinal) {
+func messageLoop(conn net.Conn, co handlers.Ordinal) {
 	var id events.SubscriberID
 	id = handlers.Dispatcher.Subscribe(func(event interface{}) {
 		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
-			switch te.(type) {
-			case *handlers.ConfigData:
-				co.logMsg(0, "", false, string(queryGetConfig), 0)
-
-				err := json.NewEncoder(WebSocketTextWriter{conn}).Encode(event.(*handlers.ConfigData).Config)
-				if err != nil {
-					// TODO
-				}
+			var eo handlers.Ordinal
+			var eid string
+			if th, ok := event.(*handlers.TraceHeader); ok {
+				eo, eid = (*th).Identifiers()
+			}
+			if query := queryFromEvent(te); query != nil {
+				writeQuery(conn, co, eo, query)
+			} else {
+				log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocUnexpectedResponse, eid, fmt.Sprintf("%T", event))
 			}
 		}
 	})
 	defer handlers.Dispatcher.Unsubscribe(id)
 
 	for {
-		mo := nextWsMsgOrdinal()
-
 		msg, _, err := wsutil.ReadClientData(conn)
 		if err != nil {
 			if err != io.EOF {
-				// TODO report error
+				log.Report(log.SrcWS, wsopInbound, co.String(), handlers.EventOrdinal.Next().String(), wsocReadError, err.Error())
 			}
 			break
 		}
 
-		var q WebSocketQuery
+		var q Query
 		err = json.Unmarshal(msg, &q)
 		if err != nil {
-			// TODO report error
+			sg := msg
+			if len(sg) > 32 {
+				sg = sg[:32]
+			}
+			eo := handlers.EventOrdinal.Next()
+			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocUnexpectedRequest, string(sg), err.Error())
+			writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID})
 			continue
 		}
 
-		co.logMsg(mo, q.ID, true, string(q.Type), int64(len(msg)))
-
 		// process message
-		switch q.Type {
-		case queryGetConfig:
-			handlers.Dispatcher.Send(&handlers.ConfigGet{RequestTarget: events.RequestTarget{ReceiverID: id}})
+		n, _ := queryNameMap[q.Type]
+		if event := q.toTargetedRequest(id); event != nil {
+			var eo handlers.Ordinal
+			if th, ok := event.(*handlers.TraceHeader); ok {
+				eo, _ = (*th).Identifiers()
+			}
+			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
+			handlers.Dispatcher.Send(event)
+		} else {
+			eo := handlers.EventOrdinal.Next()
+			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocNoRequestMapping, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
+			writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID})
 		}
+	}
+}
+
+func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Query) {
+	w := newWebSocketTextWriter(conn)
+	n, _ := queryNameMap[q.Type]
+	if err := json.NewEncoder(w).Encode(q); err == nil {
+		log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatUint(w.length, 10))
+	} else {
+		log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocWriteError, q.ID, n, err.Error())
 	}
 }
 
 // WebSocketTextWriter struct
 type WebSocketTextWriter struct {
-	conn net.Conn
+	conn   net.Conn
+	length uint64
 }
 
-func (w WebSocketTextWriter) Write(p []byte) (n int, err error) {
-	n = 0
+func newWebSocketTextWriter(conn net.Conn) *WebSocketTextWriter {
+	return &WebSocketTextWriter{conn, 0}
+}
+
+func (w *WebSocketTextWriter) Write(p []byte) (n int, err error) {
 	err = wsutil.WriteServerText(w.conn, p)
+	if err == nil {
+		n = len(p)
+		w.length += uint64(n)
+	}
 	return
 }

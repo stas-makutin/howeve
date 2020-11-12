@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
 type queryType uint16
 
 const (
-	queryRestart = queryType(iota)
+	queryUnexpected = queryType(iota)
+	queryRestart
 	queryRestartResult
 	queryGetConfig
 	queryGetConfigResult
@@ -22,6 +24,7 @@ var queryTypeMap = map[string]queryType{
 }
 
 var queryNameMap = map[queryType]string{
+	queryUnexpected:      "unexpected",
 	queryRestart:         "restart",
 	queryRestartResult:   "restartResult",
 	queryGetConfig:       "getConfig",
@@ -30,16 +33,16 @@ var queryNameMap = map[queryType]string{
 
 // Query struct
 type Query struct {
-	Type    queryType   `json:"q"`
-	ID      string      `json:"i"`
-	Payload interface{} `json:"p,omitempty"`
+	Type    queryType
+	ID      string
+	Payload interface{}
 }
 
 // UnmarshalJSON func
 func (c *Query) UnmarshalJSON(data []byte) error {
 	var env struct {
 		Type    string          `json:"q"`
-		ID      string          `json:"i"`
+		ID      string          `json:"i,omitempty"`
 		Payload json.RawMessage `json:"p,omitempty"`
 	}
 	err := json.Unmarshal(data, &env)
@@ -60,7 +63,7 @@ func (c *Query) UnmarshalJSON(data []byte) error {
 func (c *Query) MarshalJSON() ([]byte, error) {
 	var env struct {
 		Type    string      `json:"q"`
-		ID      string      `json:"i"`
+		ID      string      `json:"i,omitempty"`
 		Payload interface{} `json:"p,omitempty"`
 	}
 	n, ok := queryNameMap[c.Type]
@@ -76,11 +79,20 @@ func (c *Query) MarshalJSON() ([]byte, error) {
 func (c *Query) toEvent() interface{} {
 	switch c.Type {
 	case queryRestart:
-		return handlers.Restart{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+		return &handlers.Restart{RequestHeader: *handlers.NewRequestHeader(c.ID)}
 	case queryGetConfig:
-		return handlers.ConfigGet{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+		return &handlers.ConfigGet{RequestHeader: *handlers.NewRequestHeader(c.ID)}
 	}
 	return nil
+}
+
+func (c *Query) toTargetedRequest(receiverID events.SubscriberID) interface{} {
+	event := c.toEvent()
+	if te, ok := event.(events.TargetedRequest); ok {
+		te.SetReceiver(receiverID)
+		return te
+	}
+	return event
 }
 
 func queryFromEvent(event interface{}) *Query {
