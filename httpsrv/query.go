@@ -19,8 +19,8 @@ const (
 )
 
 var queryTypeMap = map[string]queryType{
-	"restart": queryRestart,
-	"getCfg":  queryGetConfig, "getConfig": queryGetConfig,
+	"restart": queryRestart, "restartResult": queryRestartResult,
+	"getCfg": queryGetConfig, "getConfig": queryGetConfig, "getConfigResult": queryGetConfigResult,
 }
 
 var queryNameMap = map[queryType]string{
@@ -98,9 +98,9 @@ func (c *Query) toTargetedRequest(receiverID events.SubscriberID) interface{} {
 func queryFromEvent(event interface{}) *Query {
 	switch e := event.(type) {
 	case *handlers.RestartResult:
-		return &Query{Type: queryRestartResult, ID: e.ID}
+		return &Query{Type: queryRestartResult, ID: e.TraceID()}
 	case *handlers.ConfigGetResult:
-		return &Query{Type: queryGetConfigResult, ID: e.ID, Payload: e.Config}
+		return &Query{Type: queryGetConfigResult, ID: e.TraceID(), Payload: e.Config}
 	}
 	return nil
 }

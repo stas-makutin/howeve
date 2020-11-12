@@ -44,6 +44,8 @@ func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 
 func (t *Task) handleEvents(event interface{}) {
 	switch e := event.(type) {
+	case *Restart:
+		handleRestart(e)
 	case *ConfigGet:
 		handleConfigGet(e, t.cfg)
 	}

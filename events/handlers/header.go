@@ -24,29 +24,39 @@ func (o Ordinal) String() string {
 
 // TraceHeader interface
 type TraceHeader interface {
-	Identifiers() (Ordinal, string)
-	Associate() TraceHeader
+	Ordinal() Ordinal
+	TraceID() string
+}
+
+// TraceFlow interface
+type TraceFlow interface {
+	Associate() TraceFlow
 }
 
 // Header - event header struct
 type Header struct {
-	Ordinal Ordinal
-	ID      string
+	ordinal Ordinal
+	traceID string
 }
 
 // NewHeader function creates new header and allocates next ordinal
-func NewHeader(ID string) *Header {
-	return &Header{Ordinal: EventOrdinal.Next(), ID: ID}
+func NewHeader(traceID string) *Header {
+	return &Header{ordinal: EventOrdinal.Next(), traceID: traceID}
 }
 
-// Identifiers - implementation of TraceHeader
-func (h *Header) Identifiers() (Ordinal, string) {
-	return h.Ordinal, h.ID
+// Ordinal - implementation of TraceHeader
+func (h Header) Ordinal() Ordinal {
+	return h.ordinal
 }
 
-// Associate - implementation of TraceHeader
+// TraceID - implementation of TraceHeader
+func (h Header) TraceID() string {
+	return h.traceID
+}
+
+// Associate - implementation of TraceFlow
 func (h *Header) Associate() Header {
-	return Header{Ordinal: h.Ordinal, ID: h.ID}
+	return Header{ordinal: h.Ordinal(), traceID: h.TraceID()}
 }
 
 // RequestHeader - combined header of the request in the request-response pair
@@ -60,7 +70,7 @@ func NewRequestHeader(ID string) *RequestHeader {
 	return &RequestHeader{Header: *NewHeader(ID)}
 }
 
-// Associate - implementation of TraceHeader
+// Associate - implementation of TraceFlow
 func (h *RequestHeader) Associate() ResponseHeader {
 	return ResponseHeader{Header: h.Header.Associate(), ResponseTarget: h.ResponseTarget()}
 }

@@ -64,8 +64,8 @@ func messageLoop(conn net.Conn, co handlers.Ordinal) {
 		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
 			var eo handlers.Ordinal
 			var eid string
-			if th, ok := event.(*handlers.TraceHeader); ok {
-				eo, eid = (*th).Identifiers()
+			if th, ok := event.(handlers.TraceHeader); ok {
+				eo, eid = th.Ordinal(), th.TraceID()
 			}
 			if query := queryFromEvent(te); query != nil {
 				writeQuery(conn, co, eo, query)
@@ -102,8 +102,8 @@ func messageLoop(conn net.Conn, co handlers.Ordinal) {
 		n, _ := queryNameMap[q.Type]
 		if event := q.toTargetedRequest(id); event != nil {
 			var eo handlers.Ordinal
-			if th, ok := event.(*handlers.TraceHeader); ok {
-				eo, _ = (*th).Identifiers()
+			if th, ok := event.(handlers.TraceHeader); ok {
+				eo = th.Ordinal()
 			}
 			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
 			handlers.Dispatcher.Send(event)

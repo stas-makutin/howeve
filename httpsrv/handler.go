@@ -8,6 +8,9 @@ import (
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
+func handleRestart(w http.ResponseWriter, r *http.Request) {
+}
+
 func handleConfig(w http.ResponseWriter, r *http.Request) {
 	handlers.Dispatcher.RequestResponse(r.Context(), &handlers.ConfigGet{RequestHeader: *handlers.NewRequestHeader("")}, reflect.TypeOf(&handlers.ConfigGetResult{}), func(event interface{}) {
 		if query := queryFromEvent(event); query != nil {
