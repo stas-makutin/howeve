@@ -7,7 +7,7 @@ import (
 
 func handleRestart(event *Restart) {
 	Dispatcher.Send(&RestartResult{ResponseHeader: event.Associate()})
-	tasks.StopServiceTasks()
+	go tasks.StopServiceTasks()
 }
 
 func handleConfigGet(event *ConfigGet, cfg *config.Config) {

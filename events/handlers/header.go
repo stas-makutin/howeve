@@ -22,10 +22,15 @@ func (o Ordinal) String() string {
 	return strconv.FormatUint(uint64(o), 36)
 }
 
-// TraceHeader interface
-type TraceHeader interface {
+// TraceInfo interface
+type TraceInfo interface {
 	Ordinal() Ordinal
 	TraceID() string
+}
+
+// TraceSet interface
+type TraceSet interface {
+	InitTrace(traceID string)
 }
 
 // TraceFlow interface
@@ -44,14 +49,20 @@ func NewHeader(traceID string) *Header {
 	return &Header{ordinal: EventOrdinal.Next(), traceID: traceID}
 }
 
-// Ordinal - implementation of TraceHeader
+// Ordinal - implementation of TraceInfo
 func (h Header) Ordinal() Ordinal {
 	return h.ordinal
 }
 
-// TraceID - implementation of TraceHeader
+// TraceID - implementation of TraceInfo
 func (h Header) TraceID() string {
 	return h.traceID
+}
+
+// InitTrace - implementation of TraceSet
+func (h *Header) InitTrace(traceID string) {
+	h.ordinal = EventOrdinal.Next()
+	h.traceID = traceID
 }
 
 // Associate - implementation of TraceFlow
@@ -68,6 +79,11 @@ type RequestHeader struct {
 // NewRequestHeader function creates new request header and allocates next ordinal
 func NewRequestHeader(ID string) *RequestHeader {
 	return &RequestHeader{Header: *NewHeader(ID)}
+}
+
+// InitTrace - implementation of TraceSet
+func (h *RequestHeader) InitTrace(traceID string) {
+	h.Header.InitTrace(traceID)
 }
 
 // Associate - implementation of TraceFlow

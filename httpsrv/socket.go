@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -64,8 +65,8 @@ func messageLoop(conn net.Conn, co handlers.Ordinal) {
 		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
 			var eo handlers.Ordinal
 			var eid string
-			if th, ok := event.(handlers.TraceHeader); ok {
-				eo, eid = th.Ordinal(), th.TraceID()
+			if ti, ok := event.(handlers.TraceInfo); ok {
+				eo, eid = ti.Ordinal(), ti.TraceID()
 			}
 			if query := queryFromEvent(te); query != nil {
 				writeQuery(conn, co, eo, query)
@@ -79,7 +80,9 @@ func messageLoop(conn net.Conn, co handlers.Ordinal) {
 	for {
 		msg, _, err := wsutil.ReadClientData(conn)
 		if err != nil {
-			if err != io.EOF {
+			// TODO replace !strings.Contains(err.Error(), "use of closed network connection") with err != net.ErrClosed in go 1.16
+			// details: https://github.com/golang/go/issues/4373
+			if err != io.EOF && !strings.Contains(err.Error(), "use of closed network connection") {
 				log.Report(log.SrcWS, wsopInbound, co.String(), handlers.EventOrdinal.Next().String(), wsocReadError, err.Error())
 			}
 			break
@@ -102,8 +105,8 @@ func messageLoop(conn net.Conn, co handlers.Ordinal) {
 		n, _ := queryNameMap[q.Type]
 		if event := q.toTargetedRequest(id); event != nil {
 			var eo handlers.Ordinal
-			if th, ok := event.(handlers.TraceHeader); ok {
-				eo = th.Ordinal()
+			if ti, ok := event.(handlers.TraceInfo); ok {
+				eo = ti.Ordinal()
 			}
 			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
 			handlers.Dispatcher.Send(event)
