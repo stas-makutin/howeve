@@ -80,6 +80,8 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 	})
 	defer handlers.Dispatcher.Unsubscribe(id)
 
+	closeCh := make(chan struct{})
+
 	// read loop
 	go func() {
 		for {
@@ -123,6 +125,7 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 				}
 			}
 		}
+		close(closeCh)
 	}()
 
 Exit:
@@ -141,6 +144,8 @@ Exit:
 			} else {
 				log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocUnexpectedResponse, eid, fmt.Sprintf("%T", event))
 			}
+		case <-closeCh:
+			break Exit
 		case <-stopCh:
 			break Exit
 		}
