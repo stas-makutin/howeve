@@ -22,11 +22,12 @@ const wsopOutbound = "O"
 const wsopInbound = "I"
 
 const wsocSuccess = "0"
-const wsocReadError = "1"
-const wsocWriteError = "2"
-const wsocUnexpectedRequest = "3"
-const wsocUnexpectedResponse = "4"
-const wsocNoRequestMapping = "5"
+const wsocReadError = "R"
+const wsocWriteError = "W"
+const wsocUnexpectedRequest = "R"
+const wsocUnexpectedResponse = "P"
+const wsocNoRequestMapping = "M"
+const wsocSkipResponse = "S"
 
 var connectionOrdinal handlers.Ordinal
 
@@ -38,94 +39,132 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, hc *handlerContext)
 		return
 	}
 
-	co := connectionOrdinal.Next()
-	log.Report(log.SrcWS, wsopStart, co.String())
-
-	closeCh := make(chan struct{})
-	go func() {
-		select {
-		case <-hc.stopCh: // closes connection on http server shutdown
-		case <-closeCh: // closes connection if it is terminated
-		}
-		conn.Close()
-		log.Report(log.SrcWS, wsopFinish, co.String())
-	}()
-
 	hc.handlerWg.Add(1)
 	go func() {
 		defer hc.handlerWg.Done()
-		defer close(closeCh)
-		messageLoop(conn, co)
+		messageLoop(conn, hc.stopCh)
 	}()
 }
 
-func messageLoop(conn net.Conn, co handlers.Ordinal) {
+func messageLoop(conn net.Conn, stopCh chan struct{}) {
+	co := connectionOrdinal.Next()
+	log.Report(log.SrcWS, wsopStart, co.String())
+	defer log.Report(log.SrcWS, wsopFinish, co.String())
+	defer conn.Close()
+
+	writeCh := make(chan interface{}, 32)
+
 	var id events.SubscriberID
 	id = handlers.Dispatcher.Subscribe(func(event interface{}) {
+		toWrite := false
 		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
-			var eo handlers.Ordinal
-			var eid string
-			if ti, ok := event.(handlers.TraceInfo); ok {
-				eo, eid = ti.Ordinal(), ti.TraceID()
-			}
-			if query := queryFromEvent(te); query != nil {
-				writeQuery(conn, co, eo, query)
-			} else {
-				log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocUnexpectedResponse, eid, fmt.Sprintf("%T", event))
+			toWrite = true
+		}
+		if toWrite {
+		Written:
+			for {
+				select {
+				case writeCh <- event:
+					break Written
+				default:
+					skippedEvent := <-writeCh
+					var eo handlers.Ordinal
+					var eid string
+					if ti, ok := skippedEvent.(handlers.TraceInfo); ok {
+						eo, eid = ti.Ordinal(), ti.TraceID()
+					}
+					log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocSkipResponse, eid, fmt.Sprintf("%T", skippedEvent))
+				}
 			}
 		}
 	})
 	defer handlers.Dispatcher.Unsubscribe(id)
 
+	// read loop
+	go func() {
+		for {
+			msg, _, err := wsutil.ReadClientData(conn)
+			if err != nil {
+				if !isConnClosed(err) {
+					log.Report(log.SrcWS, wsopInbound, co.String(), handlers.EventOrdinal.Next().String(), wsocReadError, err.Error())
+				}
+				break
+			}
+
+			var q Query
+			err = json.Unmarshal(msg, &q)
+			if err != nil {
+				sg := msg
+				if len(sg) > 32 {
+					sg = sg[:32]
+				}
+				eo := handlers.EventOrdinal.Next()
+				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocUnexpectedRequest, string(sg), err.Error())
+				if writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID}) {
+					break
+				}
+				continue
+			}
+
+			// process message
+			n, _ := queryNameMap[q.Type]
+			if event := q.toTargetedRequest(id); event != nil {
+				var eo handlers.Ordinal
+				if ti, ok := event.(handlers.TraceInfo); ok {
+					eo = ti.Ordinal()
+				}
+				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
+				handlers.Dispatcher.Send(event)
+			} else {
+				eo := handlers.EventOrdinal.Next()
+				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocNoRequestMapping, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
+				if writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID}) {
+					break
+				}
+			}
+		}
+	}()
+
+Exit:
 	for {
-		msg, _, err := wsutil.ReadClientData(conn)
-		if err != nil {
-			// TODO replace !strings.Contains(err.Error(), "use of closed network connection") with err != net.ErrClosed in go 1.16
-			// details: https://github.com/golang/go/issues/4373
-			if err != io.EOF && !strings.Contains(err.Error(), "use of closed network connection") {
-				log.Report(log.SrcWS, wsopInbound, co.String(), handlers.EventOrdinal.Next().String(), wsocReadError, err.Error())
-			}
-			break
-		}
-
-		var q Query
-		err = json.Unmarshal(msg, &q)
-		if err != nil {
-			sg := msg
-			if len(sg) > 32 {
-				sg = sg[:32]
-			}
-			eo := handlers.EventOrdinal.Next()
-			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocUnexpectedRequest, string(sg), err.Error())
-			writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID})
-			continue
-		}
-
-		// process message
-		n, _ := queryNameMap[q.Type]
-		if event := q.toTargetedRequest(id); event != nil {
+		select {
+		case event := <-writeCh:
 			var eo handlers.Ordinal
+			var eid string
 			if ti, ok := event.(handlers.TraceInfo); ok {
-				eo = ti.Ordinal()
+				eo, eid = ti.Ordinal(), ti.TraceID()
 			}
-			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
-			handlers.Dispatcher.Send(event)
-		} else {
-			eo := handlers.EventOrdinal.Next()
-			log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocNoRequestMapping, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
-			writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID})
+			if query := queryFromEvent(event); query != nil {
+				if writeQuery(conn, co, eo, query) {
+					break Exit
+				}
+			} else {
+				log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocUnexpectedResponse, eid, fmt.Sprintf("%T", event))
+			}
+		case <-stopCh:
+			break Exit
 		}
 	}
 }
 
-func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Query) {
+func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Query) bool {
 	w := newWebSocketTextWriter(conn)
 	n, _ := queryNameMap[q.Type]
-	if err := json.NewEncoder(w).Encode(q); err == nil {
-		log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatUint(w.length, 10))
-	} else {
+	if err := json.NewEncoder(w).Encode(q); err != nil {
+		if isConnClosed(err) {
+			return true
+		}
 		log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocWriteError, q.ID, n, err.Error())
+	} else {
+		log.Report(log.SrcWS, wsopOutbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatUint(w.length, 10))
 	}
+	return false
+}
+
+func isConnClosed(err error) bool {
+	// TODO replace !strings.Contains(err.Error(), "use of closed network connection") with err != net.ErrClosed in go 1.16
+	// details: https://github.com/golang/go/issues/4373
+	return err == io.EOF || strings.Contains(err.Error(), "use of closed network connection")
 }
 
 // WebSocketTextWriter struct
