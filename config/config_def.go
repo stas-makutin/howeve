@@ -7,6 +7,7 @@ type Config struct {
 	WorkingDirectory string            `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Log              *LogConfig        `yaml:"log,omitempty" json:"log,omitempty"`
 	HTTPServer       *HTTPServerConfig `yaml:"httpServer,omitempty" json:"httpServer,omitempty"`
+	Services         []ServiceConfig   `yaml:"services,omitempty" json:"services,omitempty"`
 }
 
 // LogConfig defines configuration entries for the serivce logging
@@ -31,4 +32,12 @@ type HTTPServerConfig struct {
 	WriteTimeout      uint   `yaml:"writeTimeout,omitempty" json:"writeTimeout,omitempty"`           // milliseconds
 	IdleTimeout       uint   `yaml:"idleTimeout,omitempty" json:"idleTimeout,omitempty"`             // milliseconds
 	MaxHeaderBytes    uint32 `yaml:"maxHeaderBytes,omitempty" json:"maxHeaderBytes,omitempty"`
+}
+
+// ServiceConfig defines configuration of active services
+type ServiceConfig struct {
+	Protocol  string            `yaml:"protocol" json:"protocol"`
+	Transport string            `yaml:"transport" json:"transport"`
+	Entry     string            `yaml:"entry,omitempty" json:"entry,omitempty"`
+	Params    map[string]string `yaml:"params,omitempty" json:"params,omitempty"`
 }

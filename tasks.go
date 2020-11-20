@@ -5,6 +5,7 @@ import (
 	"github.com/stas-makutin/howeve/events/handlers"
 	"github.com/stas-makutin/howeve/httpsrv"
 	"github.com/stas-makutin/howeve/log"
+	"github.com/stas-makutin/howeve/services"
 	"github.com/stas-makutin/howeve/tasks"
 )
 
@@ -14,5 +15,6 @@ func init() {
 		{Name: "Log", Task: log.NewTask(appName)},
 		{Name: "Events", Task: handlers.NewTask()},
 		{Name: "HTTP server", Task: httpsrv.NewTask()},
+		{Name: "Services", Task: services.NewTask()},
 	}
 }
