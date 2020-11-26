@@ -1,5 +1,7 @@
 package services
 
+import "context"
+
 // ProtocolIdentifier type
 type ProtocolIdentifier uint8
 
@@ -22,10 +24,11 @@ type ServiceEntry struct {
 }
 
 // DiscoveryFunc is a method which returns discovered service entries or error
-type DiscoveryFunc func(params ParamValues) ([]ServiceEntry, error)
+type DiscoveryFunc func(ctx context.Context, params ParamValues) ([]ServiceEntry, error)
 
 // ProtocolTransportOptions defines transport options specific for the protocol
 type ProtocolTransportOptions struct {
+	Params          // protocol parameters
 	DiscoveryFunc   // could be nil
 	DiscoveryParams Params
 }

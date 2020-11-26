@@ -22,7 +22,7 @@ var Transports = map[TransportIdentifier]TransportInfo{
 			"baudRate": {
 				Description:  "The serial port bitrate",
 				Type:         ParamTypeInt32,
-				DefaultValue: "9600",
+				DefaultValue: "115200",
 			},
 			"dataBits": {
 				Description:  "The size of the character, bits",
