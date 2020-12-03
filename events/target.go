@@ -55,10 +55,11 @@ func (d *Dispatcher) RequestResponse(ctx context.Context, request TargetedReques
 	request.SetReceiver(id)
 	d.Send(request)
 	select {
+	case <-ctx.Done():
+		// break
 	case event := <-ch:
 		receiveFn(event)
 		return true
-	case <-ctx.Done():
 	}
 	return false
 }

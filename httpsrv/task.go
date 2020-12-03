@@ -21,6 +21,7 @@ const defaultHTTPPort = 8180
 type Task struct {
 	listener *net.Listener
 	server   *http.Server
+	cancel   context.CancelFunc
 	hc       handlerContext
 }
 
@@ -74,7 +75,8 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 		handler = logHandler()(handler)
 	}
 
-	baseCtx := context.WithValue(context.Background(), handlerContextKey, &t.hc)
+	baseCtx, cancel := context.WithCancel(context.WithValue(context.Background(), handlerContextKey, &t.hc))
+	t.cancel = cancel
 
 	server := http.Server{
 		Handler:           handler,
@@ -128,10 +130,12 @@ func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 	defer ctx.Wg.Done()
 
 	if t.server != nil {
+		t.cancel()
 		err := t.server.Shutdown(context.Background())
 		if err != nil {
 			ctx.Log.Printf("HTTP server stopping failure: %v", err)
 		}
+		t.cancel = nil
 		t.server = nil
 	}
 	select {

@@ -47,7 +47,7 @@ func parseProtocolInfo(r *http.Request) (events.TargetedRequest, bool, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, true, err
 	}
-	tr := &handlers.ProtocolInfo{}
+	tr := &handlers.ProtocolInfo{Filter: &handlers.ProtocolInfoFilter{}}
 	for _, v := range r.Form["protocols"] {
 		for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
 			if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
