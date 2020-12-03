@@ -7,7 +7,7 @@ type ProtocolIdentifier uint8
 
 // Supported protocols identifiers
 const (
-	ProtocolZWave = ProtocolIdentifier(iota)
+	ProtocolZWave = ProtocolIdentifier(iota + 1)
 )
 
 // ServiceKey struct defines service unique identifier/key
@@ -36,14 +36,14 @@ type ProtocolTransportOptions struct {
 // ProtocolInfo protocol definition structure
 type ProtocolInfo struct {
 	Name       string
-	Transports map[TransportIdentifier]ProtocolTransportOptions
+	Transports map[TransportIdentifier]*ProtocolTransportOptions
 }
 
 // Protocols contains protocols definitions
-var Protocols = map[ProtocolIdentifier]ProtocolInfo{
+var Protocols = map[ProtocolIdentifier]*ProtocolInfo{
 	ProtocolZWave: {
 		Name: "Z-Wave",
-		Transports: map[TransportIdentifier]ProtocolTransportOptions{
+		Transports: map[TransportIdentifier]*ProtocolTransportOptions{
 			TransportSerial: {
 				DiscoveryFunc: nil,
 			},

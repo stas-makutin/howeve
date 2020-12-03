@@ -24,6 +24,32 @@ const (
 	ParamTypeEnum
 )
 
+func (pt ParamType) String() string {
+	switch pt {
+	case ParamTypeInt8:
+		return "int8"
+	case ParamTypeInt16:
+		return "int16"
+	case ParamTypeInt32:
+		return "int32"
+	case ParamTypeInt64:
+		return "int64"
+	case ParamTypeUint8:
+		return "uint8"
+	case ParamTypeUint16:
+		return "uint16"
+	case ParamTypeUint32:
+		return "uint32"
+	case ParamTypeUint64:
+		return "uint64"
+	case ParamTypeBool:
+		return "bool"
+	case ParamTypeEnum:
+		return "enum"
+	}
+	return "string"
+}
+
 // ParamInfo parameter description
 type ParamInfo struct {
 	Description  string
@@ -33,7 +59,7 @@ type ParamInfo struct {
 }
 
 // Params type defines named parameter collection
-type Params map[string]ParamInfo
+type Params map[string]*ParamInfo
 
 // ParamValues type defines named parameter values
 type ParamValues map[string]interface{}
@@ -107,4 +133,18 @@ func (p Params) Parse(name, value string) (interface{}, error) {
 		}
 	}
 	return nil, ErrInvalidParamValue
+}
+
+// Merge returns copy of combined parameters with subordinate parameters
+func (p Params) Merge(subp Params) (result Params) {
+	result = make(Params)
+	for k, v := range p {
+		result[k] = v
+	}
+	for k, v := range subp {
+		if _, ok := result[k]; !ok {
+			result[k] = v
+		}
+	}
+	return
 }

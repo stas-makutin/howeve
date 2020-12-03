@@ -16,19 +16,34 @@ const (
 	queryRestartResult
 	queryGetConfig
 	queryGetConfigResult
+	queryProtocolList
+	queryProtocolListResult
+	queryTransportList
+	queryTransportListResult
+	queryProtocolInfo
+	queryProtocolInfoResult
 )
 
 var queryTypeMap = map[string]queryType{
 	"restart": queryRestart, "restartResult": queryRestartResult,
 	"getCfg": queryGetConfig, "getConfig": queryGetConfig, "getConfigResult": queryGetConfigResult,
+	"protocols": queryProtocolList, "protocolsResult": queryProtocolListResult,
+	"transports": queryTransportList, "transportsResult": queryTransportListResult,
+	"protocolInfo": queryProtocolInfo, "protocolInfoResult": queryProtocolInfoResult,
 }
 
 var queryNameMap = map[queryType]string{
-	queryUnexpected:      "unexpected",
-	queryRestart:         "restart",
-	queryRestartResult:   "restartResult",
-	queryGetConfig:       "getConfig",
-	queryGetConfigResult: "getConfigResult",
+	queryUnexpected:          "unexpected",
+	queryRestart:             "restart",
+	queryRestartResult:       "restartResult",
+	queryGetConfig:           "getConfig",
+	queryGetConfigResult:     "getConfigResult",
+	queryProtocolList:        "protocols",
+	queryProtocolListResult:  "protocolsResult",
+	queryTransportList:       "transports",
+	queryTransportListResult: "transportsResult",
+	queryProtocolInfo:        "protocolInfo",
+	queryProtocolInfoResult:  "protocolInfoResult",
 }
 
 // Query struct
@@ -55,8 +70,7 @@ func (c *Query) UnmarshalJSON(data []byte) error {
 	}
 	c.Type = t
 	c.ID = env.ID
-	c.Payload = env.Payload
-	return nil
+	return c.unmarshalPayload(env.Payload)
 }
 
 // MarshalJSON func
@@ -76,12 +90,32 @@ func (c *Query) MarshalJSON() ([]byte, error) {
 	return json.Marshal(env)
 }
 
+func (c *Query) unmarshalPayload(data []byte) error {
+	switch c.Type {
+	case queryProtocolInfo:
+		if len(data) > 0 {
+			var p handlers.ProtocolInfoFilter
+			if err := json.Unmarshal(data, &p); err != nil {
+				return err
+			}
+			c.Payload = &p
+		}
+	}
+	return nil
+}
+
 func (c *Query) toEvent() interface{} {
 	switch c.Type {
 	case queryRestart:
 		return &handlers.Restart{RequestHeader: *handlers.NewRequestHeader(c.ID)}
 	case queryGetConfig:
 		return &handlers.ConfigGet{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+	case queryProtocolList:
+		return &handlers.ProtocolList{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+	case queryTransportList:
+		return &handlers.TransportList{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+	case queryProtocolInfo:
+		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: c.Payload.(*handlers.ProtocolInfoFilter)}
 	}
 	return nil
 }
@@ -101,6 +135,12 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryRestartResult, ID: e.TraceID()}
 	case *handlers.ConfigGetResult:
 		return &Query{Type: queryGetConfigResult, ID: e.TraceID(), Payload: e.Config}
+	case *handlers.ProtocolListResult:
+		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
+	case *handlers.TransportListResult:
+		return &Query{Type: queryTransportListResult, ID: e.TraceID(), Payload: e.Transports}
+	case *handlers.ProtocolInfoResult:
+		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
 	}
 	return nil
 }

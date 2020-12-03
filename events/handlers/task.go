@@ -48,5 +48,11 @@ func (t *Task) handleEvents(event interface{}) {
 		handleRestart(e)
 	case *ConfigGet:
 		handleConfigGet(e, t.cfg)
+	case *ProtocolList:
+		handleProtocolList(e)
+	case *TransportList:
+		handleTransportList(e)
+	case *ProtocolInfo:
+		handleProtocolInfo(e)
 	}
 }

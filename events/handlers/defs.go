@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/services"
 )
 
 // Restart - restart the service
@@ -23,4 +24,95 @@ type ConfigGet struct {
 type ConfigGetResult struct {
 	ResponseHeader
 	config.Config
+}
+
+// ProtocolListEntry - list of supported protocols
+type ProtocolListEntry struct {
+	ID   uint8  `json:"id"`
+	Name string `json:"name"`
+}
+
+// ProtocolList - get list of supported protocols request
+type ProtocolList struct {
+	RequestHeader
+}
+
+// ProtocolListResult - get list of supported protocols response
+type ProtocolListResult struct {
+	ResponseHeader
+	Protocols []*ProtocolListEntry
+}
+
+// TransportListEntry - list of all available transports despite the protocol
+type TransportListEntry struct {
+	ID   uint8  `json:"id"`
+	Name string `json:"name"`
+}
+
+// TransportList - get list of all available transports despite the protocol
+type TransportList struct {
+	RequestHeader
+}
+
+// TransportListResult - the response to get list of all available transports despite the protocol
+type TransportListResult struct {
+	ResponseHeader
+	Transports []*TransportListEntry
+}
+
+// ParamInfoEntry - information about named parameter
+type ParamInfoEntry struct {
+	Description  string   `json:"description"`
+	Type         string   `json:"type"`
+	DefaultValue string   `json:"defaultValue,omitempty"`
+	EnumValues   []string `json:"enumValues,omitempty"`
+}
+
+func buildParamsInfo(p services.Params) (pie map[string]*ParamInfoEntry) {
+	pie = make(map[string]*ParamInfoEntry)
+	for name, pi := range p {
+		pie[name] = &ParamInfoEntry{
+			Description:  pi.Description,
+			Type:         pi.Type.String(),
+			DefaultValue: pi.DefaultValue,
+			EnumValues:   pi.EnumValues,
+		}
+	}
+	return
+}
+
+// ProtocolTransportInfoEntry - protocol detaild information
+type ProtocolTransportInfoEntry struct {
+	ID              uint8                      `json:"id"`
+	Valid           bool                       `json:"valid"`
+	Name            string                     `json:"name,omitempty"`
+	Params          map[string]*ParamInfoEntry `json:"params,omitempty"`
+	Discoverable    bool                       `json:"discoverable"`
+	DiscoveryParams map[string]*ParamInfoEntry `json:"discoveryParams,omitempty"`
+}
+
+// ProtocolInfoEntry - protocol detaild information
+type ProtocolInfoEntry struct {
+	ID         uint8                         `json:"id"`
+	Valid      bool                          `json:"valid"`
+	Name       string                        `json:"name,omitempty"`
+	Transports []*ProtocolTransportInfoEntry `json:"transports,omitempty"`
+}
+
+// ProtocolInfoFilter - protocols/transport filter
+type ProtocolInfoFilter struct {
+	Protocols  []uint8 `json:"protocols,omitempty"`
+	Transports []uint8 `json:"transports,omitempty"`
+}
+
+// ProtocolInfo - get protocol(s) detailed information
+type ProtocolInfo struct {
+	RequestHeader
+	Filter *ProtocolInfoFilter
+}
+
+// ProtocolInfoResult - the response to get list of all available transports despite the protocol
+type ProtocolInfoResult struct {
+	ResponseHeader
+	Protocols []*ProtocolInfoEntry
 }

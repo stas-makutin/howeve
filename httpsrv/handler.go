@@ -4,13 +4,19 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
-func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.Type, request func(*http.Request) (events.TargetedRequest, bool)) {
-	req, initTrace := request(r)
+func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.Type, request func(*http.Request) (events.TargetedRequest, bool, error)) {
+	req, initTrace, err := request(r)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 	if initTrace {
 		if ts, ok := req.(handlers.TraceSet); ok {
 			ts.InitTrace(r.URL.Query().Get("i"))
@@ -37,14 +43,28 @@ func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.T
 	})
 }
 
-func handleRestart(w http.ResponseWriter, r *http.Request) {
-	handleEvents(w, r, reflect.TypeOf(&handlers.RestartResult{}), func(h *http.Request) (events.TargetedRequest, bool) {
-		return &handlers.Restart{}, true
-	})
-}
-
-func handleConfig(w http.ResponseWriter, r *http.Request) {
-	handleEvents(w, r, reflect.TypeOf(&handlers.ConfigGetResult{}), func(h *http.Request) (events.TargetedRequest, bool) {
-		return &handlers.ConfigGet{}, true
-	})
+func parseProtocolInfo(r *http.Request) (events.TargetedRequest, bool, error) {
+	if err := r.ParseForm(); err != nil {
+		return nil, true, err
+	}
+	tr := &handlers.ProtocolInfo{}
+	for _, v := range r.Form["protocols"] {
+		for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
+			if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
+				return nil, true, err
+			} else {
+				tr.Filter.Protocols = append(tr.Filter.Protocols, uint8(n))
+			}
+		}
+	}
+	for _, v := range r.Form["transports"] {
+		for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
+			if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
+				return nil, true, err
+			} else {
+				tr.Filter.Transports = append(tr.Filter.Transports, uint8(n))
+			}
+		}
+	}
+	return tr, true, nil
 }

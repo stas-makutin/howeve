@@ -5,7 +5,7 @@ type TransportIdentifier uint8
 
 // Supported transport identifiers
 const (
-	TransportSerial = TransportIdentifier(iota)
+	TransportSerial = TransportIdentifier(iota + 1)
 )
 
 // TransportInfo transport definition structure
@@ -15,7 +15,7 @@ type TransportInfo struct {
 }
 
 // Transports contains transports definitions
-var Transports = map[TransportIdentifier]TransportInfo{
+var Transports = map[TransportIdentifier]*TransportInfo{
 	TransportSerial: {
 		Name: "Serial",
 		Params: Params{
