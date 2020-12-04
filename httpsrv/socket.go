@@ -14,6 +14,7 @@ import (
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 	"github.com/stas-makutin/howeve/log"
+	"golang.org/x/net/context"
 )
 
 const wsopStart = "S"
@@ -81,6 +82,7 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 	defer handlers.Dispatcher.Unsubscribe(id)
 
 	closeCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// read loop
 	go func() {
@@ -110,7 +112,7 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 
 			// process message
 			n, _ := queryNameMap[q.Type]
-			if event := q.toTargetedRequest(id); event != nil {
+			if event := q.toTargetedRequest(ctx, id); event != nil {
 				var eo handlers.Ordinal
 				if ti, ok := event.(handlers.TraceInfo); ok {
 					eo = ti.Ordinal()
@@ -150,6 +152,7 @@ Exit:
 			break Exit
 		}
 	}
+	cancel()
 }
 
 func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Query) bool {

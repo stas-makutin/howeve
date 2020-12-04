@@ -7,17 +7,25 @@ import (
 
 // TargetedRequest interface
 type TargetedRequest interface {
-	SetReceiver(receiver SubscriberID)
+	SetReceiver(ctx context.Context, receiver SubscriberID)
+	Context() context.Context
 }
 
 // RequestTarget struct
 type RequestTarget struct {
 	ReceiverID SubscriberID
+	Ctx        context.Context
 }
 
 // SetReceiver func
-func (e *RequestTarget) SetReceiver(receiver SubscriberID) {
+func (e *RequestTarget) SetReceiver(ctx context.Context, receiver SubscriberID) {
 	e.ReceiverID = receiver
+	e.Ctx = ctx
+}
+
+// Context func
+func (e *RequestTarget) Context() context.Context {
+	return e.Ctx
 }
 
 // ResponseTarget func
@@ -52,7 +60,7 @@ func (d *Dispatcher) RequestResponse(ctx context.Context, request TargetedReques
 		return false
 	})
 	defer d.Unsubscribe(id)
-	request.SetReceiver(id)
+	request.SetReceiver(ctx, id)
 	d.Send(request)
 	select {
 	case <-ctx.Done():

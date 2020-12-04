@@ -1,6 +1,7 @@
 package httpsrv
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -115,15 +116,19 @@ func (c *Query) toEvent() interface{} {
 	case queryTransportList:
 		return &handlers.TransportList{RequestHeader: *handlers.NewRequestHeader(c.ID)}
 	case queryProtocolInfo:
-		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: c.Payload.(*handlers.ProtocolInfoFilter)}
+		var filter *handlers.ProtocolInfoFilter
+		if c.Payload != nil {
+			filter = c.Payload.(*handlers.ProtocolInfoFilter)
+		}
+		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: filter}
 	}
 	return nil
 }
 
-func (c *Query) toTargetedRequest(receiverID events.SubscriberID) interface{} {
+func (c *Query) toTargetedRequest(ctx context.Context, receiverID events.SubscriberID) interface{} {
 	event := c.toEvent()
 	if te, ok := event.(events.TargetedRequest); ok {
-		te.SetReceiver(receiverID)
+		te.SetReceiver(ctx, receiverID)
 		return te
 	}
 	return event
