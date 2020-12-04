@@ -35,7 +35,7 @@ func handleProtocolInfo(event *ProtocolInfo) {
 	r := &ProtocolInfoResult{ResponseHeader: event.Associate()}
 
 	tf := func(tid services.TransportIdentifier, pi *services.ProtocolInfo, pie *ProtocolInfoEntry) {
-		ptie := &ProtocolTransportInfoEntry{ID: uint8(tid), Valid: false}
+		ptie := &ProtocolTransportInfoEntry{ID: tid, Valid: false}
 		if ti, ok := services.Transports[tid]; ok {
 			ptie.Name = ti.Name
 			if pto, ok := pi.Transports[tid]; ok {
@@ -48,7 +48,7 @@ func handleProtocolInfo(event *ProtocolInfo) {
 		pie.Transports = append(pie.Transports, ptie)
 	}
 	pf := func(pid services.ProtocolIdentifier, pi *services.ProtocolInfo) {
-		pie := &ProtocolInfoEntry{ID: uint8(pid), Valid: true, Name: pi.Name}
+		pie := &ProtocolInfoEntry{ID: pid, Valid: true, Name: pi.Name}
 		if event.Filter != nil && len(event.Filter.Transports) > 0 {
 			for _, t := range event.Filter.Transports {
 				tf(services.TransportIdentifier(t), pi, pie)
@@ -77,4 +77,7 @@ func handleProtocolInfo(event *ProtocolInfo) {
 	}
 
 	Dispatcher.Send(r)
+}
+
+func handleProtocolDiscovery(event *ProtocolDiscovery) {
 }

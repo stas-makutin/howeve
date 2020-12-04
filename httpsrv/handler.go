@@ -9,6 +9,7 @@ import (
 
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
+	"github.com/stas-makutin/howeve/services"
 )
 
 func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.Type, request func(*http.Request) (events.TargetedRequest, bool, error)) {
@@ -53,7 +54,7 @@ func parseProtocolInfo(r *http.Request) (events.TargetedRequest, bool, error) {
 			if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
 				return nil, true, err
 			} else {
-				tr.Filter.Protocols = append(tr.Filter.Protocols, uint8(n))
+				tr.Filter.Protocols = append(tr.Filter.Protocols, services.ProtocolIdentifier(n))
 			}
 		}
 	}
@@ -62,9 +63,13 @@ func parseProtocolInfo(r *http.Request) (events.TargetedRequest, bool, error) {
 			if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
 				return nil, true, err
 			} else {
-				tr.Filter.Transports = append(tr.Filter.Transports, uint8(n))
+				tr.Filter.Transports = append(tr.Filter.Transports, services.TransportIdentifier(n))
 			}
 		}
 	}
 	return tr, true, nil
+}
+
+func parseProtocolDiscovery(r *http.Request) (events.TargetedRequest, bool, error) {
+	return nil, true, nil
 }

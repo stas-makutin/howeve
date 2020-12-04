@@ -54,5 +54,7 @@ func (t *Task) handleEvents(event interface{}) {
 		handleTransportList(e)
 	case *ProtocolInfo:
 		handleProtocolInfo(e)
+	case *ProtocolDiscovery:
+		handleProtocolDiscovery(e)
 	}
 }

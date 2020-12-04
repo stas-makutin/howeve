@@ -83,17 +83,17 @@ func buildParamsInfo(p services.Params) (pie map[string]*ParamInfoEntry) {
 
 // ProtocolTransportInfoEntry - protocol detaild information
 type ProtocolTransportInfoEntry struct {
-	ID              uint8                      `json:"id"`
-	Valid           bool                       `json:"valid"`
-	Name            string                     `json:"name,omitempty"`
-	Params          map[string]*ParamInfoEntry `json:"params,omitempty"`
-	Discoverable    bool                       `json:"discoverable"`
-	DiscoveryParams map[string]*ParamInfoEntry `json:"discoveryParams,omitempty"`
+	ID              services.TransportIdentifier `json:"id"`
+	Valid           bool                         `json:"valid"`
+	Name            string                       `json:"name,omitempty"`
+	Params          map[string]*ParamInfoEntry   `json:"params,omitempty"`
+	Discoverable    bool                         `json:"discoverable"`
+	DiscoveryParams map[string]*ParamInfoEntry   `json:"discoveryParams,omitempty"`
 }
 
 // ProtocolInfoEntry - protocol detaild information
 type ProtocolInfoEntry struct {
-	ID         uint8                         `json:"id"`
+	ID         services.ProtocolIdentifier   `json:"id"`
 	Valid      bool                          `json:"valid"`
 	Name       string                        `json:"name,omitempty"`
 	Transports []*ProtocolTransportInfoEntry `json:"transports,omitempty"`
@@ -101,8 +101,8 @@ type ProtocolInfoEntry struct {
 
 // ProtocolInfoFilter - protocols/transport filter
 type ProtocolInfoFilter struct {
-	Protocols  []uint8 `json:"protocols,omitempty"`
-	Transports []uint8 `json:"transports,omitempty"`
+	Protocols  []services.ProtocolIdentifier  `json:"protocols,omitempty"`
+	Transports []services.TransportIdentifier `json:"transports,omitempty"`
 }
 
 // ProtocolInfo - get protocol(s) detailed information
@@ -115,4 +115,37 @@ type ProtocolInfo struct {
 type ProtocolInfoResult struct {
 	ResponseHeader
 	Protocols []*ProtocolInfoEntry
+}
+
+// ProtocolDiscoveryQuery - discovery input parameters
+type ProtocolDiscoveryQuery struct {
+	Protocol  services.ProtocolIdentifier  `json:"protocol"`
+	Transport services.TransportIdentifier `json:"transport"`
+	Params    map[string]string            `json:"params,omitempty"`
+}
+
+// ServiceEntry - service entry description
+type ServiceEntry struct {
+	Protocol  services.ProtocolIdentifier  `json:"protocol"`
+	Transport services.TransportIdentifier `json:"transport"`
+	Entry     string                       `json:"entry"`
+	Params    map[string]string            `json:"params,omitempty"`
+}
+
+// ProtocolDiscovery - discovery available services of protocol using specific transport
+type ProtocolDiscovery struct {
+	RequestHeader
+	*ProtocolDiscoveryQuery
+}
+
+// ProtocolDiscoveryQueryResult - discovery query results
+type ProtocolDiscoveryQueryResult struct {
+	Valid    bool            `json:"valid,omitempty"`
+	Services []*ServiceEntry `json:"services,omitempty"`
+}
+
+// ProtocolDiscoveryResult - discovery results
+type ProtocolDiscoveryResult struct {
+	ResponseHeader
+	*ProtocolDiscoveryQueryResult
 }

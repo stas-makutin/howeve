@@ -23,6 +23,8 @@ const (
 	queryTransportListResult
 	queryProtocolInfo
 	queryProtocolInfoResult
+	queryProtocolDiscovery
+	queryProtocolDiscoveryResult
 )
 
 var queryTypeMap = map[string]queryType{
@@ -31,20 +33,15 @@ var queryTypeMap = map[string]queryType{
 	"protocols": queryProtocolList, "protocolsResult": queryProtocolListResult,
 	"transports": queryTransportList, "transportsResult": queryTransportListResult,
 	"protocolInfo": queryProtocolInfo, "protocolInfoResult": queryProtocolInfoResult,
+	"discovery": queryProtocolDiscovery, "discoveryResult": queryProtocolDiscoveryResult,
 }
+var queryNameMap map[queryType]string
 
-var queryNameMap = map[queryType]string{
-	queryUnexpected:          "unexpected",
-	queryRestart:             "restart",
-	queryRestartResult:       "restartResult",
-	queryGetConfig:           "getConfig",
-	queryGetConfigResult:     "getConfigResult",
-	queryProtocolList:        "protocols",
-	queryProtocolListResult:  "protocolsResult",
-	queryTransportList:       "transports",
-	queryTransportListResult: "transportsResult",
-	queryProtocolInfo:        "protocolInfo",
-	queryProtocolInfoResult:  "protocolInfoResult",
+func init() {
+	queryNameMap = make(map[queryType]string)
+	for k, v := range queryTypeMap {
+		queryNameMap[v] = k
+	}
 }
 
 // Query struct
@@ -101,6 +98,12 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			}
 			c.Payload = &p
 		}
+	case queryProtocolDiscovery:
+		var p handlers.ProtocolDiscoveryQuery
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
 	}
 	return nil
 }
@@ -121,6 +124,8 @@ func (c *Query) toEvent() interface{} {
 			filter = c.Payload.(*handlers.ProtocolInfoFilter)
 		}
 		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: filter}
+	case queryProtocolDiscovery:
+		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
 	}
 	return nil
 }
@@ -146,6 +151,8 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryTransportListResult, ID: e.TraceID(), Payload: e.Transports}
 	case *handlers.ProtocolInfoResult:
 		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
+	case *handlers.ProtocolDiscoveryResult:
+		return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryQueryResult}
 	}
 	return nil
 }
