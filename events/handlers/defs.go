@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/services"
 )
@@ -87,7 +90,7 @@ type ProtocolTransportInfoEntry struct {
 	Valid           bool                         `json:"valid"`
 	Name            string                       `json:"name,omitempty"`
 	Params          map[string]*ParamInfoEntry   `json:"params,omitempty"`
-	Discoverable    bool                         `json:"discoverable"`
+	Discoverable    bool                         `json:"discoverable,omitempty"`
 	DiscoveryParams map[string]*ParamInfoEntry   `json:"discoveryParams,omitempty"`
 }
 
@@ -117,11 +120,44 @@ type ProtocolInfoResult struct {
 	Protocols []*ProtocolInfoEntry
 }
 
+// ParamsValues type
+type ParamsValues map[string]string
+
+// NewParamsValues creates reporting parameter values from service parameter values
+func NewParamsValues(pv services.ParamValues) (r ParamsValues) {
+	if len(pv) > 0 {
+		r = make(ParamsValues)
+		for name, value := range pv {
+			r[name] = fmt.Sprint(value)
+		}
+	}
+	return
+}
+
+// Parse function parses input parameters according their definition
+func (pv ParamsValues) Parse(p services.Params) (services.ParamValues, *ErrorInfo) {
+	var rv services.ParamValues
+	for name, value := range pv {
+		if v, err := p.Parse(name, value); err != nil {
+			if errors.Is(err, services.ErrUnknownParamName) {
+				return nil, NewErrorInfo(ErrorUnknownParameter, name)
+			}
+			return nil, NewErrorInfo(ErrorInvalidParameterValue, value, name)
+		} else {
+			if rv == nil {
+				rv = make(services.ParamValues)
+			}
+			rv[name] = v
+		}
+	}
+	return rv, nil
+}
+
 // ProtocolDiscoveryQuery - discovery input parameters
 type ProtocolDiscoveryQuery struct {
 	Protocol  services.ProtocolIdentifier  `json:"protocol"`
 	Transport services.TransportIdentifier `json:"transport"`
-	Params    map[string]string            `json:"params,omitempty"`
+	Params    ParamsValues                 `json:"params,omitempty"`
 }
 
 // ServiceEntry - service entry description
@@ -129,7 +165,7 @@ type ServiceEntry struct {
 	Protocol  services.ProtocolIdentifier  `json:"protocol"`
 	Transport services.TransportIdentifier `json:"transport"`
 	Entry     string                       `json:"entry"`
-	Params    map[string]string            `json:"params,omitempty"`
+	Params    ParamsValues                 `json:"params,omitempty"`
 }
 
 // ProtocolDiscovery - discovery available services of protocol using specific transport
@@ -140,7 +176,7 @@ type ProtocolDiscovery struct {
 
 // ProtocolDiscoveryQueryResult - discovery query results
 type ProtocolDiscoveryQueryResult struct {
-	Valid    bool            `json:"valid,omitempty"`
+	Error    *ErrorInfo      `json:"error,omitempty"`
 	Services []*ServiceEntry `json:"services,omitempty"`
 }
 

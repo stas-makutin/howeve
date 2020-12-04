@@ -80,4 +80,46 @@ func handleProtocolInfo(event *ProtocolInfo) {
 }
 
 func handleProtocolDiscovery(event *ProtocolDiscovery) {
+	r := &ProtocolDiscoveryResult{ResponseHeader: event.Associate(), ProtocolDiscoveryQueryResult: &ProtocolDiscoveryQueryResult{}}
+	if pi, ok := services.Protocols[event.Protocol]; ok {
+		if ti, ok := services.Transports[event.Transport]; ok {
+			if pti, ok := pi.Transports[event.Transport]; ok {
+				if pti.DiscoveryFunc != nil {
+					if params, errorInfo := event.Params.Parse(pti.DiscoveryParams); errorInfo != nil {
+						r.ProtocolDiscoveryQueryResult.Error = errorInfo
+					} else {
+						go func() {
+							if serviceEntries, err := pti.DiscoveryFunc(event.Context(), params); err == nil {
+								if len(serviceEntries) > 0 {
+									r.Services = make([]*ServiceEntry, len(serviceEntries))
+									for _, serviceEntry := range serviceEntries {
+										r.Services = append(r.Services, &ServiceEntry{
+											Protocol:  serviceEntry.Key.Protocol,
+											Transport: serviceEntry.Key.Transport,
+											Entry:     serviceEntry.Key.Entry,
+											Params:    NewParamsValues(serviceEntry.Params),
+										})
+									}
+								}
+							} else {
+								// TODO error reporting
+							}
+							Dispatcher.Send(r)
+						}()
+						return
+					}
+				} else {
+					r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorInvalidProtocolTransport, pi.Name, event.Protocol, ti.Name, event.Transport)
+				}
+			} else {
+				r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorInvalidProtocolTransport, pi.Name, event.Protocol, ti.Name, event.Transport)
+			}
+		} else {
+			r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorUnknownTransport, event.Transport)
+		}
+	} else {
+		r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorUnknownProtocol, event.Protocol)
+	}
+
+	Dispatcher.Send(r)
 }

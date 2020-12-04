@@ -12,9 +12,9 @@ const (
 
 // ServiceKey struct defines service unique identifier/key
 type ServiceKey struct {
-	protocol  ProtocolIdentifier
-	transport TransportIdentifier
-	entry     string
+	Protocol  ProtocolIdentifier
+	Transport TransportIdentifier
+	Entry     string
 }
 
 // ServiceEntry defines service entry - i.e. entry point of service execution
