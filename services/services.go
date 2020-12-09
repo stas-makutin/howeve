@@ -1,9 +1,11 @@
 package services
 
-func startService(key ServiceKey, params ParamValues) {
+import "github.com/stas-makutin/howeve/services/servicedef"
+
+func startService(key servicedef.ServiceKey, params servicedef.ParamValues) {
 
 }
 
-func stopService(key ServiceKey) {
+func stopService(key servicedef.ServiceKey) {
 
 }

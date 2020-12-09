@@ -10,6 +10,7 @@ import (
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 	"github.com/stas-makutin/howeve/services"
+	"github.com/stas-makutin/howeve/services/servicedef"
 )
 
 func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.Type, request func(*http.Request) (events.TargetedRequest, bool, error)) {
@@ -72,7 +73,7 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 				if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
 					return nil, true, err
 				} else {
-					q.Protocols = append(q.Protocols, services.ProtocolIdentifier(n))
+					q.Protocols = append(q.Protocols, servicedef.ProtocolIdentifier(n))
 				}
 			}
 		}
@@ -81,7 +82,7 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 				if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
 					return nil, true, err
 				} else {
-					q.Transports = append(q.Transports, services.TransportIdentifier(n))
+					q.Transports = append(q.Transports, servicedef.TransportIdentifier(n))
 				}
 			}
 		}
@@ -103,12 +104,12 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
-			q.Protocol = services.ProtocolIdentifier(n)
+			q.Protocol = servicedef.ProtocolIdentifier(n)
 		}
 		if n, err := strconv.ParseUint(r.Form.Get("transport"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
-			q.Transport = services.TransportIdentifier(n)
+			q.Transport = servicedef.TransportIdentifier(n)
 		}
 		if pi, ok := services.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {

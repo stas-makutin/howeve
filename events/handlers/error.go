@@ -12,6 +12,7 @@ const (
 	ErrorInvalidProtocolTransport
 	ErrorUnknownParameter
 	ErrorInvalidParameterValue
+	ErrorNoDiscovery
 )
 
 // ErrorInfo - error
@@ -34,6 +35,8 @@ func NewErrorInfo(code ErrorCode, args ...interface{}) (e *ErrorInfo) {
 		e.Message = fmt.Sprintf("Unknown parameter \"%s\"", args...)
 	case ErrorInvalidParameterValue:
 		e.Message = fmt.Sprintf("Unknown value \"%s\" of parameter \"%s\"", args...)
+	case ErrorNoDiscovery:
+		e.Message = fmt.Sprintf("The discovery is not supported for the protocol %s (%d) and the transport %s (%d)", args...)
 	}
 	return
 }

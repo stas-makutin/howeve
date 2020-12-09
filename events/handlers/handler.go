@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/services"
+	"github.com/stas-makutin/howeve/services/servicedef"
 	"github.com/stas-makutin/howeve/tasks"
 )
 
@@ -34,7 +35,7 @@ func handleTransportList(event *TransportList) {
 func handleProtocolInfo(event *ProtocolInfo) {
 	r := &ProtocolInfoResult{ResponseHeader: event.Associate()}
 
-	tf := func(tid services.TransportIdentifier, pi *services.ProtocolInfo, pie *ProtocolInfoEntry) {
+	tf := func(tid servicedef.TransportIdentifier, pi *servicedef.ProtocolInfo, pie *ProtocolInfoEntry) {
 		ptie := &ProtocolTransportInfoEntry{ID: tid, Valid: false}
 		if ti, ok := services.Transports[tid]; ok {
 			ptie.Name = ti.Name
@@ -47,11 +48,11 @@ func handleProtocolInfo(event *ProtocolInfo) {
 		}
 		pie.Transports = append(pie.Transports, ptie)
 	}
-	pf := func(pid services.ProtocolIdentifier, pi *services.ProtocolInfo) {
+	pf := func(pid servicedef.ProtocolIdentifier, pi *servicedef.ProtocolInfo) {
 		pie := &ProtocolInfoEntry{ID: pid, Valid: true, Name: pi.Name}
 		if event.Filter != nil && len(event.Filter.Transports) > 0 {
 			for _, t := range event.Filter.Transports {
-				tf(services.TransportIdentifier(t), pi, pie)
+				tf(servicedef.TransportIdentifier(t), pi, pie)
 			}
 		} else {
 			for tid := range pi.Transports {
@@ -63,7 +64,7 @@ func handleProtocolInfo(event *ProtocolInfo) {
 
 	if event.Filter != nil && len(event.Filter.Protocols) > 0 {
 		for _, p := range event.Filter.Protocols {
-			pid := services.ProtocolIdentifier(p)
+			pid := servicedef.ProtocolIdentifier(p)
 			if pi, ok := services.Protocols[pid]; ok {
 				pf(pid, pi)
 			} else {
@@ -91,13 +92,16 @@ func handleProtocolDiscovery(event *ProtocolDiscovery) {
 						go func() {
 							if serviceEntries, err := pti.DiscoveryFunc(event.Context(), params); err == nil {
 								if len(serviceEntries) > 0 {
-									r.Services = make([]*ServiceEntry, len(serviceEntries))
+									r.Services = make([]*ServiceEntryDetails, 0, len(serviceEntries))
 									for _, serviceEntry := range serviceEntries {
-										r.Services = append(r.Services, &ServiceEntry{
-											Protocol:  serviceEntry.Key.Protocol,
-											Transport: serviceEntry.Key.Transport,
-											Entry:     serviceEntry.Key.Entry,
-											Params:    NewParamsValues(serviceEntry.Params),
+										r.Services = append(r.Services, &ServiceEntryDetails{
+											ServiceEntry: ServiceEntry{
+												Protocol:  serviceEntry.Key.Protocol,
+												Transport: serviceEntry.Key.Transport,
+												Entry:     serviceEntry.Key.Entry,
+												Params:    NewParamsValues(serviceEntry.Params),
+											},
+											Description: serviceEntry.Description,
 										})
 									}
 								}
@@ -109,7 +113,7 @@ func handleProtocolDiscovery(event *ProtocolDiscovery) {
 						return
 					}
 				} else {
-					r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorInvalidProtocolTransport, pi.Name, event.Protocol, ti.Name, event.Transport)
+					r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorNoDiscovery, pi.Name, event.Protocol, ti.Name, event.Transport)
 				}
 			} else {
 				r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorInvalidProtocolTransport, pi.Name, event.Protocol, ti.Name, event.Transport)
