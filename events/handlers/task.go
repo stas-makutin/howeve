@@ -56,5 +56,7 @@ func (t *Task) handleEvents(event interface{}) {
 		handleProtocolInfo(e)
 	case *ProtocolDiscovery:
 		handleProtocolDiscovery(e)
+	case *AddService:
+		handleAddService(e)
 	}
 }

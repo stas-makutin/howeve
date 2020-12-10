@@ -127,3 +127,8 @@ func handleProtocolDiscovery(event *ProtocolDiscovery) {
 
 	Dispatcher.Send(r)
 }
+
+func handleAddService(event *AddService) {
+	r := &AddServiceResult{ResponseHeader: event.Associate(), AddServiceReply: &AddServiceReply{Success: true}}
+	Dispatcher.Send(r)
+}

@@ -25,6 +25,8 @@ const (
 	queryProtocolInfoResult
 	queryProtocolDiscovery
 	queryProtocolDiscoveryResult
+	queryAddService
+	queryAddServiceResult
 )
 
 var queryTypeMap = map[string]queryType{
@@ -34,6 +36,7 @@ var queryTypeMap = map[string]queryType{
 	"transports": queryTransportList, "transportsResult": queryTransportListResult,
 	"protocolInfo": queryProtocolInfo, "protocolInfoResult": queryProtocolInfoResult,
 	"discovery": queryProtocolDiscovery, "discoveryResult": queryProtocolDiscoveryResult,
+	"addService": queryAddService, "addServiceResult": queryAddServiceResult,
 }
 var queryNameMap map[queryType]string
 
@@ -104,6 +107,12 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			return err
 		}
 		c.Payload = &p
+	case queryAddService:
+		var p handlers.ServiceEntry
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
 	}
 	return nil
 }
@@ -126,6 +135,8 @@ func (c *Query) toEvent() interface{} {
 		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: filter}
 	case queryProtocolDiscovery:
 		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
+	case queryAddService:
+		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntry: c.Payload.(*handlers.ServiceEntry)}
 	}
 	return nil
 }
@@ -153,6 +164,8 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
 	case *handlers.ProtocolDiscoveryResult:
 		return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryQueryResult}
+	case *handlers.AddServiceResult:
+		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.AddServiceReply}
 	}
 	return nil
 }

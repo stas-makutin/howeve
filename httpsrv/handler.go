@@ -2,6 +2,7 @@ package httpsrv
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -127,4 +128,48 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 	}
 
 	return &handlers.ProtocolDiscovery{ProtocolDiscoveryQuery: q}, true, nil
+}
+
+func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ServiceEntry
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ServiceEntry{}
+		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
+			return nil, true, err
+		} else {
+			q.Protocol = servicedef.ProtocolIdentifier(n)
+		}
+		if n, err := strconv.ParseUint(r.Form.Get("transport"), 10, 8); err != nil {
+			return nil, true, err
+		} else {
+			q.Transport = servicedef.TransportIdentifier(n)
+		}
+		q.Entry = r.Form.Get("entry")
+		if q.Entry == "" {
+			return nil, true, errors.New("'entry' parameter is not available or empty")
+		}
+		if pi, ok := services.Protocols[q.Protocol]; ok {
+			if pti, ok := pi.Transports[q.Transport]; ok {
+				if ti, ok := services.Transports[q.Transport]; ok {
+					for name := range pti.Params.Merge(ti.Params) {
+						v := r.Form.Get(name)
+						if v != "" {
+							if q.Params == nil {
+								q.Params = make(handlers.ParamsValues)
+							}
+							q.Params[name] = v
+						}
+					}
+				}
+			}
+		}
+	}
+	return &handlers.AddService{ServiceEntry: q}, true, nil
 }

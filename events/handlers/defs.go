@@ -191,3 +191,21 @@ type ProtocolDiscoveryResult struct {
 	ResponseHeader
 	*ProtocolDiscoveryQueryResult
 }
+
+// AddService - add new service
+type AddService struct {
+	RequestHeader
+	*ServiceEntry
+}
+
+// AddServiceReply - add new service reply
+type AddServiceReply struct {
+	Error   *ErrorInfo `json:"error,omitempty"`
+	Success bool       `json:"success,omitempty"`
+}
+
+// AddServiceResult - add new service result
+type AddServiceResult struct {
+	ResponseHeader
+	*AddServiceReply
+}
