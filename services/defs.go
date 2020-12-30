@@ -5,29 +5,37 @@ import (
 	"github.com/stas-makutin/howeve/services/zwave"
 )
 
+// serial transport parameters names
+const (
+	ParamNameSerialBaudRate = "baudRate"
+	ParamNameSerialDataBits = "dataBits"
+	ParamNameSerialParity   = "parity"
+	ParamNameSerialStopBits = "stopBits"
+)
+
 // Transports contains transports definitions
 var Transports = map[servicedef.TransportIdentifier]*servicedef.TransportInfo{
 	servicedef.TransportSerial: {
 		Name: "Serial",
 		Params: servicedef.Params{
-			"baudRate": {
+			ParamNameSerialBaudRate: {
 				Description:  "The serial port bitrate",
 				Type:         servicedef.ParamTypeInt32,
 				DefaultValue: "115200",
 			},
-			"dataBits": {
+			ParamNameSerialDataBits: {
 				Description:  "The size of the character, bits",
 				Type:         servicedef.ParamTypeEnum,
 				DefaultValue: "8",
 				EnumValues:   []string{"5", "6", "7", "8"},
 			},
-			"parity": {
+			ParamNameSerialParity: {
 				Description:  "The parity",
 				Type:         servicedef.ParamTypeEnum,
 				DefaultValue: "none",
 				EnumValues:   []string{"none", "odd", "even", "mark", "space"},
 			},
-			"stopBits": {
+			ParamNameSerialStopBits: {
 				Description:  "The number of stop bits",
 				Type:         servicedef.ParamTypeEnum,
 				DefaultValue: "1",
@@ -45,7 +53,7 @@ var Protocols = map[servicedef.ProtocolIdentifier]*servicedef.ProtocolInfo{
 			servicedef.TransportSerial: {
 				DiscoveryFunc: zwave.DiscoverySerial,
 				Params: servicedef.Params{
-					"dataBits": &servicedef.ParamInfo{
+					ParamNameSerialDataBits: &servicedef.ParamInfo{
 						Type:         servicedef.ParamTypeString,
 						DefaultValue: "8",
 						Const:        true,

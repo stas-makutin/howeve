@@ -2,6 +2,7 @@ package serial
 
 import (
 	serial "github.com/albenik/go-serial/v2"
+	"github.com/stas-makutin/howeve/services"
 	"github.com/stas-makutin/howeve/services/servicedef"
 )
 
@@ -13,7 +14,51 @@ type Transport struct {
 // Open func
 func (t *Transport) Open(entry string, params servicedef.ParamValues) (err error) {
 	t.Close()
-	t.port, err = serial.Open(entry, serial.WithBaudrate(115200))
+
+	options := []serial.Option{}
+	if v, ok := params[services.ParamNameSerialBaudRate]; ok {
+		options = append(options, serial.WithBaudrate(v.(int)))
+	}
+	if v, ok := params[services.ParamNameSerialDataBits]; ok {
+		switch v {
+		case "5":
+			options = append(options, serial.WithDataBits(5))
+		case "6":
+			options = append(options, serial.WithDataBits(6))
+		case "7":
+			options = append(options, serial.WithDataBits(7))
+		case "8":
+			options = append(options, serial.WithDataBits(8))
+		}
+	}
+	if v, ok := params[services.ParamNameSerialParity]; ok {
+		switch v {
+		case "none":
+			options = append(options, serial.WithParity(serial.NoParity))
+		case "odd":
+			options = append(options, serial.WithParity(serial.OddParity))
+		case "even":
+			options = append(options, serial.WithParity(serial.EvenParity))
+		case "mark":
+			options = append(options, serial.WithParity(serial.MarkParity))
+		case "space":
+			options = append(options, serial.WithParity(serial.SpaceParity))
+		}
+	}
+	if v, ok := params[services.ParamNameSerialStopBits]; ok {
+		switch v {
+		case "1":
+			options = append(options, serial.WithStopBits(serial.OneStopBit))
+		case "1.5":
+			options = append(options, serial.WithStopBits(serial.OnePointFiveStopBits))
+		case "2":
+			options = append(options, serial.WithStopBits(serial.TwoStopBits))
+		}
+	}
+	options = append(options, serial.WithWriteTimeout(5000))
+
+	t.port, err = serial.Open(entry, options...)
+
 	return
 }
 
