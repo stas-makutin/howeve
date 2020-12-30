@@ -54,6 +54,7 @@ func (pt ParamType) String() string {
 type ParamInfo struct {
 	Description  string
 	Type         ParamType
+	Const        bool
 	DefaultValue string
 	EnumValues   []string
 }

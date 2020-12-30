@@ -74,11 +74,13 @@ type ParamInfoEntry struct {
 func buildParamsInfo(p servicedef.Params) (pie map[string]*ParamInfoEntry) {
 	pie = make(map[string]*ParamInfoEntry)
 	for name, pi := range p {
-		pie[name] = &ParamInfoEntry{
-			Description:  pi.Description,
-			Type:         pi.Type.String(),
-			DefaultValue: pi.DefaultValue,
-			EnumValues:   pi.EnumValues,
+		if !pi.Const {
+			pie[name] = &ParamInfoEntry{
+				Description:  pi.Description,
+				Type:         pi.Type.String(),
+				DefaultValue: pi.DefaultValue,
+				EnumValues:   pi.EnumValues,
+			}
 		}
 	}
 	return

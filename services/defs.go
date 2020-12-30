@@ -44,6 +44,13 @@ var Protocols = map[servicedef.ProtocolIdentifier]*servicedef.ProtocolInfo{
 		Transports: map[servicedef.TransportIdentifier]*servicedef.ProtocolTransportOptions{
 			servicedef.TransportSerial: {
 				DiscoveryFunc: zwave.DiscoverySerial,
+				Params: servicedef.Params{
+					"dataBits": &servicedef.ParamInfo{
+						Type:         servicedef.ParamTypeString,
+						DefaultValue: "8",
+						Const:        true,
+					},
+				},
 			},
 		},
 	},

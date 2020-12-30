@@ -1,5 +1,10 @@
 package servicedef
 
+import (
+	"errors"
+	"io"
+)
+
 // TransportIdentifier type
 type TransportIdentifier uint8
 
@@ -13,3 +18,12 @@ type TransportInfo struct {
 	Name string
 	Params
 }
+
+// Transport interface - blocking transport operations
+type Transport interface {
+	Open(entry string, params ParamValues) error
+	io.ReadWriteCloser
+}
+
+// ErrNotOpen error
+var ErrNotOpen error = errors.New("The transport entry is not open")

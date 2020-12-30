@@ -3,7 +3,7 @@ package zwave
 import (
 	"context"
 
-	"github.com/albenik/go-serial/enumerator"
+	"github.com/albenik/go-serial/v2/enumerator"
 	"github.com/stas-makutin/howeve/services/servicedef"
 )
 
