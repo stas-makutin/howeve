@@ -55,7 +55,9 @@ func (t *Transport) Open(entry string, params servicedef.ParamValues) (err error
 			options = append(options, serial.WithStopBits(serial.TwoStopBits))
 		}
 	}
-	options = append(options, serial.WithWriteTimeout(5000))
+	if v, ok := params[services.ParamNameSerialWriteTimeout]; ok {
+		options = append(options, serial.WithWriteTimeout(int(v.(uint32))))
+	}
 
 	t.port, err = serial.Open(entry, options...)
 

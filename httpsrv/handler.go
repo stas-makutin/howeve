@@ -114,13 +114,15 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 		}
 		if pi, ok := services.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
-				for name := range pti.DiscoveryParams {
-					v := r.Form.Get(name)
-					if v != "" {
-						if q.Params == nil {
-							q.Params = make(handlers.ParamsValues)
+				for name, p := range pti.DiscoveryParams {
+					if !p.Const {
+						v := r.Form.Get(name)
+						if v != "" {
+							if q.Params == nil {
+								q.Params = make(handlers.ParamsValues)
+							}
+							q.Params[name] = v
 						}
-						q.Params[name] = v
 					}
 				}
 			}
@@ -158,13 +160,15 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 		if pi, ok := services.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
 				if ti, ok := services.Transports[q.Transport]; ok {
-					for name := range pti.Params.Merge(ti.Params) {
-						v := r.Form.Get(name)
-						if v != "" {
-							if q.Params == nil {
-								q.Params = make(handlers.ParamsValues)
+					for name, p := range pti.Params.Merge(ti.Params) {
+						if !p.Const {
+							v := r.Form.Get(name)
+							if v != "" {
+								if q.Params == nil {
+									q.Params = make(handlers.ParamsValues)
+								}
+								q.Params[name] = v
 							}
-							q.Params[name] = v
 						}
 					}
 				}

@@ -7,10 +7,11 @@ import (
 
 // serial transport parameters names
 const (
-	ParamNameSerialBaudRate = "baudRate"
-	ParamNameSerialDataBits = "dataBits"
-	ParamNameSerialParity   = "parity"
-	ParamNameSerialStopBits = "stopBits"
+	ParamNameSerialBaudRate     = "baudRate"
+	ParamNameSerialDataBits     = "dataBits"
+	ParamNameSerialParity       = "parity"
+	ParamNameSerialStopBits     = "stopBits"
+	ParamNameSerialWriteTimeout = "writeTimeout"
 )
 
 // Transports contains transports definitions
@@ -41,6 +42,11 @@ var Transports = map[servicedef.TransportIdentifier]*servicedef.TransportInfo{
 				DefaultValue: "1",
 				EnumValues:   []string{"1", "1.5", "2"},
 			},
+			ParamNameSerialWriteTimeout: {
+				Description:  "The write timeout, millisecons",
+				Type:         servicedef.ParamTypeUint32,
+				DefaultValue: "3000",
+			},
 		},
 	},
 }
@@ -56,6 +62,11 @@ var Protocols = map[servicedef.ProtocolIdentifier]*servicedef.ProtocolInfo{
 					ParamNameSerialDataBits: &servicedef.ParamInfo{
 						Type:         servicedef.ParamTypeString,
 						DefaultValue: "8",
+						Const:        true,
+					},
+					ParamNameSerialWriteTimeout: &servicedef.ParamInfo{
+						Type:         servicedef.ParamTypeUint32,
+						DefaultValue: "3000",
 						Const:        true,
 					},
 				},
