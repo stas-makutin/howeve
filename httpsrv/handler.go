@@ -2,7 +2,6 @@ package httpsrv
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -133,7 +132,7 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 }
 
 func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ServiceEntry
+	var q *handlers.ServiceEntryWithAlias
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -142,7 +141,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ServiceEntry{}
+		q = &handlers.ServiceEntryWithAlias{}
 		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
@@ -154,9 +153,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 			q.Transport = defs.TransportIdentifier(n)
 		}
 		q.Entry = r.Form.Get("entry")
-		if q.Entry == "" {
-			return nil, true, errors.New("'entry' parameter is not available or empty")
-		}
+		q.Alias = r.Form.Get("alias")
 		if pi, ok := services.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
 				if ti, ok := services.Transports[q.Transport]; ok {
@@ -175,5 +172,5 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 			}
 		}
 	}
-	return &handlers.AddService{ServiceEntry: q}, true, nil
+	return &handlers.AddService{ServiceEntryWithAlias: q}, true, nil
 }

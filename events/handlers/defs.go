@@ -189,10 +189,16 @@ type ProtocolDiscoveryResult struct {
 	*ProtocolDiscoveryQueryResult
 }
 
+// ServiceEntryWithAlias - service entry with alias
+type ServiceEntryWithAlias struct {
+	ServiceEntry
+	Alias string `json:"alias,omitempty"`
+}
+
 // AddService - add new service
 type AddService struct {
 	RequestHeader
-	*ServiceEntry
+	*ServiceEntryWithAlias
 }
 
 // AddServiceReply - add new service reply

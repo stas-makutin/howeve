@@ -36,6 +36,7 @@ type HTTPServerConfig struct {
 
 // ServiceConfig defines configuration of active services
 type ServiceConfig struct {
+	Alias     string            `yaml:"alias,omitempty" json:"alias,omitempty"`
 	Protocol  string            `yaml:"protocol" json:"protocol"`
 	Transport string            `yaml:"transport" json:"transport"`
 	Entry     string            `yaml:"entry,omitempty" json:"entry,omitempty"`

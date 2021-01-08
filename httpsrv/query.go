@@ -136,7 +136,7 @@ func (c *Query) toEvent() interface{} {
 	case queryProtocolDiscovery:
 		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
 	case queryAddService:
-		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntry: c.Payload.(*handlers.ServiceEntry)}
+		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntryWithAlias: c.Payload.(*handlers.ServiceEntryWithAlias)}
 	}
 	return nil
 }
