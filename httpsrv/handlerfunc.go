@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/defs"
 )
 
 // HandlerContextKeyType handler context field type
@@ -15,7 +15,7 @@ const handlerContextKey handlerContextKeyType = 0
 
 // HandlerContext struct
 type handlerContext struct {
-	cfg       *config.HTTPServerConfig
+	cfg       *defs.HTTPServerConfig
 	handlerWg sync.WaitGroup
 	stopCh    chan struct{}
 }

@@ -2,8 +2,8 @@ package serial
 
 import (
 	serial "github.com/albenik/go-serial/v2"
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/services"
-	"github.com/stas-makutin/howeve/services/servicedef"
 )
 
 // Transport struct - serial Transport implementation
@@ -12,7 +12,7 @@ type Transport struct {
 }
 
 // Open func
-func (t *Transport) Open(entry string, params servicedef.ParamValues) (err error) {
+func (t *Transport) Open(entry string, params defs.ParamValues) (err error) {
 	t.Close()
 
 	options := []serial.Option{}
@@ -78,7 +78,7 @@ func (t *Transport) Read(p []byte) (int, error) {
 	if t.port != nil {
 		return t.port.Read(p)
 	}
-	return 0, servicedef.ErrNotOpen
+	return 0, defs.ErrNotOpen
 }
 
 // Write func
@@ -86,5 +86,5 @@ func (t *Transport) Write(p []byte) (int, error) {
 	if t.port != nil {
 		return t.port.Write(p)
 	}
-	return 0, servicedef.ErrNotOpen
+	return 0, defs.ErrNotOpen
 }

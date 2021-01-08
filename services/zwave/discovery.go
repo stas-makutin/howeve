@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/albenik/go-serial/v2/enumerator"
-	"github.com/stas-makutin/howeve/services/servicedef"
+	"github.com/stas-makutin/howeve/defs"
 )
 
 // DiscoverySerial - discover COM ports
-func DiscoverySerial(ctx context.Context, params servicedef.ParamValues) ([]*servicedef.ServiceEntryDetails, error) {
+func DiscoverySerial(ctx context.Context, params defs.ParamValues) ([]*defs.ServiceEntryDetails, error) {
 	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
 		return nil, err
@@ -16,13 +16,13 @@ func DiscoverySerial(ctx context.Context, params servicedef.ParamValues) ([]*ser
 	if len(ports) <= 0 {
 		return nil, nil
 	}
-	se := make([]*servicedef.ServiceEntryDetails, 0, len(ports))
+	se := make([]*defs.ServiceEntryDetails, 0, len(ports))
 	for _, port := range ports {
-		se = append(se, &servicedef.ServiceEntryDetails{
-			ServiceEntry: servicedef.ServiceEntry{
-				Key: servicedef.ServiceKey{
-					Protocol:  servicedef.ProtocolZWave,
-					Transport: servicedef.TransportSerial,
+		se = append(se, &defs.ServiceEntryDetails{
+			ServiceEntry: defs.ServiceEntry{
+				Key: defs.ServiceKey{
+					Protocol:  defs.ProtocolZWave,
+					Transport: defs.TransportSerial,
 					Entry:     port.Name,
 				},
 			},

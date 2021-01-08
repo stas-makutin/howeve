@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/tasks"
 	"gopkg.in/yaml.v3"
 )
@@ -70,7 +71,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 		atomic.StoreUint32(&t.updateLock, 1)
 		defer atomic.StoreUint32(&t.updateLock, 0)
 
-		var cfg = Config{
+		var cfg = defs.Config{
 			WorkingDirectory: workingDirectory,
 		}
 		for _, w := range writers {

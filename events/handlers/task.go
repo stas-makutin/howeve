@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/tasks"
 )
@@ -12,7 +13,7 @@ var Dispatcher events.Dispatcher
 // Task struct
 type Task struct {
 	subscriberID events.SubscriberID
-	cfg          *config.Config
+	cfg          *defs.Config
 }
 
 // NewTask func
@@ -22,7 +23,7 @@ func NewTask() *Task {
 	return t
 }
 
-func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
+func (t *Task) readConfig(cfg *defs.Config, cfgError config.Error) {
 	t.cfg = cfg
 }
 

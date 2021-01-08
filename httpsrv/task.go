@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/log"
 	"github.com/stas-makutin/howeve/tasks"
 
@@ -35,7 +36,7 @@ func NewTask() *Task {
 	return t
 }
 
-func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
+func (t *Task) readConfig(cfg *defs.Config, cfgError config.Error) {
 	t.hc.cfg = cfg.HTTPServer
 	if t.hc.cfg == nil {
 		return
@@ -45,7 +46,7 @@ func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 	}
 }
 
-func (t *Task) writeConfig(cfg *config.Config) {
+func (t *Task) writeConfig(cfg *defs.Config) {
 	cfg.HTTPServer = t.hc.cfg
 }
 

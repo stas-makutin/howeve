@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 	"github.com/stas-makutin/howeve/services"
-	"github.com/stas-makutin/howeve/services/servicedef"
 )
 
 func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.Type, request func(*http.Request) (events.TargetedRequest, bool, error)) {
@@ -74,7 +74,7 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 				if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
 					return nil, true, err
 				} else {
-					q.Protocols = append(q.Protocols, servicedef.ProtocolIdentifier(n))
+					q.Protocols = append(q.Protocols, defs.ProtocolIdentifier(n))
 				}
 			}
 		}
@@ -83,7 +83,7 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 				if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
 					return nil, true, err
 				} else {
-					q.Transports = append(q.Transports, servicedef.TransportIdentifier(n))
+					q.Transports = append(q.Transports, defs.TransportIdentifier(n))
 				}
 			}
 		}
@@ -105,17 +105,17 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
-			q.Protocol = servicedef.ProtocolIdentifier(n)
+			q.Protocol = defs.ProtocolIdentifier(n)
 		}
 		if n, err := strconv.ParseUint(r.Form.Get("transport"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
-			q.Transport = servicedef.TransportIdentifier(n)
+			q.Transport = defs.TransportIdentifier(n)
 		}
 		if pi, ok := services.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
 				for name, p := range pti.DiscoveryParams {
-					if !p.Const {
+					if p.Flags&defs.ParamFlagConst == 0 {
 						v := r.Form.Get(name)
 						if v != "" {
 							if q.Params == nil {
@@ -146,12 +146,12 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
-			q.Protocol = servicedef.ProtocolIdentifier(n)
+			q.Protocol = defs.ProtocolIdentifier(n)
 		}
 		if n, err := strconv.ParseUint(r.Form.Get("transport"), 10, 8); err != nil {
 			return nil, true, err
 		} else {
-			q.Transport = servicedef.TransportIdentifier(n)
+			q.Transport = defs.TransportIdentifier(n)
 		}
 		q.Entry = r.Form.Get("entry")
 		if q.Entry == "" {
@@ -161,7 +161,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 			if pti, ok := pi.Transports[q.Transport]; ok {
 				if ti, ok := services.Transports[q.Transport]; ok {
 					for name, p := range pti.Params.Merge(ti.Params) {
-						if !p.Const {
+						if p.Flags&defs.ParamFlagConst == 0 {
 							v := r.Form.Get(name)
 							if v != "" {
 								if q.Params == nil {

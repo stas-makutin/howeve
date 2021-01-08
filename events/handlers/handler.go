@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/services"
-	"github.com/stas-makutin/howeve/services/servicedef"
 	"github.com/stas-makutin/howeve/tasks"
 )
 
@@ -12,7 +11,7 @@ func handleRestart(event *Restart) {
 	go tasks.StopServiceTasks()
 }
 
-func handleConfigGet(event *ConfigGet, cfg *config.Config) {
+func handleConfigGet(event *ConfigGet, cfg *defs.Config) {
 	Dispatcher.Send(&ConfigGetResult{Config: *cfg, ResponseHeader: event.Associate()})
 }
 
@@ -35,7 +34,7 @@ func handleTransportList(event *TransportList) {
 func handleProtocolInfo(event *ProtocolInfo) {
 	r := &ProtocolInfoResult{ResponseHeader: event.Associate()}
 
-	tf := func(tid servicedef.TransportIdentifier, pi *servicedef.ProtocolInfo, pie *ProtocolInfoEntry) {
+	tf := func(tid defs.TransportIdentifier, pi *defs.ProtocolInfo, pie *ProtocolInfoEntry) {
 		ptie := &ProtocolTransportInfoEntry{ID: tid, Valid: false}
 		if ti, ok := services.Transports[tid]; ok {
 			ptie.Name = ti.Name
@@ -48,11 +47,11 @@ func handleProtocolInfo(event *ProtocolInfo) {
 		}
 		pie.Transports = append(pie.Transports, ptie)
 	}
-	pf := func(pid servicedef.ProtocolIdentifier, pi *servicedef.ProtocolInfo) {
+	pf := func(pid defs.ProtocolIdentifier, pi *defs.ProtocolInfo) {
 		pie := &ProtocolInfoEntry{ID: pid, Valid: true, Name: pi.Name}
 		if event.Filter != nil && len(event.Filter.Transports) > 0 {
 			for _, t := range event.Filter.Transports {
-				tf(servicedef.TransportIdentifier(t), pi, pie)
+				tf(defs.TransportIdentifier(t), pi, pie)
 			}
 		} else {
 			for tid := range pi.Transports {
@@ -64,7 +63,7 @@ func handleProtocolInfo(event *ProtocolInfo) {
 
 	if event.Filter != nil && len(event.Filter.Protocols) > 0 {
 		for _, p := range event.Filter.Protocols {
-			pid := servicedef.ProtocolIdentifier(p)
+			pid := defs.ProtocolIdentifier(p)
 			if pi, ok := services.Protocols[pid]; ok {
 				pf(pid, pi)
 			} else {

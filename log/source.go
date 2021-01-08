@@ -4,4 +4,7 @@ package log
 const SrcHTTP = "H"
 
 // SrcWS - WebSocket log sources
-const SrcWS = "S"
+const SrcWS = "W"
+
+// SrcSVC - services log sources
+const SrcSVC = "S"

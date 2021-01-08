@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/stas-makutin/howeve/config"
-	"github.com/stas-makutin/howeve/services/servicedef"
+	"github.com/stas-makutin/howeve/defs"
 )
 
 // Restart - restart the service
@@ -26,7 +25,7 @@ type ConfigGet struct {
 // ConfigGetResult - config data event
 type ConfigGetResult struct {
 	ResponseHeader
-	config.Config
+	defs.Config
 }
 
 // ProtocolListEntry - list of supported protocols
@@ -71,10 +70,10 @@ type ParamInfoEntry struct {
 	EnumValues   []string `json:"enumValues,omitempty"`
 }
 
-func buildParamsInfo(p servicedef.Params) (pie map[string]*ParamInfoEntry) {
+func buildParamsInfo(p defs.Params) (pie map[string]*ParamInfoEntry) {
 	pie = make(map[string]*ParamInfoEntry)
 	for name, pi := range p {
-		if !pi.Const {
+		if pi.Flags&defs.ParamFlagConst == 0 {
 			pie[name] = &ParamInfoEntry{
 				Description:  pi.Description,
 				Type:         pi.Type.String(),
@@ -88,17 +87,17 @@ func buildParamsInfo(p servicedef.Params) (pie map[string]*ParamInfoEntry) {
 
 // ProtocolTransportInfoEntry - protocol detaild information
 type ProtocolTransportInfoEntry struct {
-	ID              servicedef.TransportIdentifier `json:"id"`
-	Valid           bool                           `json:"valid"`
-	Name            string                         `json:"name,omitempty"`
-	Params          map[string]*ParamInfoEntry     `json:"params,omitempty"`
-	Discoverable    bool                           `json:"discoverable,omitempty"`
-	DiscoveryParams map[string]*ParamInfoEntry     `json:"discoveryParams,omitempty"`
+	ID              defs.TransportIdentifier   `json:"id"`
+	Valid           bool                       `json:"valid"`
+	Name            string                     `json:"name,omitempty"`
+	Params          map[string]*ParamInfoEntry `json:"params,omitempty"`
+	Discoverable    bool                       `json:"discoverable,omitempty"`
+	DiscoveryParams map[string]*ParamInfoEntry `json:"discoveryParams,omitempty"`
 }
 
 // ProtocolInfoEntry - protocol detaild information
 type ProtocolInfoEntry struct {
-	ID         servicedef.ProtocolIdentifier `json:"id"`
+	ID         defs.ProtocolIdentifier       `json:"id"`
 	Valid      bool                          `json:"valid"`
 	Name       string                        `json:"name,omitempty"`
 	Transports []*ProtocolTransportInfoEntry `json:"transports,omitempty"`
@@ -106,8 +105,8 @@ type ProtocolInfoEntry struct {
 
 // ProtocolInfoFilter - protocols/transport filter
 type ProtocolInfoFilter struct {
-	Protocols  []servicedef.ProtocolIdentifier  `json:"protocols,omitempty"`
-	Transports []servicedef.TransportIdentifier `json:"transports,omitempty"`
+	Protocols  []defs.ProtocolIdentifier  `json:"protocols,omitempty"`
+	Transports []defs.TransportIdentifier `json:"transports,omitempty"`
 }
 
 // ProtocolInfo - get protocol(s) detailed information
@@ -126,7 +125,7 @@ type ProtocolInfoResult struct {
 type ParamsValues map[string]string
 
 // NewParamsValues creates reporting parameter values from service parameter values
-func NewParamsValues(pv servicedef.ParamValues) (r ParamsValues) {
+func NewParamsValues(pv defs.ParamValues) (r ParamsValues) {
 	if len(pv) > 0 {
 		r = make(ParamsValues)
 		for name, value := range pv {
@@ -137,37 +136,33 @@ func NewParamsValues(pv servicedef.ParamValues) (r ParamsValues) {
 }
 
 // Parse function parses input parameters according their definition
-func (pv ParamsValues) Parse(p servicedef.Params) (servicedef.ParamValues, *ErrorInfo) {
-	var rv servicedef.ParamValues
-	for name, value := range pv {
-		if v, err := p.Parse(name, value); err != nil {
-			if errors.Is(err, servicedef.ErrUnknownParamName) {
-				return nil, NewErrorInfo(ErrorUnknownParameter, name)
-			}
-			return nil, NewErrorInfo(ErrorInvalidParameterValue, value, name)
-		} else {
-			if rv == nil {
-				rv = make(servicedef.ParamValues)
-			}
-			rv[name] = v
+func (pv ParamsValues) Parse(p defs.Params) (defs.ParamValues, *ErrorInfo) {
+	values, name, err := p.ParseAll(pv)
+	if err != nil {
+		if errors.Is(err, defs.ErrUnknownParamName) {
+			return nil, NewErrorInfo(ErrorUnknownParameter, name)
+		} else if errors.Is(err, defs.ErrNoRequiredParam) {
+			return nil, NewErrorInfo(ErrorNoRequiredParameter, name)
 		}
+		value, _ := pv[name]
+		return nil, NewErrorInfo(ErrorInvalidParameterValue, value, name)
 	}
-	return rv, nil
+	return values, nil
 }
 
 // ProtocolDiscoveryQuery - discovery input parameters
 type ProtocolDiscoveryQuery struct {
-	Protocol  servicedef.ProtocolIdentifier  `json:"protocol"`
-	Transport servicedef.TransportIdentifier `json:"transport"`
-	Params    ParamsValues                   `json:"params,omitempty"`
+	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
+	Transport defs.TransportIdentifier `json:"transport"`
+	Params    ParamsValues             `json:"params,omitempty"`
 }
 
 // ServiceEntry - service entry description
 type ServiceEntry struct {
-	Protocol  servicedef.ProtocolIdentifier  `json:"protocol"`
-	Transport servicedef.TransportIdentifier `json:"transport"`
-	Entry     string                         `json:"entry"`
-	Params    ParamsValues                   `json:"params,omitempty"`
+	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
+	Transport defs.TransportIdentifier `json:"transport"`
+	Entry     string                   `json:"entry"`
+	Params    ParamsValues             `json:"params,omitempty"`
 }
 
 // ServiceEntryDetails - service entry with details

@@ -1,4 +1,4 @@
-package servicedef
+package defs
 
 // ServiceKey struct defines service unique identifier/key
 type ServiceKey struct {

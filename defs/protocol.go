@@ -1,4 +1,4 @@
-package servicedef
+package defs
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package servicedef
+package defs
 
 import (
 	"errors"
@@ -8,6 +8,9 @@ import (
 
 // ParamType type of parameter type enum
 type ParamType uint8
+
+// ParamFlags type of parameter bit flags
+type ParamFlags uint8
 
 // Parameter's data types
 const (
@@ -22,6 +25,12 @@ const (
 	ParamTypeBool
 	ParamTypeString
 	ParamTypeEnum
+)
+
+// Parameter's bit flags
+const (
+	ParamFlagConst ParamFlags = 1 << iota
+	ParamFlagRequired
 )
 
 func (pt ParamType) String() string {
@@ -54,7 +63,7 @@ func (pt ParamType) String() string {
 type ParamInfo struct {
 	Description  string
 	Type         ParamType
-	Const        bool
+	Flags        ParamFlags
 	DefaultValue string
 	EnumValues   []string
 }
@@ -71,47 +80,46 @@ var ErrUnknownParamName error = errors.New("The parameter name is unknown")
 // ErrInvalidParamValue is the error for not valid parameter value
 var ErrInvalidParamValue error = errors.New("The parameter value is not valid")
 
-// Parse function validates parameter name and parses its value
-func (p Params) Parse(name, value string) (interface{}, error) {
-	info, ok := p[name]
-	if !ok {
-		return nil, ErrUnknownParamName
-	}
-	switch info.Type {
+// ErrNoRequiredParam is the error for missing required parameter
+var ErrNoRequiredParam error = errors.New("The required parameter is missing")
+
+// Parse function parses provided parameter value
+func (p ParamInfo) Parse(value string) (interface{}, error) {
+	switch p.Type {
 	case ParamTypeInt8, ParamTypeInt16, ParamTypeInt32, ParamTypeInt64:
 		bitSize := 64
-		if ParamTypeInt8 == info.Type {
+		if ParamTypeInt8 == p.Type {
 			bitSize = 8
-		} else if ParamTypeInt16 == info.Type {
+		} else if ParamTypeInt16 == p.Type {
 			bitSize = 16
-		} else if ParamTypeInt32 == info.Type {
+		} else if ParamTypeInt32 == p.Type {
 			bitSize = 32
 		}
 		if v, err := strconv.ParseInt(value, 0, bitSize); err == nil {
-			if ParamTypeInt8 == info.Type {
+			if ParamTypeInt8 == p.Type {
 				return int8(v), nil
-			} else if ParamTypeInt16 == info.Type {
+			} else if ParamTypeInt16 == p.Type {
 				return int16(v), nil
-			} else if ParamTypeInt32 == info.Type {
+			} else if ParamTypeInt32 == p.Type {
 				return int32(v), nil
 			}
 			return v, nil
 		}
 	case ParamTypeUint8, ParamTypeUint16, ParamTypeUint32, ParamTypeUint64:
 		bitSize := 64
-		if ParamTypeUint8 == info.Type {
+		if ParamTypeUint8 == p.Type {
 			bitSize = 8
-		} else if ParamTypeUint16 == info.Type {
+		} else if ParamTypeUint16 == p.Type {
 			bitSize = 16
-		} else if ParamTypeUint32 == info.Type {
+		} else if ParamTypeUint32 == p.Type {
 			bitSize = 32
 		}
 		if v, err := strconv.ParseUint(value, 0, bitSize); err == nil {
-			if ParamTypeUint8 == info.Type {
+			if ParamTypeUint8 == p.Type {
 				return uint8(v), nil
-			} else if ParamTypeUint16 == info.Type {
+			} else if ParamTypeUint16 == p.Type {
 				return uint16(v), nil
-			} else if ParamTypeUint32 == info.Type {
+			} else if ParamTypeUint32 == p.Type {
 				return uint32(v), nil
 			}
 			return v, nil
@@ -127,13 +135,48 @@ func (p Params) Parse(name, value string) (interface{}, error) {
 	case ParamTypeString:
 		return value, nil
 	case ParamTypeEnum:
-		for _, v := range info.EnumValues {
+		for _, v := range p.EnumValues {
 			if v == value {
 				return value, nil
 			}
 		}
 	}
 	return nil, ErrInvalidParamValue
+}
+
+// Parse function validates parameter name and parses its value
+func (p Params) Parse(name, value string) (interface{}, error) {
+	param, ok := p[name]
+	if !ok {
+		return nil, ErrUnknownParamName
+	}
+	return param.Parse(value)
+}
+
+// ParseAll function validates parameters and parses their value. Returns values map or parameter name + associated error
+func (p Params) ParseAll(values map[string]string) (ParamValues, string, error) {
+	rv := make(ParamValues)
+
+	for name, param := range p {
+		value, ok := values[name]
+		if ok {
+			if param.Flags&ParamFlagConst != 0 {
+				value = param.DefaultValue
+			}
+		} else {
+			if param.Flags&ParamFlagRequired != 0 {
+				return nil, name, ErrNoRequiredParam
+			}
+			value = param.DefaultValue
+		}
+		if v, err := param.Parse(value); err == nil {
+			rv[name] = v
+		} else {
+			return nil, name, err
+		}
+	}
+
+	return rv, "", nil
 }
 
 // Merge returns copy of combined parameters with subordinate parameters
