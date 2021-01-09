@@ -70,20 +70,20 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 		q = &handlers.ProtocolInfoFilter{}
 		for _, v := range r.Form["protocols"] {
 			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
-				if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
+				n, err := strconv.ParseUint(vp, 10, 8)
+				if err != nil {
 					return nil, true, err
-				} else {
-					q.Protocols = append(q.Protocols, defs.ProtocolIdentifier(n))
 				}
+				q.Protocols = append(q.Protocols, defs.ProtocolIdentifier(n))
 			}
 		}
 		for _, v := range r.Form["transports"] {
 			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
-				if n, err := strconv.ParseUint(vp, 10, 8); err != nil {
+				n, err := strconv.ParseUint(vp, 10, 8)
+				if err != nil {
 					return nil, true, err
-				} else {
-					q.Transports = append(q.Transports, defs.TransportIdentifier(n))
 				}
+				q.Transports = append(q.Transports, defs.TransportIdentifier(n))
 			}
 		}
 	}

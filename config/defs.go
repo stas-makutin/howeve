@@ -1,4 +1,4 @@
-package defs
+package config
 
 import "os"
 
@@ -7,6 +7,7 @@ type Config struct {
 	WorkingDirectory string            `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 	Log              *LogConfig        `yaml:"log,omitempty" json:"log,omitempty"`
 	HTTPServer       *HTTPServerConfig `yaml:"httpServer,omitempty" json:"httpServer,omitempty"`
+	MessageLog       *MessageLogConfig `yaml:"messageLog,omitempty" json:"messageLog,omitempty"`
 	Services         []ServiceConfig   `yaml:"services,omitempty" json:"services,omitempty"`
 }
 
@@ -32,6 +33,12 @@ type HTTPServerConfig struct {
 	WriteTimeout      uint   `yaml:"writeTimeout,omitempty" json:"writeTimeout,omitempty"`           // milliseconds
 	IdleTimeout       uint   `yaml:"idleTimeout,omitempty" json:"idleTimeout,omitempty"`             // milliseconds
 	MaxHeaderBytes    uint32 `yaml:"maxHeaderBytes,omitempty" json:"maxHeaderBytes,omitempty"`
+}
+
+// MessageLogConfig defines message log configuration entries
+type MessageLogConfig struct {
+	MaxSize uint   `yaml:"maxSize,omitempty" json:"maxSize,omitempty"` // maximal messages log size, in bytes. must be greater or equal to 8192. Default value is 10MB
+	File    string `yaml:"file,omitempty" json:"file,omitempty"`       // file where messages log will be stored. If not specified or empty the message log will not persist
 }
 
 // ServiceConfig defines configuration of active services

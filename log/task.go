@@ -10,14 +10,13 @@ import (
 	"time"
 
 	"github.com/stas-makutin/howeve/config"
-	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/tasks"
 	"github.com/stas-makutin/howeve/utils"
 )
 
 // Task struct
 type Task struct {
-	cfg                *defs.LogConfig
+	cfg                *config.LogConfig
 	defaultLogFileName string
 	fileName           string
 	fileMode           os.FileMode
@@ -35,7 +34,7 @@ func NewTask(defaultLogFileName string) *Task {
 	return t
 }
 
-func (t *Task) readConfig(cfg *defs.Config, cfgError config.Error) {
+func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 	t.cfg = cfg.Log
 	t.fileName = ""
 	if t.cfg == nil {
@@ -87,7 +86,7 @@ func (t *Task) readConfig(cfg *defs.Config, cfgError config.Error) {
 	t.archive = archive == "zip"
 }
 
-func (t *Task) writeConfig(cfg *defs.Config) {
+func (t *Task) writeConfig(cfg *config.Config) {
 	cfg.Log = t.cfg
 }
 

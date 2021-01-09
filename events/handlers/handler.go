@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/services"
 	"github.com/stas-makutin/howeve/tasks"
@@ -11,7 +12,7 @@ func handleRestart(event *Restart) {
 	go tasks.StopServiceTasks()
 }
 
-func handleConfigGet(event *ConfigGet, cfg *defs.Config) {
+func handleConfigGet(event *ConfigGet, cfg *config.Config) {
 	Dispatcher.Send(&ConfigGetResult{Config: *cfg, ResponseHeader: event.Associate()})
 }
 

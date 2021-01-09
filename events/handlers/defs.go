@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
 )
 
@@ -25,7 +26,7 @@ type ConfigGet struct {
 // ConfigGetResult - config data event
 type ConfigGetResult struct {
 	ResponseHeader
-	defs.Config
+	config.Config
 }
 
 // ProtocolListEntry - list of supported protocols

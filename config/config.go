@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -14,10 +13,10 @@ import (
 type Error func(msg string)
 
 // Reader func
-type Reader func(cfg *defs.Config, cfgError Error)
+type Reader func(cfg *Config, cfgError Error)
 
 // Writer func
-type Writer func(cfg *defs.Config)
+type Writer func(cfg *Config)
 
 var readers []Reader
 var writers []Writer
@@ -34,8 +33,8 @@ func AddWriter(w Writer) {
 	writers = append(writers, w)
 }
 
-func readConfig(cfgFile string) (*defs.Config, error) {
-	var config defs.Config
+func readConfig(cfgFile string) (*Config, error) {
+	var config Config
 
 	err := func() error {
 		file, err := os.Open(cfgFile)

@@ -11,7 +11,7 @@ import (
 
 // Task struct
 type Task struct {
-	cfg *defs.Config
+	cfg *config.Config
 }
 
 // NewTask func
@@ -22,11 +22,11 @@ func NewTask() *Task {
 	return t
 }
 
-func (t *Task) readConfig(cfg *defs.Config, cfgError config.Error) {
+func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 	t.cfg = cfg
 }
 
-func (t *Task) writeConfig(cfg *defs.Config) {
+func (t *Task) writeConfig(cfg *config.Config) {
 }
 
 // Open func
