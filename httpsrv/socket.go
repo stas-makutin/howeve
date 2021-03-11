@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -170,9 +169,7 @@ func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Quer
 }
 
 func isConnClosed(err error) bool {
-	// TODO replace !strings.Contains(err.Error(), "use of closed network connection") with err != net.ErrClosed in go 1.16
-	// details: https://github.com/golang/go/issues/4373
-	return err == io.EOF || strings.Contains(err.Error(), "use of closed network connection")
+	return err == io.EOF || err == net.ErrClosed
 }
 
 // WebSocketTextWriter struct

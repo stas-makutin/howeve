@@ -8,6 +8,7 @@ import (
 // Task struct
 type Task struct {
 	cfg *config.Config
+	ml  messages
 }
 
 // NewTask func
@@ -27,6 +28,9 @@ func (t *Task) writeConfig(cfg *config.Config) {
 
 // Open func
 func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
+	if t.cfg.MessageLog != nil {
+
+	}
 	return nil
 }
 

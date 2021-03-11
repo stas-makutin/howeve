@@ -101,16 +101,19 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 			return nil, true, err
 		}
 		q = &handlers.ProtocolDiscoveryQuery{}
-		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
+
+		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
+		if err != nil {
 			return nil, true, err
-		} else {
-			q.Protocol = defs.ProtocolIdentifier(n)
 		}
-		if n, err := strconv.ParseUint(r.Form.Get("transport"), 10, 8); err != nil {
+		q.Protocol = defs.ProtocolIdentifier(n)
+
+		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
+		if err != nil {
 			return nil, true, err
-		} else {
-			q.Transport = defs.TransportIdentifier(n)
 		}
+		q.Transport = defs.TransportIdentifier(n)
+
 		if pi, ok := services.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
 				for name, p := range pti.DiscoveryParams {
@@ -142,16 +145,19 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 			return nil, true, err
 		}
 		q = &handlers.ServiceEntryWithAlias{}
-		if n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8); err != nil {
+
+		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
+		if err != nil {
 			return nil, true, err
-		} else {
-			q.Protocol = defs.ProtocolIdentifier(n)
 		}
-		if n, err := strconv.ParseUint(r.Form.Get("transport"), 10, 8); err != nil {
+		q.Protocol = defs.ProtocolIdentifier(n)
+
+		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
+		if err != nil {
 			return nil, true, err
-		} else {
-			q.Transport = defs.TransportIdentifier(n)
 		}
+		q.Transport = defs.TransportIdentifier(n)
+
 		q.Entry = r.Form.Get("entry")
 		q.Alias = r.Form.Get("alias")
 		if pi, ok := services.Protocols[q.Protocol]; ok {
