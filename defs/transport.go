@@ -26,4 +26,9 @@ type Transport interface {
 }
 
 // ErrNotOpen error
-var ErrNotOpen error = errors.New("The transport entry is not open")
+var ErrNotOpen error = errors.New("the transport entry is not open")
+
+// IsValid verifies if protocol identifer is valid
+func (transport TransportIdentifier) IsValid() bool {
+	return transport == TransportSerial
+}

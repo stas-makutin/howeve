@@ -1,6 +1,6 @@
 module github.com/stas-makutin/howeve
 
-go 1.15
+go 1.17
 
 require (
 	github.com/albenik/go-serial/v2 v2.1.0
@@ -13,4 +13,10 @@ require (
 	golang.org/x/sys v0.0.0-20201207223542-d4d67f95c62d // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+)
+
+require (
+	github.com/creack/goselect v0.1.1 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.6.0 // indirect
 )

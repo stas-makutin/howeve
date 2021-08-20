@@ -33,3 +33,8 @@ type ProtocolInfo struct {
 	Name       string
 	Transports map[TransportIdentifier]*ProtocolTransportOptions
 }
+
+// IsValid verifies if protocol identifer is valid
+func (protocol ProtocolIdentifier) IsValid() bool {
+	return protocol == ProtocolZWave
+}

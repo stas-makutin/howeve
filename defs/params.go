@@ -75,13 +75,13 @@ type Params map[string]*ParamInfo
 type ParamValues map[string]interface{}
 
 // ErrUnknownParamName is the error for unknown parameter name
-var ErrUnknownParamName error = errors.New("The parameter name is unknown")
+var ErrUnknownParamName error = errors.New("the parameter name is unknown")
 
 // ErrInvalidParamValue is the error for not valid parameter value
-var ErrInvalidParamValue error = errors.New("The parameter value is not valid")
+var ErrInvalidParamValue error = errors.New("the parameter value is not valid")
 
 // ErrNoRequiredParam is the error for missing required parameter
-var ErrNoRequiredParam error = errors.New("The required parameter is missing")
+var ErrNoRequiredParam error = errors.New("the required parameter is missing")
 
 // Parse function parses provided parameter value
 func (p ParamInfo) Parse(value string) (interface{}, error) {
@@ -126,10 +126,10 @@ func (p ParamInfo) Parse(value string) (interface{}, error) {
 		}
 	case ParamTypeBool:
 		value = strings.ToLower(value)
-		if "1" == value || "true" == value {
+		if value == "1" || value == "true" {
 			return true, nil
 		}
-		if "0" == value || "false" == value {
+		if value == "0" || value == "false" {
 			return false, nil
 		}
 	case ParamTypeString:
