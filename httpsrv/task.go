@@ -41,7 +41,7 @@ func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 		return
 	}
 	if t.hc.cfg.Port != 0 && (t.hc.cfg.Port < 1 || t.hc.cfg.Port > 65535) {
-		cfgError("httpServer.port must be between 1 and 65535.")
+		cfgError("httpServer.port must be between 1 and 65535")
 	}
 }
 

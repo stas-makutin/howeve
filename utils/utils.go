@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // SuffixMultiplier struct
@@ -66,6 +67,18 @@ func ParseSizeString(size string) (int64, error) {
 func ParseTimeDuration(duration string) (time.Duration, error) {
 	v, err := ParseSuffixed(duration, timeSuffixes)
 	return time.Duration(v), err
+}
+
+// ParseOptions func
+func ParseOptions(options string, accept func(option string) bool) bool {
+	for _, option := range strings.FieldsFunc(options, func(r rune) bool { return r == ',' || r == ';' || unicode.IsSpace(r) }) {
+		if option != "" {
+			if !accept(option) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // FileToArchive struct

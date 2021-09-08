@@ -8,3 +8,6 @@ const SrcWS = "W"
 
 // SrcSVC - services log sources
 const SrcSVC = "S"
+
+// SrcMsg - messages log sources
+const SrcMsg = "M"

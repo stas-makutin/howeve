@@ -41,6 +41,7 @@ type MessageLogConfig struct {
 	File     string      `yaml:"file,omitempty" json:"file,omitempty"`       // file where messages log will be stored. If not specified or empty the message log will not persist
 	DirMode  os.FileMode `yaml:"dirMode,omitempty" json:"dirMode,omitempty"`
 	FileMode os.FileMode `yaml:"fileMode,omitempty" json:"fileMode,omitempty"`
+	Flags    string      `yaml:"flags,omitempty" json:"flags,omitempty"`
 }
 
 // ServiceConfig defines configuration of active services
