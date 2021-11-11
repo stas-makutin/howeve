@@ -99,7 +99,7 @@ func readMessages(r io.Reader) (*messages, error) {
 			break
 		} else {
 			messages.entries = append(messages.entries, message)
-			messages.services[*message.ServiceKey] = messages.services[*message.ServiceKey] + 1
+			messages.services[*message.ServiceKey] += 1
 		}
 	}
 
