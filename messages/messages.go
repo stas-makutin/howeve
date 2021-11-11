@@ -36,3 +36,38 @@ func (m *messages) clear() {
 	m.services = make(map[defs.ServiceKey]int)
 	m.entries = nil
 }
+
+func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) {
+	m.Lock()
+	defer m.Unlock()
+
+	messagesCount := m.services[*key]
+	m.services[*key] = messagesCount + 1
+
+	m.entries = append(m.entries, &message{
+		time:       time.Now().UTC(),
+		ServiceKey: key,
+		Message:    msg,
+	})
+}
+
+func (m *messages) pop() (time.Time, *defs.ServiceKey, *defs.Message) {
+	m.Lock()
+	entry := func() *message {
+		defer m.Unlock()
+
+		if len(m.entries) <= 0 {
+			return nil
+		}
+
+		entry := m.entries[0]
+		m.entries = m.entries[1:]
+		return entry
+	}()
+
+	if entry == nil {
+		return time.Now().UTC(), nil, nil
+	}
+
+	return entry.time, entry.ServiceKey, entry.Message
+}

@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
 	"github.com/kardianos/service"
 	"github.com/stas-makutin/howeve/tasks"
@@ -116,6 +118,8 @@ func (app *application) Stop(s service.Service) error {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	app := &application{}
 	action := app.parseCommandLine(service.Interactive())
 
