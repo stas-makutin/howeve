@@ -64,7 +64,10 @@ func (m *messages) save(file string, dirMode os.FileMode, fileMode os.FileMode) 
 	}
 	defer f.Close()
 
-	return writeMessages(bufio.NewWriter(f), m)
+	w := bufio.NewWriter(f)
+	defer w.Flush()
+
+	return writeMessages(w, m)
 }
 
 var fileHeader = []byte("ml01")
@@ -96,6 +99,7 @@ func readMessages(r io.Reader) (*messages, error) {
 			break
 		} else {
 			messages.entries = append(messages.entries, message)
+			messages.services[*message.ServiceKey] = messages.services[*message.ServiceKey] + 1
 		}
 	}
 
@@ -110,9 +114,10 @@ func writeMessages(w io.Writer, messages *messages) error {
 	serviceIndices := make(map[defs.ServiceKey]uint16)
 	var serviceIndex uint16 = 0
 
-	if err := binary.Write(w, binary.LittleEndian, uint16(len(messages.services))); err != nil {
+	if err := writeServicesCount(w, uint16(len(messages.services))); err != nil {
 		return err
 	}
+
 	for service, serviceMessagesCount := range messages.services {
 		if serviceMessagesCount <= 0 {
 			continue
@@ -127,7 +132,7 @@ func writeMessages(w io.Writer, messages *messages) error {
 	// messages
 	for _, message := range messages.entries {
 		if err := writeMessageEntry(w, message, serviceIndices); err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -257,7 +262,7 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 		}
 	}
 	return &message{
-		time:       time.Unix(0, timeNano),
+		time:       time.Unix(0, timeNano).UTC(),
 		ServiceKey: service,
 		Message: &defs.Message{
 			UUID:    uuid,
@@ -271,7 +276,7 @@ func writeMessageEntry(w io.Writer, m *message, serviceIndices map[defs.ServiceK
 	if !ok || len(m.Payload) > int(^uint16(0)) {
 		return nil // ignore invalid services and large payoads
 	}
-	if err := binary.Write(w, binary.LittleEndian, m.time.UnixNano()); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, m.time.UTC().UnixNano()); err != nil {
 		return writeError("message time", err)
 	}
 	if err := binary.Write(w, binary.LittleEndian, serviceIndex); err != nil {
