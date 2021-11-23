@@ -14,9 +14,9 @@ func init() {
 	tasks.ServiceTasks = []tasks.ServiceTaskEntry{
 		{Name: "Configuration", Task: config.NewTask()},
 		{Name: "Log", Task: log.NewTask(appName)},
-		{Name: "Events", Task: handlers.NewTask()},
-		{Name: "HTTP server", Task: httpsrv.NewTask()},
 		{Name: "Message Log", Task: messages.NewTask()},
 		{Name: "Services", Task: services.NewTask()},
+		{Name: "Events", Task: handlers.NewTask()},
+		{Name: "HTTP server", Task: httpsrv.NewTask()},
 	}
 }

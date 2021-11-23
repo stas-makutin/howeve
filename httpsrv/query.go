@@ -27,6 +27,10 @@ const (
 	queryProtocolDiscoveryResult
 	queryAddService
 	queryAddServiceResult
+	querySendToService
+	querySendToServiceResult
+	queryRetriveFromService
+	queryRetriveFromServiceResult
 )
 
 var queryTypeMap = map[string]queryType{
@@ -37,6 +41,8 @@ var queryTypeMap = map[string]queryType{
 	"protocolInfo": queryProtocolInfo, "protocolInfoResult": queryProtocolInfoResult,
 	"discovery": queryProtocolDiscovery, "discoveryResult": queryProtocolDiscoveryResult,
 	"addService": queryAddService, "addServiceResult": queryAddServiceResult,
+	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
+	"retriveFrom": queryRetriveFromService, "retriveFromResult": queryRetriveFromServiceResult,
 }
 var queryNameMap map[queryType]string
 
@@ -67,7 +73,7 @@ func (c *Query) UnmarshalJSON(data []byte) error {
 	}
 	t, ok := queryTypeMap[env.Type]
 	if !ok {
-		return fmt.Errorf("Unexpected query %v", env.Type)
+		return fmt.Errorf("unexpected query %v", env.Type)
 	}
 	c.Type = t
 	c.ID = env.ID
@@ -83,7 +89,7 @@ func (c *Query) MarshalJSON() ([]byte, error) {
 	}
 	n, ok := queryNameMap[c.Type]
 	if !ok {
-		return nil, fmt.Errorf("Unknown query %v", c.Type)
+		return nil, fmt.Errorf("unknown query %v", c.Type)
 	}
 	env.Type = n
 	env.ID = c.ID
@@ -137,6 +143,10 @@ func (c *Query) toEvent() interface{} {
 		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
 	case queryAddService:
 		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntryWithAlias: c.Payload.(*handlers.ServiceEntryWithAlias)}
+	case querySendToService:
+		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+	case queryRetriveFromService:
+		return &handlers.RetriveFromService{RequestHeader: *handlers.NewRequestHeader(c.ID)}
 	}
 	return nil
 }
@@ -166,6 +176,10 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryQueryResult}
 	case *handlers.AddServiceResult:
 		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.AddServiceReply}
+	case *handlers.SendToServiceResult:
+		return &Query{Type: querySendToServiceResult, ID: e.TraceID()}
+	case *handlers.RetriveFromServiceResult:
+		return &Query{Type: queryRetriveFromServiceResult, ID: e.TraceID()}
 	}
 	return nil
 }

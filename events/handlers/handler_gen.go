@@ -82,53 +82,44 @@ func handleProtocolInfo(event *ProtocolInfo) {
 
 func handleProtocolDiscovery(event *ProtocolDiscovery) {
 	r := &ProtocolDiscoveryResult{ResponseHeader: event.Associate(), ProtocolDiscoveryQueryResult: &ProtocolDiscoveryQueryResult{}}
-	if pi, ok := services.Protocols[event.Protocol]; ok {
-		if ti, ok := services.Transports[event.Transport]; ok {
-			if pti, ok := pi.Transports[event.Transport]; ok {
-				if pti.DiscoveryFunc != nil {
-					if params, errorInfo := event.Params.Parse(pti.DiscoveryParams); errorInfo != nil {
-						r.ProtocolDiscoveryQueryResult.Error = errorInfo
-					} else {
-						go func() {
-							if serviceEntries, err := pti.DiscoveryFunc(event.Context(), params); err == nil {
-								if len(serviceEntries) > 0 {
-									r.Services = make([]*ServiceEntryDetails, 0, len(serviceEntries))
-									for _, serviceEntry := range serviceEntries {
-										r.Services = append(r.Services, &ServiceEntryDetails{
-											ServiceEntry: ServiceEntry{
-												Protocol:  serviceEntry.Key.Protocol,
-												Transport: serviceEntry.Key.Transport,
-												Entry:     serviceEntry.Key.Entry,
-												Params:    NewParamsValues(serviceEntry.Params),
-											},
-											Description: serviceEntry.Description,
-										})
-									}
-								}
-							} else {
-								// TODO error reporting
-							}
-							Dispatcher.Send(r)
-						}()
-						return
-					}
-				} else {
-					r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorNoDiscovery, pi.Name, event.Protocol, ti.Name, event.Transport)
-				}
+	if pat, ei := findProtocolAndTransport(event.Protocol, event.Transport); ei == nil {
+		if pat.options.DiscoveryFunc != nil {
+			if params, errorInfo := event.Params.parse(pat.options.DiscoveryParams); errorInfo != nil {
+				r.ProtocolDiscoveryQueryResult.Error = errorInfo
 			} else {
-				r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorInvalidProtocolTransport, pi.Name, event.Protocol, ti.Name, event.Transport)
+				go func() {
+					if serviceEntries, err := pat.options.DiscoveryFunc(event.Context(), params); err == nil {
+						if len(serviceEntries) > 0 {
+							r.Services = make([]*ServiceEntryDetails, 0, len(serviceEntries))
+							for _, serviceEntry := range serviceEntries {
+								r.Services = append(r.Services, &ServiceEntryDetails{
+									ServiceEntry: ServiceEntry{
+										ServiceKey: ServiceKey{
+											Protocol:  serviceEntry.Key.Protocol,
+											Transport: serviceEntry.Key.Transport,
+											Entry:     serviceEntry.Key.Entry,
+										},
+										Params: NewParamsValues(serviceEntry.Params),
+									},
+									Description: serviceEntry.Description,
+								})
+							}
+						}
+					} else {
+						// TODO error reporting
+					}
+					Dispatcher.Send(r)
+				}()
+				return
 			}
 		} else {
-			r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorUnknownTransport, event.Transport)
+			r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(
+				ErrorNoDiscovery, pat.protocol.Name, event.Protocol, pat.transport.Name, event.Transport,
+			)
 		}
 	} else {
-		r.ProtocolDiscoveryQueryResult.Error = NewErrorInfo(ErrorUnknownProtocol, event.Protocol)
+		r.ProtocolDiscoveryQueryResult.Error = ei
 	}
 
-	Dispatcher.Send(r)
-}
-
-func handleAddService(event *AddService) {
-	r := &AddServiceResult{ResponseHeader: event.Associate(), AddServiceReply: &AddServiceReply{Success: true}}
 	Dispatcher.Send(r)
 }
