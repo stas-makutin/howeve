@@ -12,3 +12,10 @@ type ServiceEntry struct {
 	Key    ServiceKey
 	Params ParamValues
 }
+
+// Service interface, defines minimal set of methods the service needs to support
+type Service interface {
+	Start() error
+	Stop()
+	Send(message Message) error
+}

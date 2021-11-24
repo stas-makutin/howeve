@@ -5,9 +5,6 @@ import (
 	"github.com/stas-makutin/howeve/tasks"
 )
 
-// Services - reference to current service registry
-var Services *ServicesRegistry
-
 // Task struct
 type Task struct {
 	cfg *config.Config
@@ -31,7 +28,7 @@ func (t *Task) writeConfig(cfg *config.Config) {
 
 // Open func
 func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
-	Services = newServicesRegistry()
+	services = newServicesRegistry()
 	for _, scfg := range t.cfg.Services {
 		addServiceFromConfig(scfg)
 	}
@@ -40,11 +37,11 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 // Close func
 func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
-	Services = nil
+	services = nil
 	return nil
 }
 
 // Stop func
 func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
-	Services.Stop()
+	services.Stop()
 }

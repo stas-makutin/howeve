@@ -62,3 +62,23 @@ func findProtocolAndTransport(protocol defs.ProtocolIdentifier, transport defs.T
 	}
 	return pat, NewErrorInfo(ErrorUnknownProtocol, protocol)
 }
+
+func makeServiceKey(protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, entry string) (*defs.ServiceKey, *ErrorInfo) {
+	_, errorInfo := findProtocolAndTransport(protocol, transport)
+	if errorInfo != nil {
+		return nil, errorInfo
+	}
+	return &defs.ServiceKey{Protocol: protocol, Transport: transport, Entry: entry}, nil
+}
+
+func makeServiceEntry(protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, entry string, pv ParamsValues) (*defs.ServiceEntry, *ErrorInfo) {
+	pat, errorInfo := findProtocolAndTransport(protocol, transport)
+	if errorInfo != nil {
+		return nil, errorInfo
+	}
+	params, errorInfo := pv.parse(pat.options.Params)
+	if errorInfo != nil {
+		return nil, errorInfo
+	}
+	return &defs.ServiceEntry{Key: defs.ServiceKey{Protocol: protocol, Transport: transport, Entry: entry}, Params: params}, nil
+}

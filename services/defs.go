@@ -59,6 +59,7 @@ var Protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 		Name: "Z-Wave",
 		Transports: map[defs.TransportIdentifier]*defs.ProtocolTransportOptions{
 			defs.TransportSerial: {
+				ServiceFunc:   zwave.NewServiceSerial,
 				DiscoveryFunc: zwave.DiscoverySerial,
 				Params: defs.Params{
 					ParamNameSerialDataBits: &defs.ParamInfo{
