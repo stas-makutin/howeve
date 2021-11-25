@@ -92,7 +92,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	// create TCP listener
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
-		return fmt.Errorf("Listen on %v port failed: %v", port, err)
+		return fmt.Errorf("listen on %v port failed: %v", port, err)
 	}
 
 	// apply concurrent connections limit
@@ -138,9 +138,9 @@ func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 		t.cancel = nil
 		t.server = nil
 	}
-	select {
-	case <-t.hc.stopCh:
-	}
+
+	<-t.hc.stopCh
+
 	t.hc.handlerWg.Wait()
 	if t.listener != nil {
 		err := (*t.listener).Close()

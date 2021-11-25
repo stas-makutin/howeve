@@ -1,26 +1,26 @@
 package zwave
 
 import (
-	"context"
-
 	"github.com/stas-makutin/howeve/defs"
 )
 
 // ServiceSerial zwave service implementation using serial transport
 type ServiceSerial struct {
-	ctx context.Context
 }
 
 // NewServiceSerial creates new zwave service implementation using serial transport
-func NewServiceSerial(ctx context.Context, entry string, params defs.ParamValues) (*defs.Service, error) {
-	return nil, nil
+func NewServiceSerial(entry string, params defs.ParamValues) (defs.Service, error) {
+	return &ServiceSerial{}, nil
 }
 
-func (svc *ServiceSerial) Start() error {
-	return nil
+func (svc *ServiceSerial) Start() {
 }
 
 func (svc *ServiceSerial) Stop() {
+}
+
+func (svc *ServiceSerial) Status() defs.ServiceStatus {
+	return defs.ServiceStatus{}
 }
 
 func (svc *ServiceSerial) Send(message defs.Message) error {

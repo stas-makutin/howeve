@@ -31,7 +31,7 @@ func (pv ParamsValues) parse(p defs.Params) (defs.ParamValues, *ErrorInfo) {
 		} else if errors.Is(err, defs.ErrNoRequiredParam) {
 			return nil, NewErrorInfo(ErrorNoRequiredParameter, name)
 		}
-		value, _ := pv[name]
+		value := pv[name]
 		return nil, NewErrorInfo(ErrorInvalidParameterValue, value, name)
 	}
 	return values, nil

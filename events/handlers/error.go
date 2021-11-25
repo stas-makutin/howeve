@@ -14,6 +14,9 @@ const (
 	ErrorInvalidParameterValue
 	ErrorNoRequiredParameter
 	ErrorNoDiscovery
+	ErrorServiceExists
+	ErrorServiceAliasExists
+	ErrorServiceInitialize
 )
 
 // ErrorInfo - error
@@ -40,7 +43,13 @@ func NewErrorInfo(code ErrorCode, args ...interface{}) (e *ErrorInfo) {
 	case ErrorNoRequiredParameter:
 		e.Message = fmt.Sprintf("Required parameter \"%s\" is missing", args...)
 	case ErrorNoDiscovery:
-		e.Message = fmt.Sprintf("The discovery is not supported for the protocol %s (%d) and the transport %s (%d)", args...)
+		e.Message = fmt.Sprintf("The discovery is not supported for %s (%d) protocol and %s (%d) transport", args...)
+	case ErrorServiceExists:
+		e.Message = fmt.Sprintf("The service exists already for %s (%d) protocol, %s (%d) transport, and %s entry", args...)
+	case ErrorServiceAliasExists:
+		e.Message = fmt.Sprintf("The service's alias %s exists already", args...)
+	case ErrorServiceInitialize:
+		e.Message = fmt.Sprintf("The service initialization failed, %s (%d) protocol, %s (%d) transport, and %s entry, reason: %s", args...)
 	}
 	return
 }

@@ -11,12 +11,13 @@ import (
 )
 
 func init() {
+	// tasks are listed in dependency order, blowe depends on above
 	tasks.ServiceTasks = []tasks.ServiceTaskEntry{
 		{Name: "Configuration", Task: config.NewTask()},
 		{Name: "Log", Task: log.NewTask(appName)},
+		{Name: "Events", Task: handlers.NewTask()},
 		{Name: "Message Log", Task: messages.NewTask()},
 		{Name: "Services", Task: services.NewTask()},
-		{Name: "Events", Task: handlers.NewTask()},
 		{Name: "HTTP server", Task: httpsrv.NewTask()},
 	}
 }

@@ -13,7 +13,7 @@ const (
 )
 
 // ServiceFunc is a method which creates service or returns error
-type ServiceFunc func(ctx context.Context, entry string, params ParamValues) (*Service, error)
+type ServiceFunc func(entry string, params ParamValues) (Service, error)
 
 // ServiceEntryDetails - service entry with details
 type ServiceEntryDetails struct {

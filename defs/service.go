@@ -13,9 +13,14 @@ type ServiceEntry struct {
 	Params ParamValues
 }
 
+// ServiceStatus describes the status of the service
+type ServiceStatus struct {
+}
+
 // Service interface, defines minimal set of methods the service needs to support
 type Service interface {
-	Start() error
+	Start()
 	Stop()
+	Status() ServiceStatus
 	Send(message Message) error
 }

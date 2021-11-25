@@ -29,8 +29,6 @@ const (
 	queryAddServiceResult
 	querySendToService
 	querySendToServiceResult
-	queryRetriveFromService
-	queryRetriveFromServiceResult
 )
 
 var queryTypeMap = map[string]queryType{
@@ -42,7 +40,6 @@ var queryTypeMap = map[string]queryType{
 	"discovery": queryProtocolDiscovery, "discoveryResult": queryProtocolDiscoveryResult,
 	"addService": queryAddService, "addServiceResult": queryAddServiceResult,
 	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
-	"retriveFrom": queryRetriveFromService, "retriveFromResult": queryRetriveFromServiceResult,
 }
 var queryNameMap map[queryType]string
 
@@ -145,8 +142,6 @@ func (c *Query) toEvent() interface{} {
 		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntryWithAlias: c.Payload.(*handlers.ServiceEntryWithAlias)}
 	case querySendToService:
 		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID)}
-	case queryRetriveFromService:
-		return &handlers.RetriveFromService{RequestHeader: *handlers.NewRequestHeader(c.ID)}
 	}
 	return nil
 }
@@ -178,8 +173,6 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.AddServiceReply}
 	case *handlers.SendToServiceResult:
 		return &Query{Type: querySendToServiceResult, ID: e.TraceID()}
-	case *handlers.RetriveFromServiceResult:
-		return &Query{Type: queryRetriveFromServiceResult, ID: e.TraceID()}
 	}
 	return nil
 }

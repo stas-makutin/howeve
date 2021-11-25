@@ -72,13 +72,6 @@ func setupRoutes(mux *http.ServeMux) {
 				})
 			},
 		},
-		{
-			"service/retrive", func(w http.ResponseWriter, r *http.Request) {
-				handleEvents(w, r, reflect.TypeOf(&handlers.RetriveFromServiceResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
-					return parseRetriveFromService(w, r)
-				})
-			},
-		},
 	} {
 		mux.Handle(rt.route, handlerFunc(rt.handler))
 	}

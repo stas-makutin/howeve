@@ -184,7 +184,3 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 func parseSendToService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
 	return nil, true, nil
 }
-
-func parseRetriveFromService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	return nil, true, nil
-}

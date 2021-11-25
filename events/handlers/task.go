@@ -60,7 +60,5 @@ func (t *Task) handleEvents(event interface{}) {
 		handleAddService(e)
 	case *SendToService:
 		handleSendToService(e)
-	case *RetriveFromService:
-		handleRetriveFromService(e)
 	}
 }

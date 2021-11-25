@@ -78,6 +78,14 @@ var Protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 	},
 }
 
+// TransportName return name of the transport for provided identifier
+func TransportName(t defs.TransportIdentifier) string {
+	if ti, ok := Transports[t]; ok {
+		return ti.Name
+	}
+	return ""
+}
+
 // TransportByName resolves transport name into identifier
 func TransportByName(name string) (defs.TransportIdentifier, bool) {
 	for id, ti := range Transports {
@@ -86,6 +94,14 @@ func TransportByName(name string) (defs.TransportIdentifier, bool) {
 		}
 	}
 	return 0, false
+}
+
+// ProtocolName return name of the transport for provided identifier
+func ProtocolName(p defs.ProtocolIdentifier) string {
+	if pi, ok := Protocols[p]; ok {
+		return pi.Name
+	}
+	return ""
 }
 
 // ProtocolByName resolves protocol name into identifier

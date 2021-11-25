@@ -1,13 +1,21 @@
 package services
 
 import (
-	"context"
+	"errors"
 	"sync"
 
 	"github.com/stas-makutin/howeve/defs"
 )
 
 var services *servicesRegistry
+
+// errors
+
+// ErrServiceExists is the error in case if service already exists
+var ErrServiceExists error = errors.New("the service already exists")
+
+// ErrAliasExists is the error in case if service already exists
+var ErrAliasExists error = errors.New("the service alias already exists")
 
 // public interface
 
@@ -17,7 +25,7 @@ func AddService(entry *defs.ServiceEntry, alias string) error {
 }
 
 type serviceInfo struct {
-	service *defs.Service
+	service defs.Service
 	alias   string
 	params  defs.ParamValues
 }
@@ -25,19 +33,14 @@ type serviceInfo struct {
 // servicesRegistry - registry of available services
 type servicesRegistry struct {
 	sync.Mutex
-	ctx      context.Context
-	cancel   context.CancelFunc
 	services map[defs.ServiceKey]*serviceInfo
-	aliases  map[string]*defs.ServiceKey
+	aliases  map[string]*serviceInfo
 }
 
 func newServicesRegistry() *servicesRegistry {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &servicesRegistry{
-		ctx:      ctx,
-		cancel:   cancel,
 		services: make(map[defs.ServiceKey]*serviceInfo),
-		aliases:  make(map[string]*defs.ServiceKey),
+		aliases:  make(map[string]*serviceInfo),
 	}
 }
 
@@ -45,9 +48,8 @@ func (sr *servicesRegistry) Stop() {
 	sr.Lock()
 	defer sr.Unlock()
 
-	sr.cancel()
 	for _, si := range sr.services {
-		(*si.service).Stop()
+		si.service.Stop()
 	}
 	sr.services = nil
 	sr.aliases = nil
@@ -58,11 +60,24 @@ func (sr *servicesRegistry) Add(entry *defs.ServiceEntry, alias string) error {
 	defer sr.Unlock()
 
 	if _, ok := sr.services[entry.Key]; ok {
-		// already exists
+		return ErrServiceExists
 	}
 	if _, ok := sr.aliases[alias]; ok {
-		// alias already exists
+		return ErrAliasExists
 	}
 
+	serviceFunc := Protocols[entry.Key.Protocol].Transports[entry.Key.Transport].ServiceFunc
+	service, error := serviceFunc(entry.Key.Entry, entry.Params)
+	if error != nil {
+		return error
+	}
+
+	service.Start()
+
+	si := &serviceInfo{service, alias, entry.Params}
+	sr.services[entry.Key] = si
+	if alias != "" {
+		sr.aliases[alias] = si
+	}
 	return nil
 }

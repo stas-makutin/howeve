@@ -110,7 +110,7 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 			}
 
 			// process message
-			n, _ := queryNameMap[q.Type]
+			n := queryNameMap[q.Type]
 			if event := q.toTargetedRequest(ctx, id); event != nil {
 				var eo handlers.Ordinal
 				if ti, ok := event.(handlers.TraceInfo); ok {
@@ -156,7 +156,7 @@ Exit:
 
 func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Query) bool {
 	w := newWebSocketTextWriter(conn)
-	n, _ := queryNameMap[q.Type]
+	n := queryNameMap[q.Type]
 	if err := json.NewEncoder(w).Encode(q); err != nil {
 		if isConnClosed(err) {
 			return true

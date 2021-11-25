@@ -40,13 +40,3 @@ type SendToService struct {
 type SendToServiceResult struct {
 	ResponseHeader
 }
-
-// RetriveFromServiceResult - retrieve message(s) from service
-type RetriveFromService struct {
-	RequestHeader
-}
-
-// RetriveFromServiceResult - retrieve message(s) from service result
-type RetriveFromServiceResult struct {
-	ResponseHeader
-}
