@@ -74,14 +74,14 @@ type Params map[string]*ParamInfo
 // ParamValues type defines named parameter values
 type ParamValues map[string]interface{}
 
-// ErrUnknownParamName is the error for unknown parameter name
-var ErrUnknownParamName error = errors.New("the parameter name is unknown")
-
-// ErrInvalidParamValue is the error for not valid parameter value
-var ErrInvalidParamValue error = errors.New("the parameter value is not valid")
-
-// ErrNoRequiredParam is the error for missing required parameter
-var ErrNoRequiredParam error = errors.New("the required parameter is missing")
+var (
+	// ErrUnknownParamName is the error for unknown parameter name
+	ErrUnknownParamName error = errors.New("the parameter name is unknown")
+	// ErrInvalidParamValue is the error for not valid parameter value
+	ErrInvalidParamValue error = errors.New("the parameter value is not valid")
+	// ErrNoRequiredParam is the error for missing required parameter
+	ErrNoRequiredParam error = errors.New("the required parameter is missing")
+)
 
 // Parse function parses provided parameter value
 func (p ParamInfo) Parse(value string) (interface{}, error) {

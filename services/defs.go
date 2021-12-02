@@ -29,10 +29,20 @@ var Protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 						DefaultValue: "8",
 						Flags:        defs.ParamFlagConst,
 					},
+					serial.ParamNameReadTimeout: &defs.ParamInfo{
+						Type:         defs.ParamTypeUint32,
+						DefaultValue: "0",
+						Flags:        defs.ParamFlagConst,
+					},
 					serial.ParamNameWriteTimeout: &defs.ParamInfo{
 						Type:         defs.ParamTypeUint32,
-						DefaultValue: "3000",
+						DefaultValue: "0",
 						Flags:        defs.ParamFlagConst,
+					},
+					defs.ParamNameOpenAttemptsInterval: {
+						Description:  "The time interval between attempts to open serial port, milliseconds",
+						Type:         defs.ParamTypeInt32,
+						DefaultValue: "3000",
 					},
 				},
 			},

@@ -1,6 +1,9 @@
 package handlers
 
-import "github.com/stas-makutin/howeve/services"
+import (
+	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/services"
+)
 
 func handleAddService(event *AddService) {
 	r := &AddServiceResult{ResponseHeader: event.Associate(), AddServiceReply: &AddServiceReply{Success: false}}
@@ -10,12 +13,12 @@ func handleAddService(event *AddService) {
 			r.Success = true
 		} else {
 			switch error {
-			case services.ErrServiceExists:
+			case defs.ErrServiceExists:
 				errorInfo = NewErrorInfo(ErrorServiceExists,
 					services.ProtocolName(entry.Key.Protocol), entry.Key.Protocol,
 					services.TransportName(entry.Key.Transport), entry.Key.Transport, entry.Key.Entry,
 				)
-			case services.ErrAliasExists:
+			case defs.ErrAliasExists:
 				errorInfo = NewErrorInfo(ErrorServiceAliasExists, event.Alias)
 			default:
 				errorInfo = NewErrorInfo(ErrorServiceInitialize,

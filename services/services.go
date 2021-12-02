@@ -1,21 +1,12 @@
 package services
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/stas-makutin/howeve/defs"
 )
 
 var services *servicesRegistry
-
-// errors
-
-// ErrServiceExists is the error in case if service already exists
-var ErrServiceExists error = errors.New("the service already exists")
-
-// ErrAliasExists is the error in case if service already exists
-var ErrAliasExists error = errors.New("the service alias already exists")
 
 // public interface
 
@@ -60,10 +51,10 @@ func (sr *servicesRegistry) Add(entry *defs.ServiceEntry, alias string) error {
 	defer sr.Unlock()
 
 	if _, ok := sr.services[entry.Key]; ok {
-		return ErrServiceExists
+		return defs.ErrServiceExists
 	}
 	if _, ok := sr.aliases[alias]; ok {
-		return ErrAliasExists
+		return defs.ErrAliasExists
 	}
 
 	serviceFunc := Protocols[entry.Key.Protocol].Transports[entry.Key.Transport].ServiceFunc

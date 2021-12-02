@@ -8,6 +8,7 @@ const (
 	ParamNameDataBits     = "dataBits"
 	ParamNameParity       = "parity"
 	ParamNameStopBits     = "stopBits"
+	ParamNameReadTimeout  = "readTimeout"
 	ParamNameWriteTimeout = "writeTimeout"
 )
 
@@ -36,6 +37,11 @@ var TransportInfo *defs.TransportInfo = &defs.TransportInfo{
 			Type:         defs.ParamTypeEnum,
 			DefaultValue: "1",
 			EnumValues:   []string{"1", "1.5", "2"},
+		},
+		ParamNameReadTimeout: {
+			Description:  "The read timeout, millisecons",
+			Type:         defs.ParamTypeUint32,
+			DefaultValue: "3000",
 		},
 		ParamNameWriteTimeout: {
 			Description:  "The write timeout, millisecons",

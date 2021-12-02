@@ -22,6 +22,7 @@ type TransportInfo struct {
 // Transport interface - blocking transport operations
 type Transport interface {
 	Open(entry string, params ParamValues) error
+	ReadyToRead() <-chan struct{}
 	io.ReadWriteCloser
 }
 
