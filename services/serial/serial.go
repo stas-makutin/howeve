@@ -71,6 +71,9 @@ func (t *Transport) Open(entry string, params defs.ParamValues) (err error) {
 	defer t.lock.Unlock()
 	t.close()
 	t.port, err = serial.Open(entry, options...)
+	if t.port != nil {
+		t.stopCh = make(chan struct{}, 1)
+	}
 	return
 }
 
@@ -94,6 +97,17 @@ func (t *Transport) close() (err error) {
 
 // ReadyToRead function, singal in the channel if something could be read from the port or port state has changed
 func (t *Transport) ReadyToRead() <-chan struct{} {
+	// stop previous if any
+	t.lock.RLock()
+	if t.stopCh != nil {
+		select {
+		case t.stopCh <- struct{}{}:
+		default:
+		}
+	}
+	t.lock.RUnlock()
+	t.wg.Wait()
+
 	rc := make(chan struct{})
 	t.wg.Add(1)
 	go func() {

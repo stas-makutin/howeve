@@ -26,9 +26,10 @@ import (
 		entry string (utf-8)
 	>
 	<messageEntries:
-		time int64
 		service index uint16
+		time int64
 		uuid [16]byte
+		state byte
 		payload length uint16
 		payload
 	>
@@ -235,10 +236,6 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 		return nil, readError(name, err)
 	}
 
-	var timeNano int64
-	if err := binary.Read(r, binary.LittleEndian, &timeNano); err != nil {
-		return readMessageError("message time", err)
-	}
 	var serviceIndex uint16
 	if err := binary.Read(r, binary.LittleEndian, &serviceIndex); err != nil {
 		return readMessageError("message service index", err)
@@ -247,9 +244,17 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 	if !ok {
 		return nil, fmt.Errorf("message service index %d is not valid", serviceIndex)
 	}
+	var timeNano int64
+	if err := binary.Read(r, binary.LittleEndian, &timeNano); err != nil {
+		return readMessageError("message time", err)
+	}
 	var uuid [16]byte
 	if err := binary.Read(r, binary.LittleEndian, &uuid); err != nil {
 		return readMessageError("message UUID", err)
+	}
+	var state defs.MessageState
+	if err := binary.Read(r, binary.LittleEndian, &state); err != nil {
+		return readMessageError("message state", err)
 	}
 	var payloadLength uint16
 	if err := binary.Read(r, binary.LittleEndian, &payloadLength); err != nil {
@@ -262,10 +267,11 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 		}
 	}
 	return &message{
-		time:       time.Unix(0, timeNano).UTC(),
 		ServiceKey: service,
 		Message: &defs.Message{
+			Time:    time.Unix(0, timeNano).UTC(),
 			UUID:    uuid,
+			State:   state,
 			Payload: payload,
 		},
 	}, nil
@@ -276,14 +282,17 @@ func writeMessageEntry(w io.Writer, m *message, serviceIndices map[defs.ServiceK
 	if !ok || len(m.Payload) > int(^uint16(0)) {
 		return nil // ignore invalid services and large payoads
 	}
-	if err := binary.Write(w, binary.LittleEndian, m.time.UTC().UnixNano()); err != nil {
-		return writeError("message time", err)
-	}
 	if err := binary.Write(w, binary.LittleEndian, serviceIndex); err != nil {
 		return writeError("message service index", err)
 	}
+	if err := binary.Write(w, binary.LittleEndian, m.Time.UTC().UnixNano()); err != nil {
+		return writeError("message time", err)
+	}
 	if _, err := w.Write(m.UUID[:]); err != nil {
 		return writeError("message UUID", err)
+	}
+	if err := binary.Write(w, binary.LittleEndian, m.State); err != nil {
+		return writeError("message state", err)
 	}
 	if err := binary.Write(w, binary.LittleEndian, uint16(len(m.Payload))); err != nil {
 		return writeError("message payload length", err)

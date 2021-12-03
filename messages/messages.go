@@ -2,14 +2,12 @@ package messages
 
 import (
 	"sync"
-	"time"
 
 	"github.com/stas-makutin/howeve/defs"
 )
 
 // message struct defines entry in the message log
 type message struct {
-	time time.Time
 	*defs.ServiceKey
 	*defs.Message
 }
@@ -45,13 +43,12 @@ func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) {
 	m.services[*key] = messagesCount + 1
 
 	m.entries = append(m.entries, &message{
-		time:       time.Now().UTC(),
 		ServiceKey: key,
 		Message:    msg,
 	})
 }
 
-func (m *messages) pop() (time.Time, *defs.ServiceKey, *defs.Message) {
+func (m *messages) pop() (*defs.ServiceKey, *defs.Message) {
 	m.Lock()
 	entry := func() *message {
 		defer m.Unlock()
@@ -66,8 +63,8 @@ func (m *messages) pop() (time.Time, *defs.ServiceKey, *defs.Message) {
 	}()
 
 	if entry == nil {
-		return time.Now().UTC(), nil, nil
+		return nil, nil
 	}
 
-	return entry.time, entry.ServiceKey, entry.Message
+	return entry.ServiceKey, entry.Message
 }

@@ -92,7 +92,7 @@ ServiceLoop:
 		if open {
 			open = false
 			expectReply = false
-			rb, re = 0, 0
+			rb = re
 			if err := svc.transport.Open(svc.entry, svc.params); err != nil {
 				// TODO error logging
 				select {

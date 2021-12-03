@@ -49,11 +49,12 @@ func TestMessagesPersistence(t *testing.T) {
 
 	for msgCount > 0 {
 		service := services[rand.Intn(100)%2]
+		state := []defs.MessageState{defs.Incoming, defs.Outgoing, defs.OutgoingPending, defs.OutgoingFailed, defs.OutgoingRejected}[rand.Intn(100)%5]
 		payloadLen := 12 + rand.Intn(200)
 		payload := make([]byte, payloadLen)
 		rand.Read(payload)
 
-		m.push(service, &defs.Message{UUID: uuid.New(), Payload: payload})
+		m.push(service, &defs.Message{Time: time.Now().UTC(), UUID: uuid.New(), State: state, Payload: payload})
 
 		msgCount--
 	}
@@ -96,11 +97,14 @@ func TestMessagesPersistence(t *testing.T) {
 				entry := m.entries[i]
 				entry2 := m2.entries[i]
 
-				if entry.time != entry2.time {
-					t.Errorf("message %d: time is different: %s vs %s", i, entry.time.Format(time.RFC3339), entry2.time.Format(time.RFC3339))
+				if entry.Time != entry2.Time {
+					t.Errorf("message %d: time is different: %s vs %s", i, entry.Time.Format(time.RFC3339), entry2.Time.Format(time.RFC3339))
 				}
 				if entry.UUID != entry2.UUID {
 					t.Errorf("message %d: uuid is different: %s vs %s", i, entry.UUID, entry2.UUID)
+				}
+				if entry.State != entry2.State {
+					t.Errorf("message %d: state is different: %d vs %d", i, entry.State, entry2.State)
 				}
 				if !bytes.Equal(entry.Payload, entry2.Payload) {
 					t.Errorf("message %d: payload is different", i)
