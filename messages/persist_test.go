@@ -16,7 +16,7 @@ func TestMessagesPersistence(t *testing.T) {
 	m := newMessages()
 
 	t.Run("Load from non-existing file", func(t *testing.T) {
-		if err := m.load("messages-non-existing-file"); err != nil {
+		if _, err := m.load("messages-non-existing-file"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -33,7 +33,7 @@ func TestMessagesPersistence(t *testing.T) {
 	file.Close()
 
 	t.Run("Load from empty file", func(t *testing.T) {
-		err := m.load(fileName)
+		_, err := m.load(fileName)
 		if err == nil {
 			t.Error("empty file must not be valid, the file must contain the header at least")
 		} else if err.Error() != "the message log file corrupted: header" {
@@ -41,11 +41,16 @@ func TestMessagesPersistence(t *testing.T) {
 		}
 	})
 
+	length := minimalLength
 	services := []*defs.ServiceKey{
 		{Protocol: defs.ProtocolZWave, Transport: defs.TransportSerial, Entry: "COM1"},
 		{Protocol: defs.ProtocolZWave, Transport: defs.TransportSerial, Entry: "COM3"},
 	}
 	msgCount := 50 + rand.Intn(100)
+
+	for _, v := range services {
+		length += serviceEntryLength(len(v.Entry))
+	}
 
 	for msgCount > 0 {
 		service := services[rand.Intn(100)%2]
@@ -54,6 +59,7 @@ func TestMessagesPersistence(t *testing.T) {
 		payload := make([]byte, payloadLen)
 		rand.Read(payload)
 
+		length += messageEntryLength(payloadLen)
 		m.push(service, &defs.Message{Time: time.Now().UTC(), UUID: uuid.New(), State: state, Payload: payload})
 
 		msgCount--
@@ -68,9 +74,11 @@ func TestMessagesPersistence(t *testing.T) {
 	}
 
 	m2 := newMessages()
+	m2_length := 0
 
 	if !t.Run("Load log file", func(t *testing.T) {
-		if err := m2.load(fileName); err != nil {
+		m2_length, err = m2.load(fileName)
+		if err != nil {
 			t.Error(err)
 			return
 		}
@@ -79,6 +87,9 @@ func TestMessagesPersistence(t *testing.T) {
 	}
 
 	t.Run("Verify loaded log file", func(t *testing.T) {
+		if length != m2_length {
+			t.Errorf("persisted length is different: %d vs %d", length, m2_length)
+		}
 		if len(m.services) != len(m2.services) {
 			t.Errorf("number of services is different: %d vs %d", len(m.services), len(m2.services))
 		} else {

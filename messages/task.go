@@ -2,58 +2,34 @@ package messages
 
 import (
 	"github.com/stas-makutin/howeve/config"
-	"github.com/stas-makutin/howeve/log"
 	"github.com/stas-makutin/howeve/tasks"
 )
 
 // Task struct
 type Task struct {
-	cfg   *config.Config
-	ml    *messages
-	flags flagType
 }
 
 // NewTask func
 func NewTask() *Task {
 	t := &Task{}
-	t.ml = newMessages()
-	config.AddReader(t.readConfig)
-	config.AddWriter(t.writeConfig)
+	config.AddReader(readConfig)
+	config.AddWriter(writeConfig)
 	return t
 }
 
-func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
-	t.cfg = cfg
-	if flags, err := parseFlags(cfg.MessageLog.Flags); err == nil {
-		t.flags = flags
-	} else {
-		cfgError("messageLog.flags: " + err.Error())
-	}
-}
-
-func (t *Task) writeConfig(cfg *config.Config) {
-	cfg.MessageLog = t.cfg.MessageLog
-}
-
 // Open func
-func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
-	if t.cfg.MessageLog != nil && t.cfg.MessageLog.File != "" {
-		if err := t.ml.load(t.cfg.MessageLog.File); err != nil {
-			if t.flags&flagIgnoreReadError != 0 {
-				log.Report(log.SrcMsg, err.Error())
-			} else {
-				return err
-			}
-		}
-	}
-	return nil
+func (t *Task) Open(ctx *tasks.ServiceTaskContext) (err error) {
+	err = initMessageLog()
+	return
 }
 
 // Close func
 func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
+	destroyMessageLog()
 	return nil
 }
 
 // Stop func
 func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
+	Persist()
 }

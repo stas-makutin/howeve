@@ -3,6 +3,7 @@ package messages
 import (
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/defs"
 )
 
@@ -12,16 +13,12 @@ type message struct {
 	*defs.Message
 }
 
-// returns byte length of the message entry
-// func (m *message) length() int {
-// 	return 8 /* time */ + 2 /* service index */ + len(m.UUID) + len(m.Payload) + 2 /* payload size field */
-// }
-
 // messages log container
 type messages struct {
 	sync.Mutex
-	services map[defs.ServiceKey]int
-	entries  []*message
+	services    map[defs.ServiceKey]int
+	entries     []*message
+	entriesById map[uuid.UUID]*message
 }
 
 func newMessages() *messages {
@@ -33,6 +30,7 @@ func newMessages() *messages {
 func (m *messages) clear() {
 	m.services = make(map[defs.ServiceKey]int)
 	m.entries = nil
+	m.entriesById = make(map[uuid.UUID]*message)
 }
 
 func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) {
@@ -42,10 +40,13 @@ func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) {
 	messagesCount := m.services[*key]
 	m.services[*key] = messagesCount + 1
 
-	m.entries = append(m.entries, &message{
+	entry := &message{
 		ServiceKey: key,
 		Message:    msg,
-	})
+	}
+
+	m.entriesById[msg.UUID] = entry
+	m.entries = append(m.entries, entry)
 }
 
 func (m *messages) pop() (*defs.ServiceKey, *defs.Message) {
@@ -59,6 +60,7 @@ func (m *messages) pop() (*defs.ServiceKey, *defs.Message) {
 
 		entry := m.entries[0]
 		m.entries = m.entries[1:]
+		delete(m.entriesById, entry.UUID)
 		return entry
 	}()
 

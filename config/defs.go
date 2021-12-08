@@ -35,15 +35,6 @@ type HTTPServerConfig struct {
 	MaxHeaderBytes    uint32 `yaml:"maxHeaderBytes,omitempty" json:"maxHeaderBytes,omitempty"`
 }
 
-// MessageLogConfig defines message log configuration entries
-type MessageLogConfig struct {
-	MaxSize  uint        `yaml:"maxSize,omitempty" json:"maxSize,omitempty"` // maximal messages log size, in bytes. must be greater or equal to 8192. Default value is 10MB
-	File     string      `yaml:"file,omitempty" json:"file,omitempty"`       // file where messages log will be stored. If not specified or empty the message log will not persist
-	DirMode  os.FileMode `yaml:"dirMode,omitempty" json:"dirMode,omitempty"`
-	FileMode os.FileMode `yaml:"fileMode,omitempty" json:"fileMode,omitempty"`
-	Flags    string      `yaml:"flags,omitempty" json:"flags,omitempty"`
-}
-
 // ServiceConfig defines configuration of active services
 type ServiceConfig struct {
 	Alias     string            `yaml:"alias,omitempty" json:"alias,omitempty"`

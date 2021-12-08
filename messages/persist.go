@@ -35,24 +35,25 @@ import (
 	>
 */
 
-func (m *messages) load(file string) error {
+func (m *messages) load(file string) (int, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return 0, nil
 		}
-		return fmt.Errorf("unable to open the message log file: %v", err)
+		return 0, fmt.Errorf("unable to open the message log file: %v", err)
 	}
 	defer f.Close()
 
-	if messages, err := readMessages(bufio.NewReader(f)); err != nil {
-		return err
+	messages, length, err := readMessages(bufio.NewReader(f))
+	if err != nil {
+		return 0, err
 	} else {
 		m.services = messages.services
 		m.entries = messages.entries
 	}
 
-	return nil
+	return length, nil
 }
 
 func (m *messages) save(file string, dirMode os.FileMode, fileMode os.FileMode) error {
@@ -72,39 +73,51 @@ func (m *messages) save(file string, dirMode os.FileMode, fileMode os.FileMode) 
 }
 
 var fileHeader = []byte("ml01")
+var minimalLength int = len(fileHeader) + 2 /* services count */
 
-func readMessages(r io.Reader) (*messages, error) {
+func serviceEntryLength(entryLength int) int {
+	return 1 /* protocol id */ + 1 /* transport id */ + 2 /* entry length */ + entryLength
+}
+
+func messageEntryLength(payloadLength int) int {
+	return 2 /* service index */ + 8 /* time */ + 16 /* UUID */ + 1 /* state */ + 2 /* payload size field */ + payloadLength
+}
+
+func readMessages(r io.Reader) (*messages, int, error) {
 	if err := readHeader(r); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	messages := newMessages()
 	serviceCount, err := readServicesCount(r)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+	length := minimalLength
 	serviceIndices := make(map[uint16]*defs.ServiceKey)
 	var serviceIndex uint16 = 0
 	for ; serviceIndex < serviceCount; serviceIndex++ {
 		if service, err := readServicesEntry(r, serviceIndex); err != nil {
-			return nil, err
+			return nil, 0, err
 		} else {
 			messages.services[*service] = 0
 			serviceIndices[serviceIndex] = service
+			length += serviceEntryLength(len(service.Entry))
 		}
 	}
 
 	for {
 		if message, err := readMessageEntry(r, serviceIndices); err != nil {
-			return nil, err
+			return nil, 0, err
 		} else if message == nil {
 			break
 		} else {
 			messages.entries = append(messages.entries, message)
 			messages.services[*message.ServiceKey] += 1
+			length += messageEntryLength(len(message.Payload))
 		}
 	}
 
-	return messages, nil
+	return messages, length, nil
 }
 
 func writeMessages(w io.Writer, messages *messages) error {
