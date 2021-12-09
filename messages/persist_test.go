@@ -16,7 +16,7 @@ func TestMessagesPersistence(t *testing.T) {
 	m := newMessages()
 
 	t.Run("Load from non-existing file", func(t *testing.T) {
-		if _, err := m.load("messages-non-existing-file"); err != nil {
+		if _, err := m.load("messages-non-existing-file", 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -33,7 +33,7 @@ func TestMessagesPersistence(t *testing.T) {
 	file.Close()
 
 	t.Run("Load from empty file", func(t *testing.T) {
-		_, err := m.load(fileName)
+		_, err := m.load(fileName, 0)
 		if err == nil {
 			t.Error("empty file must not be valid, the file must contain the header at least")
 		} else if err.Error() != "the message log file corrupted: header" {
@@ -48,10 +48,6 @@ func TestMessagesPersistence(t *testing.T) {
 	}
 	msgCount := 50 + rand.Intn(100)
 
-	for _, v := range services {
-		length += serviceEntryLength(len(v.Entry))
-	}
-
 	for msgCount > 0 {
 		service := services[rand.Intn(100)%2]
 		state := []defs.MessageState{defs.Incoming, defs.Outgoing, defs.OutgoingPending, defs.OutgoingFailed, defs.OutgoingRejected}[rand.Intn(100)%5]
@@ -60,7 +56,9 @@ func TestMessagesPersistence(t *testing.T) {
 		rand.Read(payload)
 
 		length += messageEntryLength(payloadLen)
-		m.push(service, &defs.Message{Time: time.Now().UTC(), UUID: uuid.New(), State: state, Payload: payload})
+		if m.push(service, &defs.Message{Time: time.Now().UTC(), UUID: uuid.New(), State: state, Payload: payload}) {
+			length += serviceEntryLength(len(service.Entry))
+		}
 
 		msgCount--
 	}
@@ -77,7 +75,7 @@ func TestMessagesPersistence(t *testing.T) {
 	m2_length := 0
 
 	if !t.Run("Load log file", func(t *testing.T) {
-		m2_length, err = m2.load(fileName)
+		m2_length, err = m2.load(fileName, length+10)
 		if err != nil {
 			t.Error(err)
 			return

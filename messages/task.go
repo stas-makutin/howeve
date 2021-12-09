@@ -18,18 +18,18 @@ func NewTask() *Task {
 }
 
 // Open func
-func (t *Task) Open(ctx *tasks.ServiceTaskContext) (err error) {
-	err = initMessageLog()
-	return
+func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
+	openMessageLog()
+	return nil
 }
 
 // Close func
 func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
-	destroyMessageLog()
+	closeMessageLog()
 	return nil
 }
 
 // Stop func
 func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
-	Persist()
+	stopMessageLog()
 }

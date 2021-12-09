@@ -35,7 +35,7 @@ import (
 	>
 */
 
-func (m *messages) load(file string) (int, error) {
+func (m *messages) load(file string, lengthLimit int) (int, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -45,7 +45,7 @@ func (m *messages) load(file string) (int, error) {
 	}
 	defer f.Close()
 
-	messages, length, err := readMessages(bufio.NewReader(f))
+	messages, length, err := readMessages(bufio.NewReader(f), lengthLimit)
 	if err != nil {
 		return 0, err
 	} else {
@@ -83,7 +83,7 @@ func messageEntryLength(payloadLength int) int {
 	return 2 /* service index */ + 8 /* time */ + 16 /* UUID */ + 1 /* state */ + 2 /* payload size field */ + payloadLength
 }
 
-func readMessages(r io.Reader) (*messages, int, error) {
+func readMessages(r io.Reader, lengthLimit int) (*messages, int, error) {
 	if err := readHeader(r); err != nil {
 		return nil, 0, err
 	}
@@ -111,9 +111,20 @@ func readMessages(r io.Reader) (*messages, int, error) {
 		} else if message == nil {
 			break
 		} else {
+			l := length + messageEntryLength(len(message.Payload))
+			if lengthLimit > 0 && l > lengthLimit {
+				break
+			}
+			length = l
+
 			messages.entries = append(messages.entries, message)
 			messages.services[*message.ServiceKey] += 1
-			length += messageEntryLength(len(message.Payload))
+		}
+	}
+
+	for service, count := range messages.services {
+		if count <= 0 {
+			delete(messages.services, service)
 		}
 	}
 

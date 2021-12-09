@@ -53,17 +53,17 @@ func (t *Task) writeConfig(cfg *config.Config) {
 func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 	port := defaultHTTPPort
-	var readTimeout, readHeaderTimeout, writeTimeout, idleTimeout uint
+	var readTimeout, readHeaderTimeout, writeTimeout, idleTimeout time.Duration
 	var maxHeaderBytes int
 	if t.hc.cfg != nil {
 		if t.hc.cfg.Port != 0 {
 			port = t.hc.cfg.Port
 		}
-		readTimeout = t.hc.cfg.ReadTimeout
-		readHeaderTimeout = t.hc.cfg.ReadHeaderTimeout
-		writeTimeout = t.hc.cfg.WriteTimeout
-		idleTimeout = t.hc.cfg.IdleTimeout
-		maxHeaderBytes = int(t.hc.cfg.MaxHeaderBytes)
+		readTimeout = t.hc.cfg.ReadTimeout.Value()
+		readHeaderTimeout = t.hc.cfg.ReadHeaderTimeout.Value()
+		writeTimeout = t.hc.cfg.WriteTimeout.Value()
+		idleTimeout = t.hc.cfg.IdleTimeout.Value()
+		maxHeaderBytes = int(t.hc.cfg.MaxHeaderBytes.Value())
 	}
 
 	router := http.NewServeMux()
@@ -80,10 +80,10 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 	server := http.Server{
 		Handler:           handler,
-		ReadTimeout:       time.Millisecond * time.Duration(readTimeout),
-		ReadHeaderTimeout: time.Millisecond * time.Duration(readHeaderTimeout),
-		WriteTimeout:      time.Millisecond * time.Duration(writeTimeout),
-		IdleTimeout:       time.Millisecond * time.Duration(idleTimeout),
+		ReadTimeout:       readTimeout,
+		ReadHeaderTimeout: readHeaderTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 		MaxHeaderBytes:    maxHeaderBytes,
 		ErrorLog:          ctx.Log,
 		BaseContext:       func(listener net.Listener) context.Context { return baseCtx },

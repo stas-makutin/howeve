@@ -48,21 +48,15 @@ func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 	if t.fileName == "" {
 		t.fileName = t.defaultLogFileName + ".log"
 	}
-	dirMode := t.cfg.DirMode
-	if dirMode == 0 {
-		dirMode = 0755
-	}
-	t.fileMode = t.cfg.FileMode
-	if t.fileMode == 0 {
-		t.fileMode = 0644
-	}
+	dirMode := t.cfg.DirMode.WithDirDefault()
+	t.fileMode = t.cfg.FileMode.WithFileDefault()
 	err := os.MkdirAll(t.cfg.Dir, dirMode)
 	if err != nil {
 		cfgError("log.dir is not valid")
 	}
 
-	size, err := utils.ParseSizeString(t.cfg.MaxSize)
-	if err == nil && size < 0 {
+	size := t.cfg.MaxSize.Value()
+	if size < 0 {
 		err = fmt.Errorf("negative value not allowed")
 	}
 	if err != nil {
@@ -70,8 +64,8 @@ func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 	}
 	t.maxSizeBytes = size
 
-	duration, err := utils.ParseTimeDuration(t.cfg.MaxAge)
-	if err == nil && duration < 0 {
+	duration := t.cfg.MaxAge.Value()
+	if duration < 0 {
 		err = fmt.Errorf("negative value not allowed")
 	}
 	if err != nil {
