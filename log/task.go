@@ -118,7 +118,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 			_, err = f.Write(record.Bytes())
 		}
 		if err != nil {
-			ctx.Log.Printf("unable to log the record:%v%v%vreason: %v", utils.NewLine, string(record.Bytes()), utils.NewLine, err)
+			ctx.Log.Printf("unable to log the record:%v%v%vreason: %v", utils.NewLine, record.String(), utils.NewLine, err)
 		}
 	}
 	return nil

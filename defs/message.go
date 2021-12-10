@@ -21,7 +21,7 @@ const (
 // Message struct represent the message sent to the service
 type Message struct {
 	Time    time.Time
-	UUID    uuid.UUID
+	ID      uuid.UUID
 	State   MessageState
 	Payload []byte
 }

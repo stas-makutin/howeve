@@ -67,7 +67,8 @@ func readConfig(cfgFile string) (*Config, error) {
 	return &config, nil
 }
 
-func writeConfig(restart bool) bool {
+// WriteConfig collects configuration changes and writes configuration file
+func WriteConfig(restart bool) bool {
 	if writeConfiguration != nil {
 		return writeConfiguration(restart)
 	}

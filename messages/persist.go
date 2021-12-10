@@ -80,7 +80,7 @@ func serviceEntryLength(entryLength int) int {
 }
 
 func messageEntryLength(payloadLength int) int {
-	return 2 /* service index */ + 8 /* time */ + 16 /* UUID */ + 1 /* state */ + 2 /* payload size field */ + payloadLength
+	return 2 /* service index */ + 8 /* time */ + 16 /* ID */ + 1 /* state */ + 2 /* payload size field */ + payloadLength
 }
 
 func readMessages(r io.Reader, lengthLimit int) (*messages, int, error) {
@@ -118,6 +118,7 @@ func readMessages(r io.Reader, lengthLimit int) (*messages, int, error) {
 			length = l
 
 			messages.entries = append(messages.entries, message)
+			messages.entriesById[message.ID] = message
 			messages.services[*message.ServiceKey] += 1
 		}
 	}
@@ -272,9 +273,9 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 	if err := binary.Read(r, binary.LittleEndian, &timeNano); err != nil {
 		return readMessageError("message time", err)
 	}
-	var uuid [16]byte
-	if err := binary.Read(r, binary.LittleEndian, &uuid); err != nil {
-		return readMessageError("message UUID", err)
+	var id [16]byte
+	if err := binary.Read(r, binary.LittleEndian, &id); err != nil {
+		return readMessageError("message ID", err)
 	}
 	var state defs.MessageState
 	if err := binary.Read(r, binary.LittleEndian, &state); err != nil {
@@ -294,7 +295,7 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 		ServiceKey: service,
 		Message: &defs.Message{
 			Time:    time.Unix(0, timeNano).UTC(),
-			UUID:    uuid,
+			ID:      id,
 			State:   state,
 			Payload: payload,
 		},
@@ -312,8 +313,8 @@ func writeMessageEntry(w io.Writer, m *message, serviceIndices map[defs.ServiceK
 	if err := binary.Write(w, binary.LittleEndian, m.Time.UTC().UnixNano()); err != nil {
 		return writeError("message time", err)
 	}
-	if _, err := w.Write(m.UUID[:]); err != nil {
-		return writeError("message UUID", err)
+	if _, err := w.Write(m.ID[:]); err != nil {
+		return writeError("message ID", err)
 	}
 	if err := binary.Write(w, binary.LittleEndian, m.State); err != nil {
 		return writeError("message state", err)

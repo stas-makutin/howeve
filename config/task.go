@@ -128,16 +128,14 @@ func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
 func (t *Task) watch(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
-		select {
-		case event, ok := <-t.watcher.Events:
-			if !ok {
+		event, ok := <-t.watcher.Events
+		if !ok {
+			return
+		}
+		if event.Op&fsnotify.Write == fsnotify.Write {
+			if atomic.LoadUint32(&t.updateLock) == 0 {
+				tasks.StopServiceTasks()
 				return
-			}
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				if atomic.LoadUint32(&t.updateLock) == 0 {
-					tasks.StopServiceTasks()
-					return
-				}
 			}
 		}
 	}

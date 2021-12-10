@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -61,6 +62,13 @@ services:
 	t.Run("Compare YAML", func(t *testing.T) {
 		if strings.TrimSpace(written.String()) != strings.TrimSpace(src) {
 			t.Error("written and source YAML are different")
+		}
+	})
+
+	var writtenJson strings.Builder
+	t.Run("Write JSON", func(t *testing.T) {
+		if err := json.NewEncoder(&writtenJson).Encode(&config); err != nil {
+			t.Error(err)
 		}
 	})
 }

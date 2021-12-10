@@ -56,7 +56,7 @@ func (t *Task) rotate(logFile string, wg *sync.WaitGroup, errorLog *log.Logger) 
 				if err != nil {
 					errorLog.Printf("%vstatus file error: %v", errorPrefix, err)
 				}
-			} else if time.Now().Sub(sfi.ModTime()) > t.maxAgeDuration {
+			} else if time.Since(sfi.ModTime()) > t.maxAgeDuration {
 				rotate = true
 			}
 		}

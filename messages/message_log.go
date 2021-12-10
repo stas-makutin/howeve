@@ -2,6 +2,7 @@ package messages
 
 import (
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/config"
@@ -23,13 +24,15 @@ var mlogStopCh chan struct{}
 
 func readConfig(cfg *config.Config, cfgError config.Error) {
 	mlogCfg = cfg.MessageLog
-
-	mlogMaxSize = int(mlogCfg.MaxSize.Value())
+	mlogMaxSize = 0
+	if mlogCfg != nil {
+		mlogMaxSize = int(mlogCfg.MaxSize.Value())
+	}
 	if mlogMaxSize <= 0 {
 		mlogMaxSize = 10 * 1024 * 1024
 	} else if mlogMaxSize < 8192 {
 		mlogMaxSize = 8192
-	} else if mlogMaxSize < 1024*1024*1024 { // 1 GiB
+	} else if mlogMaxSize > 1024*1024*1024 { // 1 GiB
 		mlogMaxSize = 1024 * 1024 * 1024
 	}
 }
@@ -51,6 +54,7 @@ func openMessageLog() {
 func closeMessageLog() {
 	mlog = nil
 	mlogSize = 0
+	close(mlogPersistCh)
 	mlogPersistCh = nil
 	mlogStopCh = nil
 }
@@ -107,6 +111,7 @@ func save() {
 	}
 }
 
+// Persist function triggers message log disk saving
 func Persist() {
 	select {
 	case mlogPersistCh <- struct{}{}:
@@ -114,10 +119,62 @@ func Persist() {
 	}
 }
 
-func Register(payload []byte) *defs.Message {
-	return nil
+// Register registers new message and add it to the message log
+func Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *defs.Message {
+	mlogLock.Lock()
+	defer mlogLock.Unlock()
+
+	newSize := mlogSize + messageEntryLength(len(payload))
+	if mlog.services[*key] == 0 {
+		newSize += serviceEntryLength(len(key.Entry))
+	}
+	for newSize > mlogMaxSize {
+		svc, message, svcLast := mlog.pop()
+		if message == nil {
+			break
+		}
+		newSize -= messageEntryLength(len(message.Payload))
+		if svcLast {
+			newSize -= serviceEntryLength(len(svc.Entry))
+		}
+	}
+	mlogSize = newSize
+
+	message := &defs.Message{
+		Time:    time.Now().UTC(),
+		ID:      uuid.New(),
+		State:   state,
+		Payload: payload,
+	}
+	mlog.push(key, message)
+	return message
 }
 
-func SetState(uuid uuid.UUID, state defs.MessageState) bool {
-	return false
+// UpdateState updates message's state to provided and time to current, by provided message id.
+// Returns updated message's service key and content or nil if provided id not found
+func UpdateState(id uuid.UUID, state defs.MessageState) (*defs.ServiceKey, *defs.Message) {
+	mlogLock.Lock()
+	defer mlogLock.Unlock()
+	entry := mlog.findByID(id)
+	if entry != nil {
+		if index, found := mlog.findByTime(entry.Time); found {
+			length := len(mlog.entries)
+			fentry := mlog.entries[index]
+			for {
+				if fentry.ID == entry.ID {
+					entry.Time = time.Now().UTC()
+					entry.State = state
+					copy(mlog.entries[index:], mlog.entries[index+1:])
+					mlog.entries[length-1] = entry
+					return entry.ServiceKey, entry.Message
+				}
+				index++
+				fentry = mlog.entries[index]
+				if index >= length || !fentry.Time.Equal(entry.Time) {
+					break
+				}
+			}
+		}
+	}
+	return nil, nil
 }

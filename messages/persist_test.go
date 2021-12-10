@@ -56,7 +56,7 @@ func TestMessagesPersistence(t *testing.T) {
 		rand.Read(payload)
 
 		length += messageEntryLength(payloadLen)
-		if m.push(service, &defs.Message{Time: time.Now().UTC(), UUID: uuid.New(), State: state, Payload: payload}) {
+		if m.push(service, &defs.Message{Time: time.Now().UTC(), ID: uuid.New(), State: state, Payload: payload}) {
 			length += serviceEntryLength(len(service.Entry))
 		}
 
@@ -109,8 +109,8 @@ func TestMessagesPersistence(t *testing.T) {
 				if entry.Time != entry2.Time {
 					t.Errorf("message %d: time is different: %s vs %s", i, entry.Time.Format(time.RFC3339), entry2.Time.Format(time.RFC3339))
 				}
-				if entry.UUID != entry2.UUID {
-					t.Errorf("message %d: uuid is different: %s vs %s", i, entry.UUID, entry2.UUID)
+				if entry.ID != entry2.ID {
+					t.Errorf("message %d: uuid is different: %s vs %s", i, entry.ID, entry2.ID)
 				}
 				if entry.State != entry2.State {
 					t.Errorf("message %d: state is different: %d vs %d", i, entry.State, entry2.State)

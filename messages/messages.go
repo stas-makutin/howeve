@@ -1,6 +1,9 @@
 package messages
 
 import (
+	"sort"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/defs"
 )
@@ -40,7 +43,7 @@ func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) bool {
 		Message:    msg,
 	}
 
-	m.entriesById[msg.UUID] = entry
+	m.entriesById[msg.ID] = entry
 	m.entries = append(m.entries, entry)
 
 	return messagesCount == 0
@@ -54,7 +57,7 @@ func (m *messages) pop() (*defs.ServiceKey, *defs.Message, bool) {
 
 	entry := m.entries[0]
 	m.entries = m.entries[1:]
-	delete(m.entriesById, entry.UUID)
+	delete(m.entriesById, entry.ID)
 
 	messagesCount := m.services[*entry.ServiceKey] - 1
 	if messagesCount == 0 {
@@ -64,4 +67,17 @@ func (m *messages) pop() (*defs.ServiceKey, *defs.Message, bool) {
 
 	m.services[*entry.ServiceKey] = messagesCount
 	return entry.ServiceKey, entry.Message, false
+}
+
+func (m *messages) findByID(id uuid.UUID) *message {
+	return m.entriesById[id]
+}
+
+func (m *messages) findByTime(t time.Time) (int, bool) {
+	length := len(m.entries)
+	index := sort.Search(length, func(i int) bool {
+		et := m.entries[i].Time
+		return et.Equal(t) || et.After(t)
+	})
+	return index, index < length && m.entries[index].Time.Equal(t)
 }

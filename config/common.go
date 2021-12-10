@@ -52,7 +52,7 @@ func (mode FileMode) MarshalYAML() (interface{}, error) {
 }
 
 func (mode FileMode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(mode.String())
+	return json.Marshal(mode.Value())
 }
 
 type SizeType int64
@@ -83,7 +83,7 @@ func (sz SizeType) MarshalYAML() (interface{}, error) {
 }
 
 func (sz SizeType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(sz.String())
+	return json.Marshal(sz.Value())
 }
 
 type DurationType time.Duration
@@ -114,5 +114,5 @@ func (d DurationType) MarshalYAML() (interface{}, error) {
 }
 
 func (d DurationType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
+	return json.Marshal(d.Value())
 }
