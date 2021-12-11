@@ -6,8 +6,10 @@ import (
 	"github.com/stas-makutin/howeve/tasks"
 )
 
+const MaxNumberOfAsyncSenders = 10
+
 // Dispatcher service event dispatcher
-var Dispatcher events.Dispatcher
+var Dispatcher *events.AsyncDispatcher
 
 // Task struct
 type Task struct {
@@ -28,6 +30,7 @@ func (t *Task) readConfig(cfg *config.Config, cfgError config.Error) {
 
 // Open func
 func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
+	Dispatcher = events.NewAsyncDispatcher(MaxNumberOfAsyncSenders)
 	t.subscriberID = Dispatcher.Subscribe(t.handleEvents)
 	return nil
 }
@@ -40,25 +43,5 @@ func (t *Task) Close(ctx *tasks.ServiceTaskContext) error {
 
 // Stop func
 func (t *Task) Stop(ctx *tasks.ServiceTaskContext) {
-}
-
-func (t *Task) handleEvents(event interface{}) {
-	switch e := event.(type) {
-	case *Restart:
-		handleRestart(e)
-	case *ConfigGet:
-		handleConfigGet(e, t.cfg)
-	case *ProtocolList:
-		handleProtocolList(e)
-	case *TransportList:
-		handleTransportList(e)
-	case *ProtocolInfo:
-		handleProtocolInfo(e)
-	case *ProtocolDiscovery:
-		handleProtocolDiscovery(e)
-	case *AddService:
-		handleAddService(e)
-	case *SendToService:
-		handleSendToService(e)
-	}
+	Dispatcher.Close()
 }

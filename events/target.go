@@ -53,7 +53,7 @@ func (d *Dispatcher) RequestResponse(ctx context.Context, request TargetedReques
 	ch := make(chan interface{}, 1)
 
 	var id SubscriberID
-	id = d.Receive(nil, ch, func(event interface{}) bool {
+	id = d.Receive(context.Background(), ch, func(event interface{}) bool {
 		if te, ok := event.(TargetedResponse); ok && te.Receiver() == id {
 			return reflect.TypeOf(event) == responseType
 		}
@@ -64,7 +64,6 @@ func (d *Dispatcher) RequestResponse(ctx context.Context, request TargetedReques
 	d.Send(request)
 	select {
 	case <-ctx.Done():
-		// break
 	case event := <-ch:
 		receiveFn(event)
 		return true

@@ -55,16 +55,9 @@ func (d *Dispatcher) Send(event interface{}, receivers ...SubscriberID) {
 func (d *Dispatcher) Receive(ctx context.Context, ch chan<- interface{}, fn func(event interface{}) bool) (id SubscriberID) {
 	id = d.Subscribe(func(event interface{}) {
 		if fn == nil || fn(event) {
-			if ctx == nil {
-				select {
-				case ch <- event:
-				default:
-				}
-			} else {
-				select {
-				case ch <- event:
-				case <-ctx.Done():
-				}
+			select {
+			case ch <- event:
+			case <-ctx.Done():
 			}
 		}
 	})
