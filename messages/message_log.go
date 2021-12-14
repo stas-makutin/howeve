@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/events/handlers"
 	"github.com/stas-makutin/howeve/log"
 	"github.com/stas-makutin/howeve/tasks"
 )
@@ -137,6 +138,7 @@ func Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *de
 		if svcLast {
 			newSize -= serviceEntryLength(len(svc.Entry))
 		}
+		handlers.SendDropMessage(svc, message)
 	}
 	mlogSize = newSize
 
@@ -147,6 +149,7 @@ func Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *de
 		Payload: payload,
 	}
 	mlog.push(key, message)
+	handlers.SendNewMessage(key, message)
 	return message
 }
 
@@ -162,10 +165,12 @@ func UpdateState(id uuid.UUID, state defs.MessageState) (*defs.ServiceKey, *defs
 			fentry := mlog.entries[index]
 			for {
 				if fentry.ID == entry.ID {
+					prevState := entry.State
 					entry.Time = time.Now().UTC()
 					entry.State = state
 					copy(mlog.entries[index:], mlog.entries[index+1:])
 					mlog.entries[length-1] = entry
+					handlers.SendUpdateMessageState(entry.ServiceKey, entry.Message, prevState)
 					return entry.ServiceKey, entry.Message
 				}
 				index++
