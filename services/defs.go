@@ -1,20 +1,16 @@
 package services
 
 import (
-	"strings"
-
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/services/serial"
 	"github.com/stas-makutin/howeve/services/zwave"
 )
 
-// Transports contains transports definitions
-var Transports = map[defs.TransportIdentifier]*defs.TransportInfo{
+var transports = map[defs.TransportIdentifier]*defs.TransportInfo{
 	defs.TransportSerial: serial.TransportInfo,
 }
 
-// Protocols contains protocols definitions
-var Protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
+var protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 	defs.ProtocolZWave: {
 		Name: "Z-Wave",
 		Transports: map[defs.TransportIdentifier]*defs.ProtocolTransportOptions{
@@ -50,38 +46,7 @@ var Protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 	},
 }
 
-// TransportName return name of the transport for provided identifier
-func TransportName(t defs.TransportIdentifier) string {
-	if ti, ok := Transports[t]; ok {
-		return ti.Name
-	}
-	return ""
-}
-
-// TransportByName resolves transport name into identifier
-func TransportByName(name string) (defs.TransportIdentifier, bool) {
-	for id, ti := range Transports {
-		if strings.EqualFold(name, ti.Name) {
-			return id, true
-		}
-	}
-	return 0, false
-}
-
-// ProtocolName return name of the transport for provided identifier
-func ProtocolName(p defs.ProtocolIdentifier) string {
-	if pi, ok := Protocols[p]; ok {
-		return pi.Name
-	}
-	return ""
-}
-
-// ProtocolByName resolves protocol name into identifier
-func ProtocolByName(name string) (defs.ProtocolIdentifier, bool) {
-	for id, pi := range Protocols {
-		if strings.EqualFold(name, pi.Name) {
-			return id, true
-		}
-	}
-	return 0, false
+func init() {
+	defs.Transports = transports
+	defs.Protocols = protocols
 }

@@ -24,7 +24,7 @@ type Service interface {
 	Start()
 	Stop()
 	Status() ServiceStatus
-	Send(message Message) error
+	Send(payload []byte) (*Message, error)
 }
 
 // errors
@@ -41,3 +41,11 @@ var (
 
 // ParamNameOpenAttemptsInterval parameter name for the time interval between attempts to open serial port
 const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
+
+// ServiceRegistry defines possible operations with services
+type ServiceRegistry interface {
+	Add(entry *ServiceEntry, alias string) error
+}
+
+// Services provides access to ServiceRegistry implementation (set in services module)
+var Services ServiceRegistry

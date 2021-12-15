@@ -28,6 +28,12 @@ const (
 	FrameResponse = 1
 )
 
+// Data frame min and max length
+const (
+	FrameMinLength = 3
+	FrameMaxLength = 253
+)
+
 // Checksum calculates data frame checksum
 func Checksum(src []byte) (rv byte) {
 	rv = 0xff
@@ -44,6 +50,38 @@ func DataFrame(frameType byte, body []byte) (frame []byte) {
 	frame = append(frame, Checksum(frame))
 	frame = append([]byte{FrameSOF}, frame...)
 	return
+}
+
+type ValidateDataFrameResult byte
+
+const (
+	FrameOK = ValidateDataFrameResult(iota)
+	FrameIncomplete
+	FrameNoSOFByte
+	FrameWrongLength
+	FrameWrongChecksum
+)
+
+// ValidateDataFrame validates data frame and returns validation result plus position after validated frame
+func ValidateDataFrame(frame []byte) (ValidateDataFrameResult, int) {
+	l := len(frame)
+	if l > 0 && frame[0] != FrameSOF {
+		return FrameNoSOFByte, 0
+	}
+	if l < 2 {
+		return FrameIncomplete, 0
+	}
+	frameLength := int(frame[1])
+	if frameLength < FrameMinLength || frameLength > FrameMaxLength {
+		return FrameWrongLength, 0
+	}
+	if l < frameLength+2 {
+		return FrameIncomplete, 0
+	}
+	if Checksum(frame[1:frameLength+1]) != frame[frameLength+1] {
+		return FrameWrongChecksum, frameLength + 2
+	}
+	return FrameOK, frameLength + 2
 }
 
 // DataRequest creates request data frame for provided body (serial api command + parameters)

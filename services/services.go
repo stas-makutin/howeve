@@ -57,7 +57,7 @@ func (sr *servicesRegistry) Add(entry *defs.ServiceEntry, alias string) error {
 		return defs.ErrAliasExists
 	}
 
-	serviceFunc := Protocols[entry.Key.Protocol].Transports[entry.Key.Transport].ServiceFunc
+	serviceFunc := defs.Protocols[entry.Key.Protocol].Transports[entry.Key.Transport].ServiceFunc
 	service, error := serviceFunc(entry.Key.Entry, entry.Params)
 	if error != nil {
 		return error

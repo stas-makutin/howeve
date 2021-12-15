@@ -8,7 +8,7 @@ import (
 	"github.com/stas-makutin/howeve/defs"
 )
 
-const readyToReadPoolInterval = 100 * time.Millisecond
+const readyToReadPoolInterval = 200 * time.Millisecond
 
 // Transport struct - serial Transport implementation
 type Transport struct {
@@ -16,6 +16,10 @@ type Transport struct {
 	lock   sync.RWMutex
 	wg     sync.WaitGroup
 	stopCh chan struct{}
+}
+
+func (t *Transport) ID() defs.TransportIdentifier {
+	return defs.TransportSerial
 }
 
 // Open func

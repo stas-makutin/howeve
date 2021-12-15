@@ -2,6 +2,7 @@ package defs
 
 import (
 	"context"
+	"strings"
 )
 
 // ProtocolIdentifier type
@@ -41,4 +42,25 @@ type ProtocolInfo struct {
 // IsValid verifies if protocol identifer is valid
 func (protocol ProtocolIdentifier) IsValid() bool {
 	return protocol == ProtocolZWave
+}
+
+// Protocols contains protocols definitions (defined in service module)
+var Protocols map[ProtocolIdentifier]*ProtocolInfo
+
+// ProtocolName return name of the transport for provided identifier
+func ProtocolName(p ProtocolIdentifier) string {
+	if pi, ok := Protocols[p]; ok {
+		return pi.Name
+	}
+	return ""
+}
+
+// ProtocolByName resolves protocol name into identifier
+func ProtocolByName(name string) (ProtocolIdentifier, bool) {
+	for id, pi := range Protocols {
+		if strings.EqualFold(name, pi.Name) {
+			return id, true
+		}
+	}
+	return 0, false
 }

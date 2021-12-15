@@ -10,7 +10,6 @@ import (
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
-	"github.com/stas-makutin/howeve/services"
 )
 
 func handleEvents(w http.ResponseWriter, r *http.Request, responseType reflect.Type, request func(*http.Request) (events.TargetedRequest, bool, error)) {
@@ -114,7 +113,7 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 		}
 		q.Transport = defs.TransportIdentifier(n)
 
-		if pi, ok := services.Protocols[q.Protocol]; ok {
+		if pi, ok := defs.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
 				for name, p := range pti.DiscoveryParams {
 					if p.Flags&defs.ParamFlagConst == 0 {
@@ -160,9 +159,9 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 
 		q.Entry = r.Form.Get("entry")
 		q.Alias = r.Form.Get("alias")
-		if pi, ok := services.Protocols[q.Protocol]; ok {
+		if pi, ok := defs.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
-				if ti, ok := services.Transports[q.Transport]; ok {
+				if ti, ok := defs.Transports[q.Transport]; ok {
 					for name, p := range pti.Params.Merge(ti.Params) {
 						if p.Flags&defs.ParamFlagConst == 0 {
 							v := r.Form.Get(name)

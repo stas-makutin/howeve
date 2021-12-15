@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
-	"github.com/stas-makutin/howeve/services"
 	"github.com/stas-makutin/howeve/tasks"
 )
 
@@ -18,7 +17,7 @@ func handleConfigGet(event *ConfigGet, cfg *config.Config) {
 
 func handleProtocolList(event *ProtocolList) {
 	r := &ProtocolListResult{ResponseHeader: event.Associate()}
-	for k, v := range services.Protocols {
+	for k, v := range defs.Protocols {
 		r.Protocols = append(r.Protocols, &ProtocolListEntry{ID: uint8(k), Name: v.Name})
 	}
 	Dispatcher.Send(r)
@@ -26,7 +25,7 @@ func handleProtocolList(event *ProtocolList) {
 
 func handleTransportList(event *TransportList) {
 	r := &TransportListResult{ResponseHeader: event.Associate()}
-	for k, v := range services.Transports {
+	for k, v := range defs.Transports {
 		r.Transports = append(r.Transports, &TransportListEntry{ID: uint8(k), Name: v.Name})
 	}
 	Dispatcher.Send(r)
@@ -37,7 +36,7 @@ func handleProtocolInfo(event *ProtocolInfo) {
 
 	tf := func(tid defs.TransportIdentifier, pi *defs.ProtocolInfo, pie *ProtocolInfoEntry) {
 		ptie := &ProtocolTransportInfoEntry{ID: tid, Valid: false}
-		if ti, ok := services.Transports[tid]; ok {
+		if ti, ok := defs.Transports[tid]; ok {
 			ptie.Name = ti.Name
 			if pto, ok := pi.Transports[tid]; ok {
 				ptie.Valid = true
@@ -65,14 +64,14 @@ func handleProtocolInfo(event *ProtocolInfo) {
 	if event.Filter != nil && len(event.Filter.Protocols) > 0 {
 		for _, p := range event.Filter.Protocols {
 			pid := defs.ProtocolIdentifier(p)
-			if pi, ok := services.Protocols[pid]; ok {
+			if pi, ok := defs.Protocols[pid]; ok {
 				pf(pid, pi)
 			} else {
 				r.Protocols = append(r.Protocols, &ProtocolInfoEntry{ID: p, Valid: false})
 			}
 		}
 	} else {
-		for pid, pi := range services.Protocols {
+		for pid, pi := range defs.Protocols {
 			pf(pid, pi)
 		}
 	}

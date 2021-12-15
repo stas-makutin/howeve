@@ -9,17 +9,17 @@ import (
 )
 
 func addServiceFromConfig(cfg config.ServiceConfig) bool {
-	protocol, ok := ProtocolByName(cfg.Protocol)
+	protocol, ok := defs.ProtocolByName(cfg.Protocol)
 	if !ok {
 		log.Report(log.SrcSVC, SvcOpStart, SvcOcCfgUnknownProtocol, cfg.Protocol, cfg.Transport, cfg.Entry)
 		return false
 	}
-	transport, ok := TransportByName(cfg.Transport)
+	transport, ok := defs.TransportByName(cfg.Transport)
 	if !ok {
 		log.Report(log.SrcSVC, SvcOpStart, SvcOcCfgUnknownTransport, cfg.Protocol, cfg.Transport, cfg.Entry)
 		return false
 	}
-	pi, ok := Protocols[protocol]
+	pi, ok := defs.Protocols[protocol]
 	if !ok {
 		log.Report(log.SrcSVC, SvcOpStart, SvcOcCfgProtocolNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry)
 		return false
@@ -29,7 +29,7 @@ func addServiceFromConfig(cfg config.ServiceConfig) bool {
 		log.Report(log.SrcSVC, SvcOpStart, SvcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry)
 		return false
 	}
-	ti, ok := Transports[transport]
+	ti, ok := defs.Transports[transport]
 	if !ok {
 		log.Report(log.SrcSVC, SvcOpStart, SvcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry)
 		return false

@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/tasks"
 )
 
@@ -29,6 +30,7 @@ func (t *Task) writeConfig(cfg *config.Config) {
 // Open func
 func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 	services = newServicesRegistry()
+	defs.Services = services
 	for _, scfg := range t.cfg.Services {
 		addServiceFromConfig(scfg)
 	}

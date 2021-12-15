@@ -3,21 +3,21 @@ package zwave
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/messages"
 	zw "github.com/stas-makutin/howeve/zwave"
 )
 
 // Service ZWave service implementation
 type Service struct {
 	transport defs.Transport
-	entry     string
+	key       *defs.ServiceKey
 	params    defs.ParamValues
 
-	sendQueue chan defs.Message
+	sendQueue chan *defs.Message
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -28,9 +28,9 @@ type Service struct {
 func NewService(transport defs.Transport, entry string, params defs.ParamValues) (defs.Service, error) {
 	return &Service{
 		transport: transport,
-		entry:     entry,
+		key:       &defs.ServiceKey{Protocol: defs.ProtocolZWave, Transport: transport.ID(), Entry: entry},
 		params:    params,
-		sendQueue: make(chan defs.Message, 10),
+		sendQueue: make(chan *defs.Message, 10),
 	}, nil
 }
 
@@ -58,22 +58,23 @@ func (svc *Service) Status() defs.ServiceStatus {
 	return defs.ServiceStatus{}
 }
 
-func (svc *Service) Send(message defs.Message) error {
-	if len(message.Payload) <= 0 {
-		return defs.ErrBadPayload
+func (svc *Service) Send(payload []byte) (*defs.Message, error) {
+	if len(payload) <= 0 || len(payload) > 255 {
+		return nil, defs.ErrBadPayload
 	}
+
+	message := messages.Register(svc.key, payload, defs.OutgoingPending)
+
 	select {
 	default:
-		return defs.ErrSendBusy
+		messages.UpdateState(message.ID, defs.OutgoingRejected)
+		return message, defs.ErrSendBusy
 	case svc.sendQueue <- message:
 	}
-	return nil
+	return message, nil
 }
 
-func (svc *Service) serviceLoop() {
-	defer svc.transport.Close()
-	defer svc.stopWg.Done()
-
+func (svc *Service) openTimeout() time.Duration {
 	openTimeout := time.Millisecond * 5000
 	if v, ok := svc.params[defs.ParamNameOpenAttemptsInterval]; ok {
 		openTimeout = time.Duration(v.(uint32)) * time.Millisecond
@@ -81,7 +82,14 @@ func (svc *Service) serviceLoop() {
 			openTimeout = 100 * time.Millisecond
 		}
 	}
+	return openTimeout
+}
 
+func (svc *Service) serviceLoop() {
+	defer svc.transport.Close()
+	defer svc.stopWg.Done()
+
+	openTimeout := svc.openTimeout()
 	open := true
 	expectReply := false
 	buffer := make([]byte, 4096)
@@ -93,7 +101,7 @@ ServiceLoop:
 			open = false
 			expectReply = false
 			rb = re
-			if err := svc.transport.Open(svc.entry, svc.params); err != nil {
+			if err := svc.transport.Open(svc.key.Entry, svc.params); err != nil {
 				// TODO error logging
 				select {
 				case <-svc.ctx.Done():
@@ -113,8 +121,7 @@ ServiceLoop:
 			case <-svc.ctx.Done():
 				break ServiceLoop
 			case <-time.After(time.Millisecond * 1500):
-				// TODO error expected reply timeout event
-				// TODO additional actions?
+				// TODO log expected reply timeout event
 				continue
 			case <-svc.transport.ReadyToRead():
 			}
@@ -122,14 +129,14 @@ ServiceLoop:
 			select {
 			case <-svc.ctx.Done():
 				break ServiceLoop
-			case msg := <-svc.sendQueue:
-				if n, err := svc.transport.Write(msg.Payload); err != nil || n != len(msg.Payload) {
+			case message := <-svc.sendQueue:
+				if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
 					// TODO error logging
+					messages.UpdateState(message.ID, defs.OutgoingFailed)
 					open = true
 				} else {
-					// TODO update message status
-
-					if len(msg.Payload) > 0 && msg.Payload[0] == zw.FrameSOF { // TODO - proper data frame validation?
+					messages.UpdateState(message.ID, defs.Outgoing)
+					if vr, _ := zw.ValidateDataFrame(message.Payload); vr == zw.FrameOK || vr == zw.FrameWrongChecksum {
 						expectReply = true
 					}
 				}
@@ -146,7 +153,7 @@ ServiceLoop:
 			break ServiceLoop
 		}
 		if err != nil {
-			log.Println("Failed to read from port:", err)
+			// TODO log.Println("Failed to read from port:", err)
 			open = true
 		} else if n > 0 {
 			re += n
@@ -156,52 +163,50 @@ ServiceLoop:
 			for rb < re {
 				switch buffer[rb] {
 				case zw.FrameASK, zw.FrameNAK, zw.FrameCAN:
-					log.Printf("< % x\n", buffer[rb:rb+1])
+					messages.Register(svc.key, buffer[rb:rb+1], defs.Incoming)
 					rb++
+
 				case zw.FrameSOF:
-					if rb+2 < re {
-						l := int(buffer[rb+1])
-						var reply []byte
-						if l <= 2 || l > 253 {
-							// log.Printf("< % x - wrong SOF length\n", buffer[rb:re])
-							rb = re
-							reply = []byte{zw.FrameNAK}
-						} else if l+2 <= re-rb {
-							if zw.Checksum(buffer[rb+1:rb+l+1]) == buffer[rb+l+1] {
-								// TODO report new message
+					var reply []byte
 
-								rb += l + 2
-								reply = []byte{zw.FrameASK}
-							} else {
-								// log.Printf("< % x - wrong SOF checksum\n", buffer[rb:re])
-								rb = re
-								reply = []byte{zw.FrameNAK}
-							}
+					switch vr, pos := zw.ValidateDataFrame(buffer[rb:re]); vr {
+					case zw.FrameOK:
+						reply = []byte{zw.FrameASK}
+						messages.Register(svc.key, buffer[rb:rb+pos], defs.Incoming)
+						rb += pos
+
+					case zw.FrameIncomplete:
+						// continue to read
+						break ReadLoop
+
+					case zw.FrameWrongLength:
+						// TODO add logging
+						reply = []byte{zw.FrameNAK}
+						rb = re // reset reading indexes - ignore content of reading buffer
+
+					case zw.FrameWrongChecksum:
+						// TODO add logging
+						reply = []byte{zw.FrameNAK}
+						rb += pos
+					}
+
+					if len(reply) > 0 {
+						message := messages.Register(svc.key, reply, defs.OutgoingPending)
+						if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
+							// TODO error logging
+							messages.UpdateState(message.ID, defs.OutgoingFailed)
+							open = true
+							break ReadLoop
 						} else {
-							break ReadLoop // incomplete SOF frame
+							messages.UpdateState(message.ID, defs.Outgoing)
 						}
-
-						if len(reply) > 0 {
-							// TODO report new message
-
-							if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
-								// TODO error logging
-								open = true
-								break ReadLoop
-							} else {
-								// TODO update message status
-							}
-						}
-					} else {
-						break ReadLoop // incomplete SOF frame
 					}
 				default:
-
-					rb = re
+					// TODO add logging
+					rb = re // reset reading indexes - ignore content of reading buffer
 					break ReadLoop
 				}
 			}
 		}
 	}
-
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/stas-makutin/howeve/defs"
-	"github.com/stas-makutin/howeve/services"
 )
 
 func buildParamsInfo(p defs.Params) (pie map[string]*ParamInfoEntry) {
@@ -46,9 +45,9 @@ type protocolAndTransport struct {
 // findProtocolAndTransport finds protocol and transport combination, if any
 func findProtocolAndTransport(protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier) (protocolAndTransport, *ErrorInfo) {
 	pat := protocolAndTransport{}
-	if pi, ok := services.Protocols[protocol]; ok {
+	if pi, ok := defs.Protocols[protocol]; ok {
 		pat.protocol = pi
-		if ti, ok := services.Transports[transport]; ok {
+		if ti, ok := defs.Transports[transport]; ok {
 			pat.transport = ti
 			if pti, ok := pi.Transports[transport]; ok {
 				pat.options = pti
