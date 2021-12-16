@@ -12,65 +12,71 @@ import (
 	"github.com/stas-makutin/howeve/tasks"
 )
 
-var mlogCfg *config.MessageLogConfig
-var mlogMaxSize int
+type messageLog struct {
+	log  *messages
+	size int
 
-var mlog *messages
-var mlogSize int
+	cfg     *config.MessageLogConfig
+	maxSize int
 
-var mlogLock sync.Mutex
-var mlogStopWb sync.WaitGroup
-var mlogPersistCh chan struct{}
-var mlogStopCh chan struct{}
+	lock      sync.Mutex
+	stopWb    sync.WaitGroup
+	persistCh chan struct{}
+	stopCh    chan struct{}
+}
 
-func readConfig(cfg *config.Config, cfgError config.Error) {
-	mlogCfg = cfg.MessageLog
-	mlogMaxSize = 0
-	if mlogCfg != nil {
-		mlogMaxSize = int(mlogCfg.MaxSize.Value())
+func newMessageLog() *messageLog {
+	return &messageLog{}
+}
+
+func (ml *messageLog) open() {
+	ml.log = newMessages()
+	ml.size = minimalLength
+	ml.persistCh = make(chan struct{}, 1)
+	ml.stopCh = make(chan struct{})
+
+	ml.stopWb.Add(1)
+	go ml.persistLoop()
+}
+
+func (ml *messageLog) close() {
+	ml.log = nil
+	ml.size = 0
+	close(ml.persistCh)
+	ml.persistCh = nil
+	ml.stopCh = nil
+}
+
+func (ml *messageLog) stop() {
+	close(ml.stopCh)
+	ml.stopWb.Wait()
+	ml.save()
+}
+
+func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
+	ml.cfg = cfg.MessageLog
+	ml.maxSize = 0
+	if ml.cfg != nil {
+		ml.maxSize = int(ml.cfg.MaxSize.Value())
 	}
-	if mlogMaxSize <= 0 {
-		mlogMaxSize = 10 * 1024 * 1024
-	} else if mlogMaxSize < 8192 {
-		mlogMaxSize = 8192
-	} else if mlogMaxSize > 1024*1024*1024 { // 1 GiB
-		mlogMaxSize = 1024 * 1024 * 1024
+	if ml.maxSize <= 0 {
+		ml.maxSize = 10 * 1024 * 1024
+	} else if ml.maxSize < 8192 {
+		ml.maxSize = 8192
+	} else if ml.maxSize > 1024*1024*1024 { // 1 GiB
+		ml.maxSize = 1024 * 1024 * 1024
 	}
 }
 
-func writeConfig(cfg *config.Config) {
-	cfg.MessageLog = mlogCfg
+func (ml *messageLog) writeConfig(cfg *config.Config) {
+	cfg.MessageLog = ml.cfg
 }
 
-func openMessageLog() {
-	mlog = newMessages()
-	mlogSize = minimalLength
-	mlogPersistCh = make(chan struct{}, 1)
-	mlogStopCh = make(chan struct{})
-
-	mlogStopWb.Add(1)
-	go messageLogBackground()
-}
-
-func closeMessageLog() {
-	mlog = nil
-	mlogSize = 0
-	close(mlogPersistCh)
-	mlogPersistCh = nil
-	mlogStopCh = nil
-}
-
-func stopMessageLog() {
-	close(mlogStopCh)
-	mlogStopWb.Wait()
-	save()
-}
-
-func messageLogBackground() {
-	defer mlogStopWb.Done()
+func (ml *messageLog) persistLoop() {
+	defer ml.stopWb.Done()
 
 	// initial load of message log
-	if load() {
+	if ml.load() {
 		tasks.EndServiceTasks()
 		return
 	}
@@ -78,23 +84,23 @@ func messageLogBackground() {
 	// save cycle
 	for {
 		select {
-		case <-mlogStopCh:
+		case <-ml.stopCh:
 			return
-		case <-mlogPersistCh:
+		case <-ml.persistCh:
 		}
-		save()
+		ml.save()
 	}
 }
 
-func load() bool {
-	mlogLock.Lock()
-	defer mlogLock.Unlock()
-	if mlogCfg != nil && mlogCfg.File != "" {
+func (ml *messageLog) load() bool {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
+	if ml.cfg != nil && ml.cfg.File != "" {
 		var err error
-		mlogSize, err = mlog.load(mlogCfg.File, mlogMaxSize)
+		ml.size, err = ml.log.load(ml.cfg.File, ml.maxSize)
 		if err != nil {
 			log.Report(log.SrcMsg, err.Error())
-			if mlogCfg.Flags&config.MLFlagIgnoreReadError == 0 {
+			if ml.cfg.Flags&config.MLFlagIgnoreReadError == 0 {
 				return true
 			}
 		}
@@ -102,35 +108,35 @@ func load() bool {
 	return false
 }
 
-func save() {
-	mlogLock.Lock()
-	defer mlogLock.Unlock()
-	if mlogCfg != nil && mlogCfg.File != "" {
-		if err := mlog.save(mlogCfg.File, mlogCfg.DirMode.WithDirDefault(), mlogCfg.FileMode.WithFileDefault()); err != nil {
+func (ml *messageLog) save() {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
+	if ml.cfg != nil && ml.cfg.File != "" {
+		if err := ml.log.save(ml.cfg.File, ml.cfg.DirMode.WithDirDefault(), ml.cfg.FileMode.WithFileDefault()); err != nil {
 			log.Report(log.SrcMsg, err.Error())
 		}
 	}
 }
 
 // Persist function triggers message log disk saving
-func Persist() {
+func (ml *messageLog) Persist() {
 	select {
-	case mlogPersistCh <- struct{}{}:
+	case ml.persistCh <- struct{}{}:
 	default:
 	}
 }
 
 // Register registers new message and add it to the message log
-func Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *defs.Message {
-	mlogLock.Lock()
-	defer mlogLock.Unlock()
+func (ml *messageLog) Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *defs.Message {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
 
-	newSize := mlogSize + messageEntryLength(len(payload))
-	if mlog.services[*key] == 0 {
+	newSize := ml.size + messageEntryLength(len(payload))
+	if ml.log.services[*key] == 0 {
 		newSize += serviceEntryLength(len(key.Entry))
 	}
-	for newSize > mlogMaxSize {
-		svc, message, svcLast := mlog.pop()
+	for newSize > ml.maxSize {
+		svc, message, svcLast := ml.log.pop()
 		if message == nil {
 			break
 		}
@@ -140,7 +146,7 @@ func Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *de
 		}
 		handlers.SendDropMessage(svc, message)
 	}
-	mlogSize = newSize
+	ml.size = newSize
 
 	message := &defs.Message{
 		Time:    time.Now().UTC(),
@@ -148,33 +154,33 @@ func Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *de
 		State:   state,
 		Payload: payload,
 	}
-	mlog.push(key, message)
+	ml.log.push(key, message)
 	handlers.SendNewMessage(key, message)
 	return message
 }
 
 // UpdateState updates message's state to provided and time to current, by provided message id.
 // Returns updated message's service key and content or nil if provided id not found
-func UpdateState(id uuid.UUID, state defs.MessageState) (*defs.ServiceKey, *defs.Message) {
-	mlogLock.Lock()
-	defer mlogLock.Unlock()
-	entry := mlog.findByID(id)
+func (ml *messageLog) UpdateState(id uuid.UUID, state defs.MessageState) (*defs.ServiceKey, *defs.Message) {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
+	entry := ml.log.findByID(id)
 	if entry != nil {
-		if index, found := mlog.findByTime(entry.Time); found {
-			length := len(mlog.entries)
-			fentry := mlog.entries[index]
+		if index, found := ml.log.findByTime(entry.Time); found {
+			length := len(ml.log.entries)
+			fentry := ml.log.entries[index]
 			for {
 				if fentry.ID == entry.ID {
 					prevState := entry.State
 					entry.Time = time.Now().UTC()
 					entry.State = state
-					copy(mlog.entries[index:], mlog.entries[index+1:])
-					mlog.entries[length-1] = entry
+					copy(ml.log.entries[index:], ml.log.entries[index+1:])
+					ml.log.entries[length-1] = entry
 					handlers.SendUpdateMessageState(entry.ServiceKey, entry.Message, prevState)
 					return entry.ServiceKey, entry.Message
 				}
 				index++
-				fentry = mlog.entries[index]
+				fentry = ml.log.entries[index]
 				if index >= length || !fentry.Time.Equal(entry.Time) {
 					break
 				}

@@ -25,3 +25,13 @@ type Message struct {
 	State   MessageState
 	Payload []byte
 }
+
+// MessageLog defines message log interface
+type MessageLog interface {
+	Persist()
+	Register(key *ServiceKey, payload []byte, state MessageState) *Message
+	UpdateState(id uuid.UUID, state MessageState) (*ServiceKey, *Message)
+}
+
+// Messages provides access to MessageLog implementation (set in messages module)
+var Messages MessageLog

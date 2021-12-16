@@ -3,17 +3,11 @@ package services
 import (
 	"sync"
 
+	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
 )
 
 var services *servicesRegistry
-
-// public interface
-
-// AddService adds new service
-func AddService(entry *defs.ServiceEntry, alias string) error {
-	return services.Add(entry, alias)
-}
 
 type serviceInfo struct {
 	service defs.Service
@@ -23,32 +17,47 @@ type serviceInfo struct {
 
 // servicesRegistry - registry of available services
 type servicesRegistry struct {
-	sync.Mutex
+	lock     sync.Mutex
 	services map[defs.ServiceKey]*serviceInfo
 	aliases  map[string]*serviceInfo
+
+	cfg []config.ServiceConfig
 }
 
 func newServicesRegistry() *servicesRegistry {
-	return &servicesRegistry{
-		services: make(map[defs.ServiceKey]*serviceInfo),
-		aliases:  make(map[string]*serviceInfo),
-	}
+	return &servicesRegistry{}
 }
 
-func (sr *servicesRegistry) Stop() {
-	sr.Lock()
-	defer sr.Unlock()
+func (sr *servicesRegistry) readConfig(cfg *config.Config, cfgError config.Error) {
+	sr.cfg = cfg.Services
+}
 
-	for _, si := range sr.services {
-		si.service.Stop()
-	}
+func (sr *servicesRegistry) writeConfig(cfg *config.Config) {
+	cfg.Services = sr.cfg
+}
+
+func (sr *servicesRegistry) open() {
+	sr.services = make(map[defs.ServiceKey]*serviceInfo)
+	sr.aliases = make(map[string]*serviceInfo)
+}
+
+func (sr *servicesRegistry) close() {
 	sr.services = nil
 	sr.aliases = nil
 }
 
+func (sr *servicesRegistry) stop() {
+	sr.lock.Lock()
+	defer sr.lock.Unlock()
+
+	for _, si := range sr.services {
+		si.service.Stop()
+	}
+}
+
 func (sr *servicesRegistry) Add(entry *defs.ServiceEntry, alias string) error {
-	sr.Lock()
-	defer sr.Unlock()
+	sr.lock.Lock()
+	defer sr.lock.Unlock()
 
 	if _, ok := sr.services[entry.Key]; ok {
 		return defs.ErrServiceExists

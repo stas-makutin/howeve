@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/stas-makutin/howeve/defs"
-	"github.com/stas-makutin/howeve/messages"
 	zw "github.com/stas-makutin/howeve/zwave"
 )
 
@@ -63,11 +62,11 @@ func (svc *Service) Send(payload []byte) (*defs.Message, error) {
 		return nil, defs.ErrBadPayload
 	}
 
-	message := messages.Register(svc.key, payload, defs.OutgoingPending)
+	message := defs.Messages.Register(svc.key, payload, defs.OutgoingPending)
 
 	select {
 	default:
-		messages.UpdateState(message.ID, defs.OutgoingRejected)
+		defs.Messages.UpdateState(message.ID, defs.OutgoingRejected)
 		return message, defs.ErrSendBusy
 	case svc.sendQueue <- message:
 	}
@@ -132,10 +131,10 @@ ServiceLoop:
 			case message := <-svc.sendQueue:
 				if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
 					// TODO error logging
-					messages.UpdateState(message.ID, defs.OutgoingFailed)
+					defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
 					open = true
 				} else {
-					messages.UpdateState(message.ID, defs.Outgoing)
+					defs.Messages.UpdateState(message.ID, defs.Outgoing)
 					if vr, _ := zw.ValidateDataFrame(message.Payload); vr == zw.FrameOK || vr == zw.FrameWrongChecksum {
 						expectReply = true
 					}
@@ -163,7 +162,7 @@ ServiceLoop:
 			for rb < re {
 				switch buffer[rb] {
 				case zw.FrameASK, zw.FrameNAK, zw.FrameCAN:
-					messages.Register(svc.key, buffer[rb:rb+1], defs.Incoming)
+					defs.Messages.Register(svc.key, buffer[rb:rb+1], defs.Incoming)
 					rb++
 
 				case zw.FrameSOF:
@@ -172,7 +171,7 @@ ServiceLoop:
 					switch vr, pos := zw.ValidateDataFrame(buffer[rb:re]); vr {
 					case zw.FrameOK:
 						reply = []byte{zw.FrameASK}
-						messages.Register(svc.key, buffer[rb:rb+pos], defs.Incoming)
+						defs.Messages.Register(svc.key, buffer[rb:rb+pos], defs.Incoming)
 						rb += pos
 
 					case zw.FrameIncomplete:
@@ -191,14 +190,14 @@ ServiceLoop:
 					}
 
 					if len(reply) > 0 {
-						message := messages.Register(svc.key, reply, defs.OutgoingPending)
+						message := defs.Messages.Register(svc.key, reply, defs.OutgoingPending)
 						if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
 							// TODO error logging
-							messages.UpdateState(message.ID, defs.OutgoingFailed)
+							defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
 							open = true
 							break ReadLoop
 						} else {
-							messages.UpdateState(message.ID, defs.Outgoing)
+							defs.Messages.UpdateState(message.ID, defs.Outgoing)
 						}
 					}
 				default:
