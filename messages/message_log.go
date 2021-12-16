@@ -12,6 +12,12 @@ import (
 	"github.com/stas-makutin/howeve/tasks"
 )
 
+// log operation codes
+const (
+	opLoad = "L"
+	opSave = "S"
+)
+
 type messageLog struct {
 	log  *messages
 	size int
@@ -99,7 +105,7 @@ func (ml *messageLog) load() bool {
 		var err error
 		ml.size, err = ml.log.load(ml.cfg.File, ml.maxSize)
 		if err != nil {
-			log.Report(log.SrcMsg, err.Error())
+			log.Report(log.SrcMsg, opLoad, err.Error())
 			if ml.cfg.Flags&config.MLFlagIgnoreReadError == 0 {
 				return true
 			}
@@ -113,7 +119,7 @@ func (ml *messageLog) save() {
 	defer ml.lock.Unlock()
 	if ml.cfg != nil && ml.cfg.File != "" {
 		if err := ml.log.save(ml.cfg.File, ml.cfg.DirMode.WithDirDefault(), ml.cfg.FileMode.WithFileDefault()); err != nil {
-			log.Report(log.SrcMsg, err.Error())
+			log.Report(log.SrcMsg, opSave, err.Error())
 		}
 	}
 }
