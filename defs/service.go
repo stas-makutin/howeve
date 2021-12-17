@@ -33,6 +33,10 @@ var (
 	ErrServiceExists error = errors.New("the service already exists")
 	// ErrAliasExists is the error in case if service already exists
 	ErrAliasExists error = errors.New("the service alias already exists")
+	// ErrProtocolNotSupported is the error in case if provided protocol is not supported
+	ErrProtocolNotSupported error = errors.New("the protocol is not supported")
+	// ErrTransportNotSupported is the error in case if provided transport is not supported for given protocol
+	ErrTransportNotSupported error = errors.New("the transport is not supported")
 	// ErrBadPayload returned by Send method in case if message's payload is not valid has no payload
 	ErrBadPayload error = errors.New("the message's payload is not valid")
 	// ErrSendBusy returned by Send method in case if service is unable to send message at this time

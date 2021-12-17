@@ -2,8 +2,7 @@ package services
 
 // log operation codes
 const (
-	SvcOpStart  = "S"
-	SvcOpFinish = "F"
+	SvcAddFromConfig = "C"
 )
 
 // log operation status codes
@@ -16,4 +15,6 @@ const (
 	SvcOcCfgUnknownParameter      = "N"
 	SvcOcCfgNoRequiredParameter   = "R"
 	SvcOcCfgInvalidParameterValue = "V"
+	SvcOcCfgAliasExists           = "A"
+	SvcOcCfgCreateError           = "C"
 )
