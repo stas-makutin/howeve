@@ -1,7 +1,7 @@
 package defs
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -71,20 +71,51 @@ type ParamInfo struct {
 // Params type defines named parameter collection
 type Params map[string]*ParamInfo
 
+// RawParamValues defines raw parameter values - before parsing
+type RawParamValues map[string]string
+
 // ParamValues type defines named parameter values
 type ParamValues map[string]interface{}
 
-var (
-	// ErrUnknownParamName is the error for unknown parameter name
-	ErrUnknownParamName error = errors.New("the parameter name is unknown")
-	// ErrInvalidParamValue is the error for not valid parameter value
-	ErrInvalidParamValue error = errors.New("the parameter value is not valid")
-	// ErrNoRequiredParam is the error for missing required parameter
-	ErrNoRequiredParam error = errors.New("the required parameter is missing")
+const (
+	UnknownParamName = iota
+	InvalidParamValue
+	NoRequiredParam
 )
 
+// ParseError is the structure which contains parameter parse error
+type ParseError struct {
+	Code  int
+	Name  string
+	Value string
+}
+
+// NewParseError creates new parse error
+func NewParseError(code int, name, value string) error {
+	return &ParseError{Code: code, Name: name, Value: value}
+}
+
+// Error is the implementation of error interface
+func (pe *ParseError) Error() string {
+	switch pe.Code {
+	case UnknownParamName:
+		return "the parameter name is unknown"
+	case NoRequiredParam:
+		return "the required parameter is missing"
+	}
+	return "the parameter value is not valid"
+}
+
+func (pe *ParseError) Is(target error) bool {
+	t, ok := target.(*ParseError)
+	if !ok {
+		return false
+	}
+	return *pe == *t
+}
+
 // Parse function parses provided parameter value
-func (p ParamInfo) Parse(value string) (interface{}, error) {
+func (p ParamInfo) Parse(name, value string) (interface{}, error) {
 	switch p.Type {
 	case ParamTypeInt8, ParamTypeInt16, ParamTypeInt32, ParamTypeInt64:
 		bitSize := 64
@@ -141,20 +172,20 @@ func (p ParamInfo) Parse(value string) (interface{}, error) {
 			}
 		}
 	}
-	return nil, ErrInvalidParamValue
+	return nil, NewParseError(InvalidParamValue, name, value)
 }
 
 // Parse function validates parameter name and parses its value
 func (p Params) Parse(name, value string) (interface{}, error) {
 	param, ok := p[name]
 	if !ok {
-		return nil, ErrUnknownParamName
+		return nil, NewParseError(UnknownParamName, name, value)
 	}
-	return param.Parse(value)
+	return param.Parse(name, value)
 }
 
-// ParseAll function validates parameters and parses their value. Returns values map or parameter name + associated error
-func (p Params) ParseAll(values map[string]string) (ParamValues, string, error) {
+// ParseValues function validates parameters and parses their value. Returns values map or parameter name + associated error
+func (p Params) ParseValues(values RawParamValues) (ParamValues, error) {
 	rv := make(ParamValues)
 
 	for name, param := range p {
@@ -165,18 +196,18 @@ func (p Params) ParseAll(values map[string]string) (ParamValues, string, error) 
 			}
 		} else {
 			if param.Flags&ParamFlagRequired != 0 {
-				return nil, name, ErrNoRequiredParam
+				return nil, NewParseError(NoRequiredParam, name, "")
 			}
 			value = param.DefaultValue
 		}
-		if v, err := param.Parse(value); err == nil {
+		if v, err := param.Parse(name, value); err == nil {
 			rv[name] = v
 		} else {
-			return nil, name, err
+			return nil, err
 		}
 	}
 
-	return rv, "", nil
+	return rv, nil
 }
 
 // Merge returns copy of combined parameters with subordinate parameters
@@ -188,6 +219,17 @@ func (p Params) Merge(subp Params) (result Params) {
 	for k, v := range subp {
 		if _, ok := result[k]; !ok {
 			result[k] = v
+		}
+	}
+	return
+}
+
+// Raw converts parameter-values into their raw form (string-string)
+func (pv ParamValues) Raw() (r RawParamValues) {
+	if len(pv) > 0 {
+		r = make(RawParamValues)
+		for name, value := range pv {
+			r[name] = fmt.Sprint(value)
 		}
 	}
 	return

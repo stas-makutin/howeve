@@ -21,19 +21,18 @@ func buildParamsInfo(p defs.Params) (pie map[string]*ParamInfoEntry) {
 	return
 }
 
-// parse function parses input parameters according their definition
-func (pv ParamsValues) parse(p defs.Params) (defs.ParamValues, *ErrorInfo) {
-	values, name, err := p.ParseAll(pv)
-	if err != nil {
-		if errors.Is(err, defs.ErrUnknownParamName) {
-			return nil, NewErrorInfo(ErrorUnknownParameter, name)
-		} else if errors.Is(err, defs.ErrNoRequiredParam) {
-			return nil, NewErrorInfo(ErrorNoRequiredParameter, name)
+func handleParamsErrors(err error) *ErrorInfo {
+	var pe *defs.ParseError
+	if errors.As(err, &pe) {
+		switch pe.Code {
+		case defs.UnknownParamName:
+			return NewErrorInfo(ErrorUnknownParameter, pe.Name)
+		case defs.NoRequiredParam:
+			return NewErrorInfo(ErrorNoRequiredParameter, pe.Name)
 		}
-		value := pv[name]
-		return nil, NewErrorInfo(ErrorInvalidParameterValue, value, name)
+		return NewErrorInfo(ErrorInvalidParameterValue, pe.Value, pe.Name)
 	}
-	return values, nil
+	return nil
 }
 
 type protocolAndTransport struct {
@@ -68,16 +67,4 @@ func makeServiceKey(protocol defs.ProtocolIdentifier, transport defs.TransportId
 		return nil, errorInfo
 	}
 	return &defs.ServiceKey{Protocol: protocol, Transport: transport, Entry: entry}, nil
-}
-
-func makeServiceEntry(protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, entry string, pv ParamsValues) (*defs.ServiceEntry, *ErrorInfo) {
-	pat, errorInfo := findProtocolAndTransport(protocol, transport)
-	if errorInfo != nil {
-		return nil, errorInfo
-	}
-	params, errorInfo := pv.parse(pat.options.Params)
-	if errorInfo != nil {
-		return nil, errorInfo
-	}
-	return &defs.ServiceEntry{Key: defs.ServiceKey{Protocol: protocol, Transport: transport, Entry: entry}, Params: params}, nil
 }

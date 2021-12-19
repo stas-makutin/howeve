@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"fmt"
-
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
 )
@@ -106,25 +104,11 @@ type ProtocolInfoResult struct {
 	Protocols []*ProtocolInfoEntry
 }
 
-// ParamsValues type
-type ParamsValues map[string]string
-
-// NewParamsValues creates reporting parameter values from service parameter values
-func NewParamsValues(pv defs.ParamValues) (r ParamsValues) {
-	if len(pv) > 0 {
-		r = make(ParamsValues)
-		for name, value := range pv {
-			r[name] = fmt.Sprint(value)
-		}
-	}
-	return
-}
-
 // ProtocolDiscoveryQuery - discovery input parameters
 type ProtocolDiscoveryQuery struct {
 	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
 	Transport defs.TransportIdentifier `json:"transport"`
-	Params    ParamsValues             `json:"params,omitempty"`
+	Params    defs.RawParamValues      `json:"params,omitempty"`
 }
 
 // ServiceKey - service identification/key
@@ -137,29 +121,11 @@ type ServiceKey struct {
 // ServiceEntry - service entry description
 type ServiceEntry struct {
 	ServiceKey
-	Params ParamsValues `json:"params,omitempty"`
+	Params defs.RawParamValues `json:"params,omitempty"`
 }
 
 // ServiceEntryDetails - service entry with details
 type ServiceEntryDetails struct {
 	ServiceEntry
 	Description string `json:"description,omitempty"`
-}
-
-// ProtocolDiscovery - discovery available services of protocol using specific transport
-type ProtocolDiscovery struct {
-	RequestHeader
-	*ProtocolDiscoveryQuery
-}
-
-// ProtocolDiscoveryQueryResult - discovery query results
-type ProtocolDiscoveryQueryResult struct {
-	Error    *ErrorInfo             `json:"error,omitempty"`
-	Services []*ServiceEntryDetails `json:"services,omitempty"`
-}
-
-// ProtocolDiscoveryResult - discovery results
-type ProtocolDiscoveryResult struct {
-	ResponseHeader
-	*ProtocolDiscoveryQueryResult
 }

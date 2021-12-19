@@ -40,3 +40,21 @@ type SendToService struct {
 type SendToServiceResult struct {
 	ResponseHeader
 }
+
+// // ProtocolDiscovery - discovery available services of protocol using specific transport
+// type ProtocolDiscovery struct {
+// 	RequestHeader
+// 	*ProtocolDiscoveryQuery
+// }
+
+// // ProtocolDiscoveryQueryResult - discovery query results
+// type ProtocolDiscoveryQueryResult struct {
+// 	Error    *ErrorInfo             `json:"error,omitempty"`
+// 	Services []*ServiceEntryDetails `json:"services,omitempty"`
+// }
+
+// // ProtocolDiscoveryResult - discovery results
+// type ProtocolDiscoveryResult struct {
+// 	ResponseHeader
+// 	*ProtocolDiscoveryQueryResult
+// }

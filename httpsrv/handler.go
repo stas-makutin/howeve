@@ -89,49 +89,49 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 	return &handlers.ProtocolInfo{Filter: q}, true, nil
 }
 
-func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ProtocolDiscoveryQuery
-	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
-		if err != nil {
-			return nil, true, err
-		}
-	} else {
-		if err := r.ParseForm(); err != nil {
-			return nil, true, err
-		}
-		q = &handlers.ProtocolDiscoveryQuery{}
+// func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+// 	var q *handlers.ProtocolDiscoveryQuery
+// 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+// 		if err != nil {
+// 			return nil, true, err
+// 		}
+// 	} else {
+// 		if err := r.ParseForm(); err != nil {
+// 			return nil, true, err
+// 		}
+// 		q = &handlers.ProtocolDiscoveryQuery{}
 
-		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
-		if err != nil {
-			return nil, true, err
-		}
-		q.Protocol = defs.ProtocolIdentifier(n)
+// 		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
+// 		if err != nil {
+// 			return nil, true, err
+// 		}
+// 		q.Protocol = defs.ProtocolIdentifier(n)
 
-		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
-		if err != nil {
-			return nil, true, err
-		}
-		q.Transport = defs.TransportIdentifier(n)
+// 		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
+// 		if err != nil {
+// 			return nil, true, err
+// 		}
+// 		q.Transport = defs.TransportIdentifier(n)
 
-		if pi, ok := defs.Protocols[q.Protocol]; ok {
-			if pti, ok := pi.Transports[q.Transport]; ok {
-				for name, p := range pti.DiscoveryParams {
-					if p.Flags&defs.ParamFlagConst == 0 {
-						v := r.Form.Get(name)
-						if v != "" {
-							if q.Params == nil {
-								q.Params = make(handlers.ParamsValues)
-							}
-							q.Params[name] = v
-						}
-					}
-				}
-			}
-		}
-	}
+// 		if pi, ok := defs.Protocols[q.Protocol]; ok {
+// 			if pti, ok := pi.Transports[q.Transport]; ok {
+// 				for name, p := range pti.DiscoveryParams {
+// 					if p.Flags&defs.ParamFlagConst == 0 {
+// 						v := r.Form.Get(name)
+// 						if v != "" {
+// 							if q.Params == nil {
+// 								q.Params = make(handlers.ParamsValues)
+// 							}
+// 							q.Params[name] = v
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
 
-	return &handlers.ProtocolDiscovery{ProtocolDiscoveryQuery: q}, true, nil
-}
+// 	return &handlers.ProtocolDiscovery{ProtocolDiscoveryQuery: q}, true, nil
+// }
 
 func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
 	var q *handlers.ServiceEntryWithAlias
@@ -167,7 +167,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 							v := r.Form.Get(name)
 							if v != "" {
 								if q.Params == nil {
-									q.Params = make(handlers.ParamsValues)
+									q.Params = make(defs.RawParamValues)
 								}
 								q.Params[name] = v
 							}

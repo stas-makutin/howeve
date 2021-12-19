@@ -9,12 +9,6 @@ type ServiceKey struct {
 	Entry     string
 }
 
-// ServiceEntry defines service entry - i.e. entry point of service execution
-type ServiceEntry struct {
-	Key    ServiceKey
-	Params ParamValues
-}
-
 // ServiceStatus describes the status of the service
 type ServiceStatus struct {
 }
@@ -48,7 +42,7 @@ const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
 
 // ServiceRegistry defines possible operations with services
 type ServiceRegistry interface {
-	Add(entry *ServiceEntry, alias string) error
+	Add(key *ServiceKey, params RawParamValues, alias string) error
 }
 
 // Services provides access to ServiceRegistry implementation (set in services module)

@@ -111,7 +111,7 @@ func (c *Query) unmarshalPayload(data []byte) error {
 		}
 		c.Payload = &p
 	case queryAddService:
-		var p handlers.ServiceEntry
+		var p handlers.ServiceEntryWithAlias
 		if err := json.Unmarshal(data, &p); err != nil {
 			return err
 		}
@@ -136,8 +136,8 @@ func (c *Query) toEvent() interface{} {
 			filter = c.Payload.(*handlers.ProtocolInfoFilter)
 		}
 		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: filter}
-	case queryProtocolDiscovery:
-		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
+	// case queryProtocolDiscovery:
+	// 	return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
 	case queryAddService:
 		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntryWithAlias: c.Payload.(*handlers.ServiceEntryWithAlias)}
 	case querySendToService:
@@ -167,8 +167,8 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryTransportListResult, ID: e.TraceID(), Payload: e.Transports}
 	case *handlers.ProtocolInfoResult:
 		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
-	case *handlers.ProtocolDiscoveryResult:
-		return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryQueryResult}
+	// case *handlers.ProtocolDiscoveryResult:
+	// 	return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryQueryResult}
 	case *handlers.AddServiceResult:
 		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.AddServiceReply}
 	case *handlers.SendToServiceResult:

@@ -16,14 +16,15 @@ const (
 // ServiceFunc is a method which creates service or returns error
 type ServiceFunc func(entry string, params ParamValues) (Service, error)
 
-// ServiceEntryDetails - service entry with details
-type ServiceEntryDetails struct {
-	ServiceEntry
+// DiscoveryEntry - discovery entry - information about service instance detected during discovery
+type DiscoveryEntry struct {
+	ServiceKey
+	ParamValues
 	Description string
 }
 
 // DiscoveryFunc is a method which returns discovered service entries or error
-type DiscoveryFunc func(ctx context.Context, params ParamValues) ([]*ServiceEntryDetails, error)
+type DiscoveryFunc func(ctx context.Context, params ParamValues) ([]*DiscoveryEntry, error)
 
 // ProtocolTransportOptions defines transport options specific for the protocol
 type ProtocolTransportOptions struct {

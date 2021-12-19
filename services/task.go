@@ -67,22 +67,44 @@ func (sr *servicesRegistry) Stop(ctx *tasks.ServiceTaskContext) {
 	}
 }
 
-func (sr *servicesRegistry) Add(entry *defs.ServiceEntry, alias string) error {
+func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues, alias string) error {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
-	if _, ok := sr.services[entry.Key]; ok {
+	if err := sr.add(key, params, alias); err != nil {
+		return err
+	}
+
+	sr.cfg = append(sr.cfg, config.ServiceConfig{
+		Alias:     alias,
+		Protocol:  defs.ProtocolName(key.Protocol),
+		Transport: defs.TransportName(key.Transport),
+		Entry:     key.Entry,
+		Params:    params,
+	})
+
+	// TODO persist
+
+	return nil
+}
+
+func (sr *servicesRegistry) add(key *defs.ServiceKey, params defs.RawParamValues, alias string) error {
+	if _, ok := sr.services[*key]; ok {
 		return defs.ErrServiceExists
 	}
 	if _, ok := sr.aliases[alias]; ok {
 		return defs.ErrAliasExists
 	}
 
-	pi := defs.Protocols[entry.Key.Protocol]
+	pi := defs.Protocols[key.Protocol]
 	if pi == nil {
 		return defs.ErrProtocolNotSupported
 	}
-	to := pi.Transports[entry.Key.Transport]
+	ti := defs.Transports[key.Transport]
+	if ti == nil {
+		return defs.ErrTransportNotSupported
+	}
+	to := pi.Transports[key.Transport]
 	if to == nil {
 		return defs.ErrTransportNotSupported
 	}
@@ -91,15 +113,20 @@ func (sr *servicesRegistry) Add(entry *defs.ServiceEntry, alias string) error {
 		return defs.ErrTransportNotSupported
 	}
 
-	service, error := serviceFunc(entry.Key.Entry, entry.Params)
+	pv, err := ti.Params.Merge(to.Params).ParseValues(params)
+	if err != nil {
+		return err
+	}
+
+	service, error := serviceFunc(key.Entry, pv)
 	if error != nil {
 		return error
 	}
 
 	service.Start()
 
-	si := &serviceInfo{service, alias, entry.Params}
-	sr.services[entry.Key] = si
+	si := &serviceInfo{service, alias, pv}
+	sr.services[*key] = si
 	if alias != "" {
 		sr.aliases[alias] = si
 	}
@@ -118,48 +145,18 @@ func (sr *servicesRegistry) addFromConfig() {
 			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgUnknownTransport, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 			continue
 		}
-		pi, ok := defs.Protocols[protocol]
-		if !ok {
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgProtocolNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
-			continue
-		}
-		pto, ok := pi.Transports[transport]
-		if !ok {
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
-			continue
-		}
-		ti, ok := defs.Transports[transport]
-		if !ok {
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
-			continue
-		}
-		params, paramName, err := pto.Params.Merge(ti.Params).ParseAll(cfg.Params)
-		if err != nil {
-			switch {
-			case errors.Is(err, defs.ErrUnknownParamName):
-				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgUnknownParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, paramName)
-				continue
-			case errors.Is(err, defs.ErrNoRequiredParam):
-				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgNoRequiredParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, paramName)
-				continue
-			}
 
-			value := cfg.Params[paramName]
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgInvalidParameterValue, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, paramName, value)
-			continue
-		}
-
-		err = sr.Add(
-			&defs.ServiceEntry{
-				Key: defs.ServiceKey{
-					Protocol:  protocol,
-					Transport: transport,
-					Entry:     cfg.Entry,
-				},
-				Params: params,
+		err := sr.add(
+			&defs.ServiceKey{
+				Protocol:  protocol,
+				Transport: transport,
+				Entry:     cfg.Entry,
 			},
+			cfg.Params,
 			cfg.Alias,
 		)
+
+		var pe *defs.ParseError
 		switch {
 		case errors.Is(err, defs.ErrServiceExists):
 			// ignore
@@ -169,6 +166,15 @@ func (sr *servicesRegistry) addFromConfig() {
 			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgProtocolNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.Is(err, defs.ErrTransportNotSupported):
 			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+		case errors.As(err, &pe):
+			switch pe.Code {
+			case defs.UnknownParamName:
+				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgUnknownParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name)
+			case defs.NoRequiredParam:
+				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgNoRequiredParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name)
+			default:
+				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgInvalidParameterValue, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name, pe.Value)
+			}
 		case err != nil:
 			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgCreateError, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, err.Error())
 		}

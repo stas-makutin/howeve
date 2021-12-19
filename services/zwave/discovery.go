@@ -8,7 +8,7 @@ import (
 )
 
 // DiscoverySerial - discover COM ports
-func DiscoverySerial(ctx context.Context, params defs.ParamValues) ([]*defs.ServiceEntryDetails, error) {
+func DiscoverySerial(ctx context.Context, params defs.ParamValues) ([]*defs.DiscoveryEntry, error) {
 	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
 		return nil, err
@@ -16,15 +16,13 @@ func DiscoverySerial(ctx context.Context, params defs.ParamValues) ([]*defs.Serv
 	if len(ports) <= 0 {
 		return nil, nil
 	}
-	se := make([]*defs.ServiceEntryDetails, 0, len(ports))
+	se := make([]*defs.DiscoveryEntry, 0, len(ports))
 	for _, port := range ports {
-		se = append(se, &defs.ServiceEntryDetails{
-			ServiceEntry: defs.ServiceEntry{
-				Key: defs.ServiceKey{
-					Protocol:  defs.ProtocolZWave,
-					Transport: defs.TransportSerial,
-					Entry:     port.Name,
-				},
+		se = append(se, &defs.DiscoveryEntry{
+			ServiceKey: defs.ServiceKey{
+				Protocol:  defs.ProtocolZWave,
+				Transport: defs.TransportSerial,
+				Entry:     port.Name,
 			},
 			Description: port.Product,
 		})

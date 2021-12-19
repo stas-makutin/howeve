@@ -1,6 +1,7 @@
 package defs
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -26,14 +27,14 @@ func TestParamsParse(t *testing.T) {
 		output interface{}
 		err    error
 	}{
-		{"paramUnknown", "1234", nil, ErrUnknownParamName},
+		{"paramUnknown", "1234", nil, NewParseError(UnknownParamName, "", "")},
 		{"paramInt8", "-0x6f", int8(-111), nil},
-		{"paramInt8", "-0xff", nil, ErrInvalidParamValue},
+		{"paramInt8", "-0xff", nil, NewParseError(InvalidParamValue, "", "")},
 		{"paramInt16", "-0x6ff", int16(-1791), nil},
 		{"paramInt32", "-0x6ffffff", int32(-117440511), nil},
 		{"paramInt64", "-0x6fffffffffffffff", int64(-8070450532247928831), nil},
 		{"paramUint8", "0b11111111", uint8(0xff), nil},
-		{"paramUint8", "-045", nil, ErrInvalidParamValue},
+		{"paramUint8", "-045", nil, NewParseError(InvalidParamValue, "", "")},
 		{"paramUint16", "0xffff", uint16(0xffff), nil},
 		{"paramUint32", "0xffffffff", uint32(0xffffffff), nil},
 		{"paramUint64", "0xffffffffffffffff", uint64(0xffffffffffffffff), nil},
@@ -41,19 +42,23 @@ func TestParamsParse(t *testing.T) {
 		{"paramBool", "FalSe", false, nil},
 		{"paramBool", "1", true, nil},
 		{"paramBool", "TruE", true, nil},
-		{"paramBool", "123", nil, ErrInvalidParamValue},
+		{"paramBool", "123", nil, NewParseError(InvalidParamValue, "", "")},
 		{"paramString", "", "", nil},
 		{"paramString", "1234", "1234", nil},
 		{"paramEnum", "enum1", "enum1", nil},
 		{"paramEnum", "enum2", "enum2", nil},
-		{"paramEnum", "enum3", nil, ErrInvalidParamValue},
-		{"paramEnum", "", nil, ErrInvalidParamValue},
+		{"paramEnum", "enum3", nil, NewParseError(InvalidParamValue, "", "")},
+		{"paramEnum", "", nil, NewParseError(InvalidParamValue, "", "")},
 	}
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("Test %d (%s)", i, test.name), func(t *testing.T) {
+			if test.err != nil {
+				test.err.(*ParseError).Name = test.name
+				test.err.(*ParseError).Value = test.input
+			}
 			output, err := params.Parse(test.name, test.input)
-			if output != test.output || err != test.err {
+			if output != test.output || (err == nil && test.err != nil) || (err != nil && test.err != nil && !errors.Is(err, test.err)) {
 				t.Errorf("expected %v, %v; got %v %v", test.output, test.err, output, err)
 			}
 		})
