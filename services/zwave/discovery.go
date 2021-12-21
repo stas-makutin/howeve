@@ -7,8 +7,8 @@ import (
 	"github.com/stas-makutin/howeve/defs"
 )
 
-// DiscoverySerial - discover COM ports
-func DiscoverySerial(ctx context.Context, params defs.ParamValues) ([]*defs.DiscoveryEntry, error) {
+// DiscoverSerial - discover COM ports with ZWave controllers
+func DiscoverSerial(ctx context.Context, params defs.ParamValues) ([]*defs.DiscoveryEntry, error) {
 	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
 		return nil, err

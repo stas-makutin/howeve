@@ -1,6 +1,10 @@
 package defs
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 // ServiceKey struct defines service unique identifier/key
 type ServiceKey struct {
@@ -42,6 +46,9 @@ const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
 
 // ServiceRegistry defines possible operations with services
 type ServiceRegistry interface {
+	Discover(protocol ProtocolIdentifier, transport TransportIdentifier, params RawParamValues) (uuid.UUID, error)
+	Discovery(id uuid.UUID, stop bool) ([]*DiscoveryEntry, error)
+
 	Add(key *ServiceKey, params RawParamValues, alias string) error
 }
 

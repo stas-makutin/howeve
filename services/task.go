@@ -10,6 +10,24 @@ import (
 	"github.com/stas-makutin/howeve/tasks"
 )
 
+// log constants
+const (
+	// operation
+	svcOpAddFromConfig = "C"
+
+	// operation codes
+	svcOcSuccess                  = "0"
+	svcOcCfgUnknownProtocol       = "P"
+	svcOcCfgUnknownTransport      = "T"
+	svcOcCfgProtocolNotSupported  = "X"
+	svcOcCfgTransportNotSupported = "x"
+	svcOcCfgUnknownParameter      = "N"
+	svcOcCfgNoRequiredParameter   = "R"
+	svcOcCfgInvalidParameterValue = "V"
+	svcOcCfgAliasExists           = "A"
+	svcOcCfgCreateError           = "C"
+)
+
 type serviceInfo struct {
 	service defs.Service
 	alias   string
@@ -23,6 +41,8 @@ type servicesRegistry struct {
 	aliases  map[string]*serviceInfo
 
 	cfg []config.ServiceConfig
+
+	*discoveryRegistry
 }
 
 // NewTask func
@@ -46,6 +66,8 @@ func (sr *servicesRegistry) Open(ctx *tasks.ServiceTaskContext) error {
 	sr.services = make(map[defs.ServiceKey]*serviceInfo)
 	sr.aliases = make(map[string]*serviceInfo)
 
+	sr.discoveryRegistry = newDiscoveryRegistry()
+
 	sr.addFromConfig()
 
 	return nil
@@ -55,12 +77,14 @@ func (sr *servicesRegistry) Close(ctx *tasks.ServiceTaskContext) error {
 	defs.Services = nil
 	sr.services = nil
 	sr.aliases = nil
+	sr.discoveryRegistry = nil
 	return nil
 }
 
 func (sr *servicesRegistry) Stop(ctx *tasks.ServiceTaskContext) {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
+	defer sr.discoveryRegistry.stop()
 
 	for _, si := range sr.services {
 		si.service.Stop()
@@ -83,7 +107,7 @@ func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues
 		Params:    params,
 	})
 
-	// TODO persist
+	config.WriteConfig(false)
 
 	return nil
 }
@@ -137,12 +161,12 @@ func (sr *servicesRegistry) addFromConfig() {
 	for _, cfg := range sr.cfg {
 		protocol, ok := defs.ProtocolByName(cfg.Protocol)
 		if !ok {
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgUnknownProtocol, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgUnknownProtocol, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 			continue
 		}
 		transport, ok := defs.TransportByName(cfg.Transport)
 		if !ok {
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgUnknownTransport, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgUnknownTransport, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 			continue
 		}
 
@@ -161,22 +185,22 @@ func (sr *servicesRegistry) addFromConfig() {
 		case errors.Is(err, defs.ErrServiceExists):
 			// ignore
 		case errors.Is(err, defs.ErrAliasExists):
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgAliasExists, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgAliasExists, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.Is(err, defs.ErrProtocolNotSupported):
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgProtocolNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgProtocolNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.Is(err, defs.ErrTransportNotSupported):
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.As(err, &pe):
 			switch pe.Code {
 			case defs.UnknownParamName:
-				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgUnknownParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name)
+				log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgUnknownParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name)
 			case defs.NoRequiredParam:
-				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgNoRequiredParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name)
+				log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgNoRequiredParameter, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name)
 			default:
-				log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgInvalidParameterValue, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name, pe.Value)
+				log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgInvalidParameterValue, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, pe.Name, pe.Value)
 			}
 		case err != nil:
-			log.Report(log.SrcSVC, SvcAddFromConfig, SvcOcCfgCreateError, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, err.Error())
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgCreateError, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, err.Error())
 		}
 	}
 }

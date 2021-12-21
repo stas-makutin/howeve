@@ -2,12 +2,35 @@ package zwave
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"sync"
 	"time"
 
 	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/log"
 	zw "github.com/stas-makutin/howeve/zwave"
+)
+
+// log constants
+const (
+	// operation
+	zwOpService = "ZW"
+
+	zwOcTransportOpen  = "O"
+	zwOcTransportRead  = "R"
+	zwOcTransportWrite = "W"
+	zwOcReplyTimeout   = "T"
+	zwOcDataFrame      = "D"
+	zwOcUnknownFrame   = "U"
+
+	zwOsSuccess       = "0"
+	zwOsFailure       = "F"
+	zwOsWrongLength   = "L"
+	zwOsWrongChecksum = "C"
+
+	zwOfWriteQueue = "Q"
+	zwOfWriteReply = "R"
 )
 
 // Service ZWave service implementation
@@ -84,6 +107,18 @@ func (svc *Service) openTimeout() time.Duration {
 	return openTimeout
 }
 
+func (svc *Service) log(op string, fields ...string) {
+	args := make([]string, 0, len(fields)+6)
+	args = append(args, log.SrcSVC)
+	args = append(args, zwOpService)
+	args = append(args, op)
+	args = append(args, defs.ProtocolName(svc.key.Protocol))
+	args = append(args, defs.TransportName(svc.key.Transport))
+	args = append(args, svc.key.Entry)
+	args = append(args, fields...)
+	log.Report(args...)
+}
+
 func (svc *Service) serviceLoop() {
 	defer svc.transport.Close()
 	defer svc.stopWg.Done()
@@ -101,7 +136,7 @@ ServiceLoop:
 			expectReply = false
 			rb = re
 			if err := svc.transport.Open(svc.key.Entry, svc.params); err != nil {
-				// TODO error logging
+				svc.log(zwOcTransportOpen, zwOsFailure, err.Error())
 				select {
 				case <-svc.ctx.Done():
 					break ServiceLoop
@@ -110,7 +145,7 @@ ServiceLoop:
 					continue
 				}
 			} else {
-				// TODO log open port event
+				svc.log(zwOcTransportOpen, zwOsSuccess)
 			}
 		}
 
@@ -120,7 +155,7 @@ ServiceLoop:
 			case <-svc.ctx.Done():
 				break ServiceLoop
 			case <-time.After(time.Millisecond * 1500):
-				// TODO log expected reply timeout event
+				svc.log(zwOcReplyTimeout)
 				continue
 			case <-svc.transport.ReadyToRead():
 			}
@@ -130,7 +165,7 @@ ServiceLoop:
 				break ServiceLoop
 			case message := <-svc.sendQueue:
 				if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
-					// TODO error logging
+					svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteQueue, err.Error())
 					defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
 					open = true
 				} else {
@@ -152,7 +187,7 @@ ServiceLoop:
 			break ServiceLoop
 		}
 		if err != nil {
-			// TODO log.Println("Failed to read from port:", err)
+			svc.log(zwOcTransportRead, zwOsFailure, err.Error())
 			open = true
 		} else if n > 0 {
 			re += n
@@ -179,12 +214,12 @@ ServiceLoop:
 						break ReadLoop
 
 					case zw.FrameWrongLength:
-						// TODO add logging
+						svc.log(zwOcDataFrame, zwOsWrongLength)
 						reply = []byte{zw.FrameNAK}
 						rb = re // reset reading indexes - ignore content of reading buffer
 
 					case zw.FrameWrongChecksum:
-						// TODO add logging
+						svc.log(zwOcDataFrame, zwOsWrongChecksum, hex.EncodeToString(buffer[rb:rb+pos]))
 						reply = []byte{zw.FrameNAK}
 						rb += pos
 					}
@@ -192,7 +227,7 @@ ServiceLoop:
 					if len(reply) > 0 {
 						message := defs.Messages.Register(svc.key, reply, defs.OutgoingPending)
 						if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
-							// TODO error logging
+							svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteReply, err.Error())
 							defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
 							open = true
 							break ReadLoop
@@ -201,7 +236,11 @@ ServiceLoop:
 						}
 					}
 				default:
-					// TODO add logging
+					rz := rb + 20
+					if rz > re {
+						rz = re
+					}
+					svc.log(zwOcUnknownFrame, hex.EncodeToString(buffer[rb:rz]))
 					rb = re // reset reading indexes - ignore content of reading buffer
 					break ReadLoop
 				}

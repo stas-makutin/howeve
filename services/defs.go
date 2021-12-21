@@ -18,7 +18,7 @@ var protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 				ServiceFunc: func(entry string, params defs.ParamValues) (defs.Service, error) {
 					return zwave.NewService(&serial.Transport{}, entry, params)
 				},
-				DiscoveryFunc: zwave.DiscoverySerial,
+				DiscoveryFunc: zwave.DiscoverSerial,
 				Params: defs.Params{
 					serial.ParamNameDataBits: &defs.ParamInfo{
 						Type:         defs.ParamTypeString,
