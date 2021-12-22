@@ -108,15 +108,14 @@ func (svc *Service) openTimeout() time.Duration {
 }
 
 func (svc *Service) log(op string, fields ...string) {
-	args := make([]string, 0, len(fields)+6)
-	args = append(args, log.SrcSVC)
-	args = append(args, zwOpService)
-	args = append(args, op)
-	args = append(args, defs.ProtocolName(svc.key.Protocol))
-	args = append(args, defs.TransportName(svc.key.Transport))
-	args = append(args, svc.key.Entry)
-	args = append(args, fields...)
-	log.Report(args...)
+	log.Report(append([]string{
+		log.SrcSVC,
+		zwOpService,
+		op,
+		defs.ProtocolName(svc.key.Protocol),
+		defs.TransportName(svc.key.Transport),
+		svc.key.Entry,
+	}, fields...)...)
 }
 
 func (svc *Service) serviceLoop() {

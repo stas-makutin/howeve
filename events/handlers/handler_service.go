@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/defs"
 )
 
@@ -38,6 +39,24 @@ func handleAddService(event *AddService) {
 func handleSendToService(event *SendToService) {
 	r := &SendToServiceResult{ResponseHeader: event.Associate()}
 	Dispatcher.Send(r)
+}
+
+func SendDiscoveryStarted(id uuid.UUID, protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, params defs.RawParamValues) {
+	Dispatcher.SendAsync(&DiscoveryStarted{
+		Header:    *NewHeader(""),
+		ID:        id,
+		Protocol:  protocol,
+		Transport: transport,
+		Params:    params,
+	})
+}
+
+func SendDiscoveryFinished(id uuid.UUID, entries []*defs.DiscoveryEntry, err error) {
+	Dispatcher.SendAsync(&DiscoveryFinished{
+		Header: *NewHeader(""),
+		ID:     id,
+		// TODO discovery entries + error
+	})
 }
 
 // func handleProtocolDiscovery(event *ProtocolDiscovery) {

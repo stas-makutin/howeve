@@ -2,6 +2,7 @@ package defs
 
 import (
 	"context"
+	"errors"
 	"strings"
 )
 
@@ -64,4 +65,29 @@ func ProtocolByName(name string) (ProtocolIdentifier, bool) {
 		}
 	}
 	return 0, false
+}
+
+// errors
+var (
+	// ErrProtocolNotSupported is the error in case if provided protocol is not supported
+	ErrProtocolNotSupported error = errors.New("the protocol is not supported")
+	// ErrTransportNotSupported is the error in case if provided transport is not supported for given protocol
+	ErrTransportNotSupported error = errors.New("the transport is not supported")
+)
+
+// ResolveProtocolAndTransport resolves protocol-transport pair
+func ResolveProtocolAndTransport(p ProtocolIdentifier, t TransportIdentifier) (*ProtocolTransportOptions, *TransportInfo, error) {
+	pi := Protocols[p]
+	if pi == nil {
+		return nil, nil, ErrProtocolNotSupported
+	}
+	ti := Transports[t]
+	if ti == nil {
+		return nil, nil, ErrTransportNotSupported
+	}
+	to := pi.Transports[t]
+	if to == nil {
+		return nil, nil, ErrTransportNotSupported
+	}
+	return to, ti, nil
 }

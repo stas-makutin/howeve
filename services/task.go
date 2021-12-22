@@ -28,6 +28,12 @@ const (
 	svcOcCfgCreateError           = "C"
 )
 
+// discovery constants
+const (
+	discoveryMaxCount  = 10
+	discoveryMaxActive = 3
+)
+
 type serviceInfo struct {
 	service defs.Service
 	alias   string
@@ -66,7 +72,7 @@ func (sr *servicesRegistry) Open(ctx *tasks.ServiceTaskContext) error {
 	sr.services = make(map[defs.ServiceKey]*serviceInfo)
 	sr.aliases = make(map[string]*serviceInfo)
 
-	sr.discoveryRegistry = newDiscoveryRegistry()
+	sr.discoveryRegistry = newDiscoveryRegistry(discoveryMaxCount, discoveryMaxActive)
 
 	sr.addFromConfig()
 
@@ -120,18 +126,11 @@ func (sr *servicesRegistry) add(key *defs.ServiceKey, params defs.RawParamValues
 		return defs.ErrAliasExists
 	}
 
-	pi := defs.Protocols[key.Protocol]
-	if pi == nil {
-		return defs.ErrProtocolNotSupported
+	to, ti, err := defs.ResolveProtocolAndTransport(key.Protocol, key.Transport)
+	if err != nil {
+		return err
 	}
-	ti := defs.Transports[key.Transport]
-	if ti == nil {
-		return defs.ErrTransportNotSupported
-	}
-	to := pi.Transports[key.Transport]
-	if to == nil {
-		return defs.ErrTransportNotSupported
-	}
+
 	serviceFunc := to.ServiceFunc
 	if serviceFunc == nil {
 		return defs.ErrTransportNotSupported

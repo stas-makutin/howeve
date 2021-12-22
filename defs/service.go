@@ -15,6 +15,7 @@ type ServiceKey struct {
 
 // ServiceStatus describes the status of the service
 type ServiceStatus struct {
+	Error error
 }
 
 // Service interface, defines minimal set of methods the service needs to support
@@ -31,14 +32,20 @@ var (
 	ErrServiceExists error = errors.New("the service already exists")
 	// ErrAliasExists is the error in case if service already exists
 	ErrAliasExists error = errors.New("the service alias already exists")
-	// ErrProtocolNotSupported is the error in case if provided protocol is not supported
-	ErrProtocolNotSupported error = errors.New("the protocol is not supported")
-	// ErrTransportNotSupported is the error in case if provided transport is not supported for given protocol
-	ErrTransportNotSupported error = errors.New("the transport is not supported")
+
 	// ErrBadPayload returned by Send method in case if message's payload is not valid has no payload
 	ErrBadPayload error = errors.New("the message's payload is not valid")
 	// ErrSendBusy returned by Send method in case if service is unable to send message at this time
 	ErrSendBusy error = errors.New("the service is too busy and unable to send the message")
+
+	// ErrNoDiscovery returned by Discover method in case if service is not providing discovery function
+	ErrNoDiscovery error = errors.New("no discovery service")
+	// ErrDiscoveryBusy returned by Discover method in case if there are too many discovery requests are running
+	ErrDiscoveryBusy error = errors.New("the discovery service is busy")
+	// ErrNoDiscoveryID returned by Discovery method if discovery id is not found
+	ErrNoDiscoveryID error = errors.New("the discovery id not found")
+	// ErrDiscoveryPending returned by Discovery method if requested discovery query is not completed yet
+	ErrDiscoveryPending error = errors.New("the discovery is not completed yet")
 )
 
 // ParamNameOpenAttemptsInterval parameter name for the time interval between attempts to open serial port

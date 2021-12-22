@@ -1,5 +1,10 @@
 package handlers
 
+import (
+	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/defs"
+)
+
 // ServiceID
 type ServiceID struct {
 	*ServiceKey
@@ -39,6 +44,29 @@ type SendToService struct {
 // SendToServiceResult - send message to service result
 type SendToServiceResult struct {
 	ResponseHeader
+}
+
+// DiscoveryStarted event contains information about started discovery query
+type DiscoveryStarted struct {
+	Header
+	ID        uuid.UUID                `json:"id"`
+	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
+	Transport defs.TransportIdentifier `json:"transport"`
+	Params    defs.RawParamValues      `json:"params,omitempty"`
+}
+
+type DiscoveryEntry struct {
+	ServiceKey
+	Params      defs.ParamValues `json:"params,omitempty"`
+	Description string           `json:"description,omitempty"`
+}
+
+// DiscoveryFinished event contains discovery query results
+type DiscoveryFinished struct {
+	Header
+	ID      uuid.UUID        `json:"id"`
+	Entries []DiscoveryEntry `json:"entries"`
+	Error   *ErrorInfo       `json:"error,omitempty"`
 }
 
 // // ProtocolDiscovery - discovery available services of protocol using specific transport
