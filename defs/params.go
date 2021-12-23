@@ -234,3 +234,12 @@ func (pv ParamValues) Raw() (r RawParamValues) {
 	}
 	return
 }
+
+// Copy creates copy of parameter-values
+func (pv ParamValues) Copy() ParamValues {
+	rv := make(ParamValues)
+	for k, v := range pv {
+		rv[k] = v
+	}
+	return rv
+}

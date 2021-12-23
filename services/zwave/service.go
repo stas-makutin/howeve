@@ -9,6 +9,7 @@ import (
 
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/log"
+	"github.com/stas-makutin/howeve/services/serial"
 	zw "github.com/stas-makutin/howeve/zwave"
 )
 
@@ -48,10 +49,15 @@ type Service struct {
 
 // NewServiceSerial creates new zwave service implementation using serial transport
 func NewService(transport defs.Transport, entry string, params defs.ParamValues) (defs.Service, error) {
+	// explicitly override timeouts, they must be 0 for non-blocking read/write operations
+	pv := params.Copy()
+	pv[serial.ParamNameReadTimeout] = 0
+	pv[serial.ParamNameWriteTimeout] = 0
+
 	return &Service{
 		transport: transport,
 		key:       &defs.ServiceKey{Protocol: defs.ProtocolZWave, Transport: transport.ID(), Entry: entry},
-		params:    params,
+		params:    pv,
 		sendQueue: make(chan *defs.Message, 10),
 	}, nil
 }

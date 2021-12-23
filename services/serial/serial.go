@@ -26,7 +26,7 @@ func (t *Transport) ID() defs.TransportIdentifier {
 func (t *Transport) Open(entry string, params defs.ParamValues) (err error) {
 	options := []serial.Option{}
 	if v, ok := params[ParamNameBaudRate]; ok {
-		options = append(options, serial.WithBaudrate(v.(int)))
+		options = append(options, serial.WithBaudrate(int(v.(int32))))
 	}
 	if v, ok := params[ParamNameDataBits]; ok {
 		switch v {
@@ -111,6 +111,10 @@ func (t *Transport) ReadyToRead() <-chan struct{} {
 	}
 	t.lock.RUnlock()
 	t.wg.Wait()
+	select {
+	case <-t.stopCh:
+	default:
+	}
 
 	rc := make(chan struct{})
 	t.wg.Add(1)

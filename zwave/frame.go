@@ -52,6 +52,40 @@ func DataFrame(frameType byte, body []byte) (frame []byte) {
 	return
 }
 
+// DataRequest creates request data frame for provided body (serial api command + parameters)
+func DataRequest(body []byte) (frame []byte) {
+	return DataFrame(FrameRequest, body)
+}
+
+// DataResponse creates response data frame for provided body (serial api command + parameters)
+func DataResponse(body []byte) (frame []byte) {
+	return DataFrame(FrameResponse, body)
+}
+
+// unpack data frame payload
+func UnpackDataFrame(frame []byte) []byte {
+	if len(frame) <= 3 {
+		return nil
+	}
+	return frame[2 : len(frame)-1]
+}
+
+// unpack data request frame payload
+func UnpackRequest(frame []byte) []byte {
+	if len(frame) <= 4 || frame[2] != FrameRequest {
+		return nil
+	}
+	return frame[3 : len(frame)-1]
+}
+
+// unpack data response frame payload
+func UnpackResponse(frame []byte) []byte {
+	if len(frame) <= 4 || frame[2] != FrameResponse {
+		return nil
+	}
+	return frame[3 : len(frame)-1]
+}
+
 type ValidateDataFrameResult byte
 
 const (
@@ -82,14 +116,4 @@ func ValidateDataFrame(frame []byte) (ValidateDataFrameResult, int) {
 		return FrameWrongChecksum, frameLength + 2
 	}
 	return FrameOK, frameLength + 2
-}
-
-// DataRequest creates request data frame for provided body (serial api command + parameters)
-func DataRequest(body []byte) (frame []byte) {
-	return DataFrame(FrameRequest, body)
-}
-
-// DataResponse creates response data frame for provided body (serial api command + parameters)
-func DataResponse(body []byte) (frame []byte) {
-	return DataFrame(FrameResponse, body)
 }
