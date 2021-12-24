@@ -103,29 +103,3 @@ type ProtocolInfoResult struct {
 	ResponseHeader
 	Protocols []*ProtocolInfoEntry
 }
-
-// ProtocolDiscoveryQuery - discovery input parameters
-type ProtocolDiscoveryQuery struct {
-	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
-	Transport defs.TransportIdentifier `json:"transport"`
-	Params    defs.RawParamValues      `json:"params,omitempty"`
-}
-
-// ServiceKey - service identification/key
-type ServiceKey struct {
-	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
-	Transport defs.TransportIdentifier `json:"transport"`
-	Entry     string                   `json:"entry"`
-}
-
-// ServiceEntry - service entry description
-type ServiceEntry struct {
-	ServiceKey
-	Params defs.RawParamValues `json:"params,omitempty"`
-}
-
-// ServiceEntryDetails - service entry with details
-type ServiceEntryDetails struct {
-	ServiceEntry
-	Description string `json:"description,omitempty"`
-}

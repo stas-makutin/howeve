@@ -23,8 +23,9 @@ type messageLog struct {
 	log  *messages
 	size int
 
-	cfg     *config.MessageLogConfig
-	maxSize int
+	cfg          *config.MessageLogConfig
+	maxSize      int
+	autoPersists time.Duration
 
 	lock      sync.Mutex
 	stopWb    sync.WaitGroup
@@ -73,6 +74,7 @@ func (ml *messageLog) Stop(ctx *tasks.ServiceTaskContext) {
 
 func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
 	ml.cfg = cfg.MessageLog
+
 	ml.maxSize = 0
 	if ml.cfg != nil {
 		ml.maxSize = int(ml.cfg.MaxSize.Value())
@@ -83,6 +85,11 @@ func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
 		ml.maxSize = 8192
 	} else if ml.maxSize > 1024*1024*1024 { // 1 GiB
 		ml.maxSize = 1024 * 1024 * 1024
+	}
+
+	ml.autoPersists = ml.cfg.AutoPesist.Value()
+	if ml.autoPersists < 1*time.Second {
+		ml.autoPersists = 6 * time.Hour
 	}
 }
 
@@ -105,6 +112,7 @@ func (ml *messageLog) persistLoop() {
 		case <-ml.stopCh:
 			return
 		case <-ml.persistCh:
+		case <-time.After(ml.autoPersists):
 		}
 		ml.save()
 	}

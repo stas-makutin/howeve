@@ -54,8 +54,11 @@ func SendDiscoveryStarted(id uuid.UUID, protocol defs.ProtocolIdentifier, transp
 func SendDiscoveryFinished(id uuid.UUID, entries []*defs.DiscoveryEntry, err error) {
 	Dispatcher.SendAsync(&DiscoveryFinished{
 		Header: *NewHeader(""),
-		ID:     id,
-		// TODO discovery entries + error
+		DiscoveryResult: &DiscoveryResult{
+			ID:      id,
+			Entries: entries,
+			// TODO error
+		},
 	})
 }
 

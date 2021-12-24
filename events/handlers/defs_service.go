@@ -7,20 +7,21 @@ import (
 
 // ServiceID
 type ServiceID struct {
-	*ServiceKey
+	*defs.ServiceKey
 	Alias string `json:"alias,omitempty"`
 }
 
-// ServiceEntryWithAlias - service entry with alias
-type ServiceEntryWithAlias struct {
-	ServiceEntry
-	Alias string `json:"alias,omitempty"`
+// ServiceEntry declares the service
+type ServiceEntry struct {
+	*defs.ServiceKey
+	Params defs.RawParamValues `json:"params,omitempty"`
+	Alias  string              `json:"alias,omitempty"`
 }
 
 // AddService - add new service
 type AddService struct {
 	RequestHeader
-	*ServiceEntryWithAlias
+	*ServiceEntry
 }
 
 // AddServiceReply - add new service reply
@@ -55,34 +56,58 @@ type DiscoveryStarted struct {
 	Params    defs.RawParamValues      `json:"params,omitempty"`
 }
 
-type DiscoveryEntry struct {
-	ServiceKey
-	Params      defs.ParamValues `json:"params,omitempty"`
-	Description string           `json:"description,omitempty"`
+// DiscoveryResult defines discovery results
+type DiscoveryResult struct {
+	ID      uuid.UUID              `json:"id"`
+	Entries []*defs.DiscoveryEntry `json:"entries"`
+	Error   *ErrorInfo             `json:"error,omitempty"`
 }
 
 // DiscoveryFinished event contains discovery query results
 type DiscoveryFinished struct {
 	Header
-	ID      uuid.UUID        `json:"id"`
-	Entries []DiscoveryEntry `json:"entries"`
-	Error   *ErrorInfo       `json:"error,omitempty"`
+	*DiscoveryResult
 }
 
-// // ProtocolDiscovery - discovery available services of protocol using specific transport
-// type ProtocolDiscovery struct {
-// 	RequestHeader
-// 	*ProtocolDiscoveryQuery
-// }
+// ProtocolDiscoverInput - discover query input parameters
+type ProtocolDiscoverInput struct {
+	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
+	Transport defs.TransportIdentifier `json:"transport"`
+	Params    defs.RawParamValues      `json:"params,omitempty"`
+}
 
-// // ProtocolDiscoveryQueryResult - discovery query results
-// type ProtocolDiscoveryQueryResult struct {
-// 	Error    *ErrorInfo             `json:"error,omitempty"`
-// 	Services []*ServiceEntryDetails `json:"services,omitempty"`
-// }
+// ProtocolDiscover defines protocol discover query event
+type ProtocolDiscover struct {
+	RequestHeader
+	*ProtocolDiscoverInput
+}
 
-// // ProtocolDiscoveryResult - discovery results
-// type ProtocolDiscoveryResult struct {
-// 	ResponseHeader
-// 	*ProtocolDiscoveryQueryResult
-// }
+// ProtocolDiscoverInput - discover query output parameters
+type ProtocolDiscoverOutput struct {
+	ID    *uuid.UUID `json:"id,omitempty"`
+	Error *ErrorInfo `json:"error,omitempty"`
+}
+
+// ProtocolDiscoverResult - discover query results
+type ProtocolDiscoverResult struct {
+	ResponseHeader
+	*ProtocolDiscoverOutput
+}
+
+// ProtocolDiscoveryInput defines input of protocol discovery event
+type ProtocolDiscoveryInput struct {
+	ID   uuid.UUID `json:"id"`
+	Stop bool      `json:"stop"`
+}
+
+// ProtocolDiscovery defines protocol discovery event
+type ProtocolDiscovery struct {
+	RequestHeader
+	*ProtocolDiscoveryInput
+}
+
+// ProtocolDiscoveryResult defines protocol discovery result event
+type ProtocolDiscoveryResult struct {
+	RequestHeader
+	*DiscoveryResult
+}

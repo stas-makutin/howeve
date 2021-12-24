@@ -134,7 +134,7 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 // }
 
 func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ServiceEntryWithAlias
+	var q *handlers.ServiceEntry
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -143,7 +143,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ServiceEntryWithAlias{}
+		q = &handlers.ServiceEntry{}
 
 		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
 		if err != nil {
@@ -177,7 +177,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 			}
 		}
 	}
-	return &handlers.AddService{ServiceEntryWithAlias: q}, true, nil
+	return &handlers.AddService{ServiceEntry: q}, true, nil
 }
 
 func parseSendToService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {

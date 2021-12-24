@@ -58,8 +58,9 @@ type MessageLogConfig struct {
 	// maximal messages log size, in bytes. must be greater or equal to 8192. Default value is 10MB
 	MaxSize SizeType `yaml:"maxSize,omitempty" json:"maxSize,omitempty"`
 	// file where messages log will be stored. If not specified or empty the message log will not persist
-	File     string         `yaml:"file,omitempty" json:"file,omitempty"`
-	DirMode  FileMode       `yaml:"dirMode,omitempty" json:"dirMode,omitempty"`
-	FileMode FileMode       `yaml:"fileMode,omitempty" json:"fileMode,omitempty"`
-	Flags    MessageLogFlag `yaml:"flags,omitempty" json:"flags,omitempty"`
+	File       string         `yaml:"file,omitempty" json:"file,omitempty"`
+	DirMode    FileMode       `yaml:"dirMode,omitempty" json:"dirMode,omitempty"`
+	FileMode   FileMode       `yaml:"fileMode,omitempty" json:"fileMode,omitempty"`
+	Flags      MessageLogFlag `yaml:"flags,omitempty" json:"flags,omitempty"`
+	AutoPesist DurationType   `yaml:"autoPersist,omitempty" json:"autoPersist,omitempty"`
 }

@@ -20,8 +20,8 @@ type ServiceFunc func(entry string, params ParamValues) (Service, error)
 // DiscoveryEntry - discovery entry - information about service instance detected during discovery
 type DiscoveryEntry struct {
 	ServiceKey
-	ParamValues
-	Description string
+	ParamValues `json:"params,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 // DiscoveryFunc is a method which returns discovered service entries or error

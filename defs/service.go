@@ -8,9 +8,9 @@ import (
 
 // ServiceKey struct defines service unique identifier/key
 type ServiceKey struct {
-	Protocol  ProtocolIdentifier
-	Transport TransportIdentifier
-	Entry     string
+	Protocol  ProtocolIdentifier  `json:"protocol"`
+	Transport TransportIdentifier `json:"transport"`
+	Entry     string              `json:"entry"`
 }
 
 // ServiceStatus describes the status of the service
