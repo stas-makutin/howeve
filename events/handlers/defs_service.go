@@ -108,6 +108,6 @@ type ProtocolDiscovery struct {
 
 // ProtocolDiscoveryResult defines protocol discovery result event
 type ProtocolDiscoveryResult struct {
-	RequestHeader
+	ResponseHeader
 	*DiscoveryResult
 }

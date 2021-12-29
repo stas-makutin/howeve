@@ -10,8 +10,12 @@ func (t *Task) handleEvents(event interface{}) {
 		handleProtocolList(e)
 	case *TransportList:
 		handleTransportList(e)
-	// case *ProtocolInfo:
-	// 	handleProtocolInfo(e)
+	case *ProtocolInfo:
+		handleProtocolInfo(e)
+	case *ProtocolDiscover:
+		handleProtocolDiscover(e)
+	case *ProtocolDiscovery:
+		handleProtocolDiscovery(e)
 	case *AddService:
 		handleAddService(e)
 	case *SendToService:

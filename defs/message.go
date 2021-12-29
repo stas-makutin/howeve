@@ -20,10 +20,10 @@ const (
 
 // Message struct represent the message sent to the service
 type Message struct {
-	Time    time.Time
-	ID      uuid.UUID
-	State   MessageState
-	Payload []byte
+	Time    time.Time    `json:"time"`
+	ID      uuid.UUID    `json:"id"`
+	State   MessageState `json:"state"`
+	Payload []byte       `json:"payload"`
 }
 
 // MessageLog defines message log interface

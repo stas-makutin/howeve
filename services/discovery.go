@@ -106,7 +106,7 @@ func (d *discoveryRegistry) Discover(protocol defs.ProtocolIdentifier, transport
 	d.stopWg.Add(1)
 	go d.discoveryRunner(de, to.DiscoveryFunc, pv)
 
-	return uuid.Nil, nil
+	return de.id, nil
 }
 
 // Discovery method returns the state or results of discovery query, identifying by its id

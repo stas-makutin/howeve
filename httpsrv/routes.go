@@ -51,13 +51,20 @@ func setupRoutes(mux *http.ServeMux) {
 				})
 			},
 		},
-		// {
-		// 	"/discovery", func(w http.ResponseWriter, r *http.Request) {
-		// 		handleEvents(w, r, reflect.TypeOf(&handlers.ProtocolDiscoveryResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
-		// 			return parseProtocolDiscovery(w, r)
-		// 		})
-		// 	},
-		// },
+		{
+			"/discover", func(w http.ResponseWriter, r *http.Request) {
+				handleEvents(w, r, reflect.TypeOf(&handlers.ProtocolDiscoverResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
+					return parseProtocolDiscover(w, r)
+				})
+			},
+		},
+		{
+			"/discovery", func(w http.ResponseWriter, r *http.Request) {
+				handleEvents(w, r, reflect.TypeOf(&handlers.ProtocolDiscoveryResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
+					return parseProtocolDiscovery(w, r)
+				})
+			},
+		},
 		{
 			"/service/add", func(w http.ResponseWriter, r *http.Request) {
 				handleEvents(w, r, reflect.TypeOf(&handlers.AddServiceResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {

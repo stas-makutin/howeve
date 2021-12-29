@@ -1,6 +1,11 @@
 package handlers
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/stas-makutin/howeve/defs"
+)
 
 // ErrorCode type
 type ErrorCode int
@@ -14,6 +19,10 @@ const (
 	ErrorInvalidParameterValue
 	ErrorNoRequiredParameter
 	ErrorNoDiscovery
+	ErrorDiscoveryBusy
+	ErrorNoDiscoveryID
+	ErrorDiscoveryPending
+	ErrorDiscoveryFailed
 	ErrorServiceExists
 	ErrorServiceAliasExists
 	ErrorServiceInitialize
@@ -24,18 +33,23 @@ type ErrorInfo struct {
 	Code    ErrorCode     `json:"c"`
 	Message string        `json:"m"`
 	Params  []interface{} `json:"p,omitempty"`
+	err     error
 }
 
-// NewErrorInfo - makes error information structure
-func NewErrorInfo(code ErrorCode, args ...interface{}) (e *ErrorInfo) {
-	e = &ErrorInfo{Code: code, Params: args}
+// newErrorInfo - makes error information structure
+func newErrorInfo(code ErrorCode, err error, args ...interface{}) (e *ErrorInfo) {
+	e = &ErrorInfo{Code: code, Params: args, err: err}
 	switch code {
 	case ErrorUnknownProtocol:
 		e.Message = fmt.Sprintf("Unknown protocol identifier %d", args...)
 	case ErrorUnknownTransport:
 		e.Message = fmt.Sprintf("Unknown transport identifier %d", args...)
 	case ErrorInvalidProtocolTransport:
-		e.Message = fmt.Sprintf("The protocol %s (%d) doesn't support the transport %s (%d)", args...)
+		e.Message = fmt.Sprintf(
+			"The protocol %s (%d) doesn't support the transport %s (%d)",
+			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+		)
 	case ErrorUnknownParameter:
 		e.Message = fmt.Sprintf("Unknown parameter \"%s\"", args...)
 	case ErrorInvalidParameterValue:
@@ -43,13 +57,69 @@ func NewErrorInfo(code ErrorCode, args ...interface{}) (e *ErrorInfo) {
 	case ErrorNoRequiredParameter:
 		e.Message = fmt.Sprintf("Required parameter \"%s\" is missing", args...)
 	case ErrorNoDiscovery:
-		e.Message = fmt.Sprintf("The discovery is not supported for %s (%d) protocol and %s (%d) transport", args...)
+		e.Message = fmt.Sprintf(
+			"The discovery is not supported for %s (%d) protocol and %s (%d) transport",
+			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+		)
+	case ErrorDiscoveryBusy:
+		e.Message = "The discovery is not available - too many discovery quieries are executing at this moment"
+	case ErrorNoDiscoveryID:
+		e.Message = fmt.Sprintf("The discovery request %s not found", args...)
+	case ErrorDiscoveryPending:
+		e.Message = fmt.Sprintf("The discovery request %s not completed yet", args...)
+	case ErrorDiscoveryFailed:
+		e.Message = fmt.Sprintf("The discovery has failed, reason: %s", err.Error())
 	case ErrorServiceExists:
-		e.Message = fmt.Sprintf("The service exists already for %s (%d) protocol, %s (%d) transport, and %s entry", args...)
+		e.Message = fmt.Sprintf(
+			"The service exists already for %s (%d) protocol, %s (%d) transport, and %s entry",
+			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			args[2],
+		)
 	case ErrorServiceAliasExists:
 		e.Message = fmt.Sprintf("The service's alias %s exists already", args...)
 	case ErrorServiceInitialize:
-		e.Message = fmt.Sprintf("The service initialization failed, %s (%d) protocol, %s (%d) transport, and %s entry, reason: %s", args...)
+		e.Message = fmt.Sprintf(
+			"The service initialization failed, %s (%d) protocol, %s (%d) transport, and %s entry, reason: %s",
+			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			args[2], err.Error(),
+		)
 	}
 	return
+}
+
+func (e *ErrorInfo) Error() string {
+	return e.Message
+}
+
+func (e *ErrorInfo) Unwrap() error {
+	return e.err
+}
+
+func handleParamsErrors(err error) *ErrorInfo {
+	var pe *defs.ParseError
+	if errors.As(err, &pe) {
+		switch pe.Code {
+		case defs.UnknownParamName:
+			return newErrorInfo(ErrorUnknownParameter, err, pe.Name)
+		case defs.NoRequiredParam:
+			return newErrorInfo(ErrorNoRequiredParameter, err, pe.Name)
+		}
+		return newErrorInfo(ErrorInvalidParameterValue, err, pe.Value, pe.Name)
+	}
+	return nil
+}
+
+func handleProtocolErrors(err error, protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier) *ErrorInfo {
+	switch err {
+	case defs.ErrTransportNotSupported:
+		return newErrorInfo(ErrorUnknownTransport, err, transport)
+	case defs.ErrProtocolNotSupported:
+		return newErrorInfo(ErrorUnknownProtocol, err, protocol)
+	case defs.ErrNoProtocolTransport:
+		return newErrorInfo(ErrorInvalidProtocolTransport, err, protocol, transport)
+	}
+	return nil
 }

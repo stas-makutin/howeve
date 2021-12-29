@@ -19,8 +19,7 @@ const (
 	svcOcSuccess                  = "0"
 	svcOcCfgUnknownProtocol       = "P"
 	svcOcCfgUnknownTransport      = "T"
-	svcOcCfgProtocolNotSupported  = "X"
-	svcOcCfgTransportNotSupported = "x"
+	svcOcCfgNoProtocolTransport   = "X"
 	svcOcCfgUnknownParameter      = "N"
 	svcOcCfgNoRequiredParameter   = "R"
 	svcOcCfgInvalidParameterValue = "V"
@@ -133,7 +132,7 @@ func (sr *servicesRegistry) add(key *defs.ServiceKey, params defs.RawParamValues
 
 	serviceFunc := to.ServiceFunc
 	if serviceFunc == nil {
-		return defs.ErrTransportNotSupported
+		return defs.ErrNoProtocolTransport
 	}
 
 	pv, err := ti.Params.Merge(to.Params).ParseValues(params)
@@ -186,9 +185,11 @@ func (sr *servicesRegistry) addFromConfig() {
 		case errors.Is(err, defs.ErrAliasExists):
 			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgAliasExists, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.Is(err, defs.ErrProtocolNotSupported):
-			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgProtocolNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgUnknownProtocol, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.Is(err, defs.ErrTransportNotSupported):
-			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgTransportNotSupported, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgUnknownTransport, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
+		case errors.Is(err, defs.ErrNoProtocolTransport):
+			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgNoProtocolTransport, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias)
 		case errors.As(err, &pe):
 			switch pe.Code {
 			case defs.UnknownParamName:

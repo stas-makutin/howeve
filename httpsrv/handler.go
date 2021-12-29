@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
@@ -89,49 +90,74 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 	return &handlers.ProtocolInfo{Filter: q}, true, nil
 }
 
-// func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-// 	var q *handlers.ProtocolDiscoveryQuery
-// 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
-// 		if err != nil {
-// 			return nil, true, err
-// 		}
-// 	} else {
-// 		if err := r.ParseForm(); err != nil {
-// 			return nil, true, err
-// 		}
-// 		q = &handlers.ProtocolDiscoveryQuery{}
+func parseProtocolDiscover(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ProtocolDiscoverInput
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ProtocolDiscoverInput{}
 
-// 		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
-// 		if err != nil {
-// 			return nil, true, err
-// 		}
-// 		q.Protocol = defs.ProtocolIdentifier(n)
+		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
+		if err != nil {
+			return nil, true, err
+		}
+		q.Protocol = defs.ProtocolIdentifier(n)
 
-// 		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
-// 		if err != nil {
-// 			return nil, true, err
-// 		}
-// 		q.Transport = defs.TransportIdentifier(n)
+		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
+		if err != nil {
+			return nil, true, err
+		}
+		q.Transport = defs.TransportIdentifier(n)
 
-// 		if pi, ok := defs.Protocols[q.Protocol]; ok {
-// 			if pti, ok := pi.Transports[q.Transport]; ok {
-// 				for name, p := range pti.DiscoveryParams {
-// 					if p.Flags&defs.ParamFlagConst == 0 {
-// 						v := r.Form.Get(name)
-// 						if v != "" {
-// 							if q.Params == nil {
-// 								q.Params = make(handlers.ParamsValues)
-// 							}
-// 							q.Params[name] = v
-// 						}
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
+		if pi, ok := defs.Protocols[q.Protocol]; ok {
+			if pti, ok := pi.Transports[q.Transport]; ok {
+				for name, p := range pti.DiscoveryParams {
+					if p.Flags&defs.ParamFlagConst == 0 {
+						v := r.Form.Get(name)
+						if v != "" {
+							if q.Params == nil {
+								q.Params = make(defs.RawParamValues)
+							}
+							q.Params[name] = v
+						}
+					}
+				}
+			}
+		}
+	}
 
-// 	return &handlers.ProtocolDiscovery{ProtocolDiscoveryQuery: q}, true, nil
-// }
+	return &handlers.ProtocolDiscover{ProtocolDiscoverInput: q}, true, nil
+}
+
+func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ProtocolDiscoveryInput
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ProtocolDiscoveryInput{}
+
+		id, err := uuid.Parse(r.Form.Get("id"))
+		if err != nil {
+			return nil, true, err
+		}
+		q.ID = id
+
+		stop := strings.ToLower(r.Form.Get("stop"))
+		q.Stop = stop == "true" || stop == "1" || stop == "yes"
+	}
+
+	return &handlers.ProtocolDiscovery{ProtocolDiscoveryInput: q}, true, nil
+}
 
 func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
 	var q *handlers.ServiceEntry

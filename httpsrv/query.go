@@ -23,6 +23,8 @@ const (
 	queryTransportListResult
 	queryProtocolInfo
 	queryProtocolInfoResult
+	queryProtocolDiscover
+	queryProtocolDiscoverResult
 	queryProtocolDiscovery
 	queryProtocolDiscoveryResult
 	queryAddService
@@ -37,6 +39,7 @@ var queryTypeMap = map[string]queryType{
 	"protocols": queryProtocolList, "protocolsResult": queryProtocolListResult,
 	"transports": queryTransportList, "transportsResult": queryTransportListResult,
 	"protocolInfo": queryProtocolInfo, "protocolInfoResult": queryProtocolInfoResult,
+	"discover": queryProtocolDiscover, "discoverResult": queryProtocolDiscoverResult,
 	"discovery": queryProtocolDiscovery, "discoveryResult": queryProtocolDiscoveryResult,
 	"addService": queryAddService, "addServiceResult": queryAddServiceResult,
 	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
@@ -104,12 +107,18 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			}
 			c.Payload = &p
 		}
-	// case queryProtocolDiscovery:
-	// 	var p handlers.ProtocolDiscoveryQuery
-	// 	if err := json.Unmarshal(data, &p); err != nil {
-	// 		return err
-	// 	}
-	// 	c.Payload = &p
+	case queryProtocolDiscover:
+		var p handlers.ProtocolDiscoverInput
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case queryProtocolDiscovery:
+		var p handlers.ProtocolDiscoveryInput
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
 	case queryAddService:
 		var p handlers.ServiceEntry
 		if err := json.Unmarshal(data, &p); err != nil {
@@ -136,8 +145,10 @@ func (c *Query) toEvent() interface{} {
 			filter = c.Payload.(*handlers.ProtocolInfoFilter)
 		}
 		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: filter}
-	// case queryProtocolDiscovery:
-	// 	return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryQuery: c.Payload.(*handlers.ProtocolDiscoveryQuery)}
+	case queryProtocolDiscover:
+		return &handlers.ProtocolDiscover{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoverInput: c.Payload.(*handlers.ProtocolDiscoverInput)}
+	case queryProtocolDiscovery:
+		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryInput: c.Payload.(*handlers.ProtocolDiscoveryInput)}
 	case queryAddService:
 		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntry: c.Payload.(*handlers.ServiceEntry)}
 	case querySendToService:

@@ -71,8 +71,10 @@ func ProtocolByName(name string) (ProtocolIdentifier, bool) {
 var (
 	// ErrProtocolNotSupported is the error in case if provided protocol is not supported
 	ErrProtocolNotSupported error = errors.New("the protocol is not supported")
-	// ErrTransportNotSupported is the error in case if provided transport is not supported for given protocol
+	// ErrTransportNotSupported is the error in case if provided transport is not supported
 	ErrTransportNotSupported error = errors.New("the transport is not supported")
+	// ErrNoProtocolTransport is the error in case if provided transport is not supported for given protocol
+	ErrNoProtocolTransport error = errors.New("the transport is not supported for the protocol")
 )
 
 // ResolveProtocolAndTransport resolves protocol-transport pair
@@ -87,7 +89,7 @@ func ResolveProtocolAndTransport(p ProtocolIdentifier, t TransportIdentifier) (*
 	}
 	to := pi.Transports[t]
 	if to == nil {
-		return nil, nil, ErrTransportNotSupported
+		return nil, nil, ErrNoProtocolTransport
 	}
 	return to, ti, nil
 }
