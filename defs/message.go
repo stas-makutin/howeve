@@ -16,6 +16,7 @@ const (
 	OutgoingPending
 	OutgoingFailed
 	OutgoingRejected
+	OutgoingTimedOut
 )
 
 // Message struct represent the message sent to the service

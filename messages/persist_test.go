@@ -50,7 +50,7 @@ func TestMessagesPersistence(t *testing.T) {
 
 	for msgCount > 0 {
 		service := services[rand.Intn(100)%2]
-		state := []defs.MessageState{defs.Incoming, defs.Outgoing, defs.OutgoingPending, defs.OutgoingFailed, defs.OutgoingRejected}[rand.Intn(100)%5]
+		state := []defs.MessageState{defs.Incoming, defs.Outgoing, defs.OutgoingPending, defs.OutgoingFailed, defs.OutgoingRejected, defs.OutgoingTimedOut}[rand.Intn(100)%6]
 		payloadLen := 12 + rand.Intn(200)
 		payload := make([]byte, payloadLen)
 		rand.Read(payload)

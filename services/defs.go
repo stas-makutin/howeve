@@ -40,6 +40,11 @@ var protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
 						Type:         defs.ParamTypeInt32,
 						DefaultValue: "3000",
 					},
+					defs.ParamNameOutgoingMaxTTL: {
+						Description:  "The time to live of outgoing message before it will be sent, milliseconds",
+						Type:         defs.ParamTypeInt32,
+						DefaultValue: "15000",
+					},
 				},
 			},
 		},

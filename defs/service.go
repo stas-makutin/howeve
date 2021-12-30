@@ -14,9 +14,10 @@ type ServiceKey struct {
 }
 
 // ServiceStatus describes the status of the service
-type ServiceStatus struct {
-	Error error
-}
+type ServiceStatus error
+
+// non-error service status
+var ErrStatusGood error = errors.New("the service is functioning normally")
 
 // Service interface, defines minimal set of methods the service needs to support
 type Service interface {
@@ -32,6 +33,8 @@ var (
 	ErrServiceExists error = errors.New("the service already exists")
 	// ErrAliasExists is the error in case if service already exists
 	ErrAliasExists error = errors.New("the service alias already exists")
+	// ErrServiceNotExists returns if service is not exists (Remove, Status methods)
+	ErrServiceNotExists error = errors.New("the service not exists")
 
 	// ErrBadPayload returned by Send method in case if message's payload is not valid has no payload
 	ErrBadPayload error = errors.New("the message's payload is not valid")
@@ -48,8 +51,14 @@ var (
 	ErrDiscoveryPending error = errors.New("the discovery is not completed yet")
 )
 
-// ParamNameOpenAttemptsInterval parameter name for the time interval between attempts to open serial port
+// ParamNameOpenAttemptsInterval parameter name for the time interval between attempts to open (serial port)
 const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
+
+// ParamNameOutgoingMaxTTL parameter name for the maximum time to live of outgoing messages
+const ParamNameOutgoingMaxTTL = "outgoingMaxTTL"
+
+// ListFunc is a the callback function used in ServiceRegistry List method. Returnningtrue will stop services iteration
+type ListFunc func(key *ServiceKey, alias string, status ServiceStatus) bool
 
 // ServiceRegistry defines possible operations with services
 type ServiceRegistry interface {
@@ -57,6 +66,12 @@ type ServiceRegistry interface {
 	Discovery(id uuid.UUID, stop bool) ([]*DiscoveryEntry, error)
 
 	Add(key *ServiceKey, params RawParamValues, alias string) error
+	Alias(key *ServiceKey, alias string) error
+	Remove(key *ServiceKey, alias string) error
+	Status(key *ServiceKey, alias string) (ServiceStatus, bool)
+	List(listFn ListFunc)
+
+	Send(key *ServiceKey, alias string, payload []byte) (*Message, error)
 }
 
 // Services provides access to ServiceRegistry implementation (set in services module)

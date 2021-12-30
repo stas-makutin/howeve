@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/stas-makutin/howeve/defs"
@@ -41,6 +42,8 @@ type Service struct {
 	params    defs.ParamValues
 
 	sendQueue chan *defs.Message
+
+	status atomic.Value
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -79,11 +82,23 @@ func (svc *Service) Stop() {
 	svc.cancel()
 	svc.stopWg.Wait()
 
+PurgeLoop:
+	for {
+		select {
+		default:
+			break PurgeLoop
+		case message := <-svc.sendQueue:
+			defs.Messages.UpdateState(message.ID, defs.OutgoingRejected)
+		}
+	}
+
 	svc.ctx, svc.cancel = nil, nil
+
+	svc.status.Store(defs.ErrStatusGood)
 }
 
 func (svc *Service) Status() defs.ServiceStatus {
-	return defs.ServiceStatus{}
+	return svc.status.Load().(defs.ServiceStatus)
 }
 
 func (svc *Service) Send(payload []byte) (*defs.Message, error) {
@@ -93,12 +108,22 @@ func (svc *Service) Send(payload []byte) (*defs.Message, error) {
 
 	message := defs.Messages.Register(svc.key, payload, defs.OutgoingPending)
 
-	select {
-	default:
-		defs.Messages.UpdateState(message.ID, defs.OutgoingRejected)
-		return message, defs.ErrSendBusy
-	case svc.sendQueue <- message:
+QueueLoop:
+	for {
+		select {
+		default:
+			if svc.Status() == defs.ErrStatusGood {
+				defs.Messages.UpdateState(message.ID, defs.OutgoingRejected)
+				return message, defs.ErrSendBusy
+			}
+			// purge message queue if service is unhealthy
+			msg := <-svc.sendQueue
+			defs.Messages.UpdateState(msg.ID, defs.OutgoingRejected)
+		case svc.sendQueue <- message:
+			break QueueLoop
+		}
 	}
+
 	return message, nil
 }
 
@@ -111,6 +136,19 @@ func (svc *Service) openTimeout() time.Duration {
 		}
 	}
 	return openTimeout
+}
+
+func (svc *Service) outgoingMaxTTL() time.Duration {
+	outgoingMaxTTL := time.Millisecond * 15000
+	if v, ok := svc.params[defs.ParamNameOutgoingMaxTTL]; ok {
+		outgoingMaxTTL = time.Duration(v.(uint32)) * time.Millisecond
+		if outgoingMaxTTL <= 0 {
+			outgoingMaxTTL = 0
+		} else if outgoingMaxTTL < 1000 {
+			outgoingMaxTTL = time.Second
+		}
+	}
+	return outgoingMaxTTL
 }
 
 func (svc *Service) log(op string, fields ...string) {
@@ -129,6 +167,7 @@ func (svc *Service) serviceLoop() {
 	defer svc.stopWg.Done()
 
 	openTimeout := svc.openTimeout()
+	outgoingMaxTTL := svc.outgoingMaxTTL()
 	open := true
 	expectReply := false
 	buffer := make([]byte, 4096)
@@ -141,6 +180,7 @@ ServiceLoop:
 			expectReply = false
 			rb = re
 			if err := svc.transport.Open(svc.key.Entry, svc.params); err != nil {
+				svc.status.Store(err)
 				svc.log(zwOcTransportOpen, zwOsFailure, err.Error())
 				select {
 				case <-svc.ctx.Done():
@@ -151,6 +191,7 @@ ServiceLoop:
 				}
 			} else {
 				svc.log(zwOcTransportOpen, zwOsSuccess)
+				svc.status.Store(defs.ErrStatusGood)
 			}
 		}
 
@@ -169,7 +210,10 @@ ServiceLoop:
 			case <-svc.ctx.Done():
 				break ServiceLoop
 			case message := <-svc.sendQueue:
-				if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
+				if outgoingMaxTTL > 0 && time.Now().UTC().Sub(message.Time) > outgoingMaxTTL {
+					defs.Messages.UpdateState(message.ID, defs.OutgoingTimedOut)
+				} else if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
+					svc.status.Store(err)
 					svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteQueue, err.Error())
 					defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
 					open = true
@@ -192,6 +236,7 @@ ServiceLoop:
 			break ServiceLoop
 		}
 		if err != nil {
+			svc.status.Store(err)
 			svc.log(zwOcTransportRead, zwOsFailure, err.Error())
 			open = true
 		} else if n > 0 {
@@ -232,6 +277,7 @@ ServiceLoop:
 					if len(reply) > 0 {
 						message := defs.Messages.Register(svc.key, reply, defs.OutgoingPending)
 						if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
+							svc.status.Store(err)
 							svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteReply, err.Error())
 							defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
 							open = true

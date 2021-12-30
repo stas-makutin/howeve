@@ -35,6 +35,7 @@ const (
 
 type serviceInfo struct {
 	service defs.Service
+	key     *defs.ServiceKey
 	alias   string
 	params  defs.ParamValues
 }
@@ -117,6 +118,103 @@ func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues
 	return nil
 }
 
+// Alias changes service's alias
+func (sr *servicesRegistry) Alias(key *defs.ServiceKey, alias string) error {
+	sr.lock.Lock()
+	defer sr.lock.Unlock()
+
+	var si *serviceInfo
+	if key != nil {
+		si = sr.services[*key]
+	}
+	if si == nil {
+		return defs.ErrServiceNotExists
+	}
+
+	if si.alias != "" {
+		delete(sr.aliases, si.alias)
+	}
+	si.alias = alias
+	if alias != "" {
+		sr.aliases[alias] = si
+	}
+
+	return nil
+}
+
+// Remove removes the service identified by (in order of priority): 1) service key; 2) alias
+func (sr *servicesRegistry) Remove(key *defs.ServiceKey, alias string) error {
+	sr.lock.Lock()
+	defer sr.lock.Unlock()
+
+	var si *serviceInfo
+	if key != nil {
+		si = sr.services[*key]
+	} else if alias != "" {
+		si = sr.aliases[alias]
+	}
+	if si == nil {
+		return defs.ErrServiceNotExists
+	}
+
+	si.service.Stop()
+
+	delete(sr.services, *si.key)
+	if si.alias != "" {
+		delete(sr.aliases, si.alias)
+	}
+
+	return nil
+}
+
+// Status return the status of the service identified by (in order of priority): 1) service key; 2) alias
+func (sr *servicesRegistry) Status(key *defs.ServiceKey, alias string) (defs.ServiceStatus, bool) {
+	sr.lock.Lock()
+	defer sr.lock.Unlock()
+
+	var si *serviceInfo
+	if key != nil {
+		si = sr.services[*key]
+	} else if alias != "" {
+		si = sr.aliases[alias]
+	}
+	if si == nil {
+		return nil, false
+	}
+
+	return si.service.Status(), true
+}
+
+// List returns list of registered services to provided callback function. The services iteration will stop if callback function will return true
+func (sr *servicesRegistry) List(listFn defs.ListFunc) {
+	if listFn != nil {
+		sr.lock.Lock()
+		defer sr.lock.Unlock()
+
+		for _, si := range sr.services {
+			listFn(si.key, si.alias, si.service.Status())
+		}
+	}
+}
+
+// Send sends payload to the service identified by (in order of priority): 1) service key; 2) alias
+func (sr *servicesRegistry) Send(key *defs.ServiceKey, alias string, payload []byte) (*defs.Message, error) {
+	sr.lock.Lock()
+	defer sr.lock.Unlock()
+
+	var si *serviceInfo
+	if key != nil {
+		si = sr.services[*key]
+	} else if alias != "" {
+		si = sr.aliases[alias]
+	}
+	if si == nil {
+		return nil, defs.ErrServiceNotExists
+	}
+
+	return si.service.Send(payload)
+}
+
 func (sr *servicesRegistry) add(key *defs.ServiceKey, params defs.RawParamValues, alias string) error {
 	if _, ok := sr.services[*key]; ok {
 		return defs.ErrServiceExists
@@ -147,7 +245,7 @@ func (sr *servicesRegistry) add(key *defs.ServiceKey, params defs.RawParamValues
 
 	service.Start()
 
-	si := &serviceInfo{service, alias, pv}
+	si := &serviceInfo{service, key, alias, pv}
 	sr.services[*key] = si
 	if alias != "" {
 		sr.aliases[alias] = si
