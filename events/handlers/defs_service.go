@@ -24,8 +24,8 @@ type AddService struct {
 	*ServiceEntry
 }
 
-// AddServiceReply - add new service reply
-type AddServiceReply struct {
+// ServiceReply - add new service reply
+type ServiceReply struct {
 	Error   *ErrorInfo `json:"error,omitempty"`
 	Success bool       `json:"success,omitempty"`
 }
@@ -33,18 +33,58 @@ type AddServiceReply struct {
 // AddServiceResult - add new service result
 type AddServiceResult struct {
 	ResponseHeader
-	*AddServiceReply
+	*StatusReply
+}
+
+// RemoveService - remove service request
+type RemoveService struct {
+	RequestHeader
+	*ServiceID
+}
+
+// RemoveServiceResult - remove service result
+type RemoveServiceResult struct {
+	ResponseHeader
+	*StatusReply
+}
+
+// ChangeServiceAlias - change service alias request
+type ChangeServiceAlias struct {
+	RequestHeader
+	*ServiceID
+	NewAlias string `json:"newAlias,omitempty"`
+}
+
+// ChangeServiceAlias - change service alias result
+type ChangeServiceAliasResult struct {
+	ResponseHeader
+	*StatusReply
+}
+
+// ServiceStatus - get service status
+type ServiceStatus struct {
+	RequestHeader
+	*ServiceID
+}
+
+// ServiceStatusResult - get service status
+type ServiceStatusResult struct {
+	ResponseHeader
+	*StatusReply
 }
 
 // SendToService - send message to service
 type SendToService struct {
 	RequestHeader
 	*ServiceID
+	Payload []byte `json:"payload,omitempty"`
 }
 
 // SendToServiceResult - send message to service result
 type SendToServiceResult struct {
 	ResponseHeader
+	*StatusReply
+	*defs.Message
 }
 
 // DiscoveryStarted event contains information about started discovery query

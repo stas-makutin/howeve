@@ -6,7 +6,7 @@ import (
 )
 
 func handleAddService(event *AddService) {
-	r := &AddServiceResult{ResponseHeader: event.Associate(), AddServiceReply: &AddServiceReply{Success: false}}
+	r := &AddServiceResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
 	key, errorInfo := makeServiceKey(event.Protocol, event.Transport, event.Entry)
 	if errorInfo == nil {
 		if err := defs.Services.Add(key, event.Params, event.Alias); err == nil {
@@ -29,6 +29,21 @@ func handleAddService(event *AddService) {
 		}
 	}
 	r.Error = errorInfo
+	Dispatcher.Send(r)
+}
+
+func handleRemoveService(event *RemoveService) {
+	r := &RemoveServiceResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	Dispatcher.Send(r)
+}
+
+func handleChangeServiceAlias(event *ChangeServiceAlias) {
+	r := &ChangeServiceAliasResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	Dispatcher.Send(r)
+}
+
+func handleServiceStatus(event *ServiceStatus) {
+	r := &ServiceStatusResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
 	Dispatcher.Send(r)
 }
 

@@ -181,7 +181,7 @@ func queryFromEvent(event interface{}) *Query {
 	// case *handlers.ProtocolDiscoveryResult:
 	// 	return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryQueryResult}
 	case *handlers.AddServiceResult:
-		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.AddServiceReply}
+		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.SendToServiceResult:
 		return &Query{Type: querySendToServiceResult, ID: e.TraceID()}
 	}

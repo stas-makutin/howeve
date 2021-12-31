@@ -18,6 +18,12 @@ func (t *Task) handleEvents(event interface{}) {
 		handleProtocolDiscovery(e)
 	case *AddService:
 		handleAddService(e)
+	case *RemoveService:
+		handleRemoveService(e)
+	case *ChangeServiceAlias:
+		handleChangeServiceAlias(e)
+	case *ServiceStatus:
+		handleServiceStatus(e)
 	case *SendToService:
 		handleSendToService(e)
 	}

@@ -103,3 +103,9 @@ type ProtocolInfoResult struct {
 	ResponseHeader
 	Protocols []*ProtocolInfoEntry
 }
+
+// StatusReply - common operation status reply (success/error)
+type StatusReply struct {
+	Error   *ErrorInfo `json:"error,omitempty"`
+	Success bool       `json:"success,omitempty"`
+}

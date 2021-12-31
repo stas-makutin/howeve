@@ -126,7 +126,7 @@ func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues
 }
 
 // Alias changes service's alias
-func (sr *servicesRegistry) Alias(key *defs.ServiceKey, alias string) error {
+func (sr *servicesRegistry) Alias(key *defs.ServiceKey, oldAlias string, newAlias string) error {
 	updateConfig := false
 	defer func() {
 		if updateConfig {
@@ -136,21 +136,18 @@ func (sr *servicesRegistry) Alias(key *defs.ServiceKey, alias string) error {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
-	var si *serviceInfo
-	if key != nil {
-		si = sr.services[*key]
-	}
+	si := sr.findService(key, oldAlias)
 	if si == nil {
 		return defs.ErrServiceNotExists
 	}
 
-	if si.alias != alias {
+	if si.alias != newAlias {
 		if si.alias != "" {
 			delete(sr.aliases, si.alias)
 		}
-		si.alias = alias
-		if alias != "" {
-			sr.aliases[alias] = si
+		si.alias = newAlias
+		if newAlias != "" {
+			sr.aliases[newAlias] = si
 		}
 
 		if i, ok := sr.findServiceCfg(si.key); ok {
@@ -173,12 +170,7 @@ func (sr *servicesRegistry) Remove(key *defs.ServiceKey, alias string) error {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
-	var si *serviceInfo
-	if key != nil {
-		si = sr.services[*key]
-	} else if alias != "" {
-		si = sr.aliases[alias]
-	}
+	si := sr.findService(key, alias)
 	if si == nil {
 		return defs.ErrServiceNotExists
 	}
@@ -203,12 +195,7 @@ func (sr *servicesRegistry) Status(key *defs.ServiceKey, alias string) (defs.Ser
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
-	var si *serviceInfo
-	if key != nil {
-		si = sr.services[*key]
-	} else if alias != "" {
-		si = sr.aliases[alias]
-	}
+	si := sr.findService(key, alias)
 	if si == nil {
 		return nil, false
 	}
@@ -233,12 +220,7 @@ func (sr *servicesRegistry) Send(key *defs.ServiceKey, alias string, payload []b
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
-	var si *serviceInfo
-	if key != nil {
-		si = sr.services[*key]
-	} else if alias != "" {
-		si = sr.aliases[alias]
-	}
+	si := sr.findService(key, alias)
 	if si == nil {
 		return nil, defs.ErrServiceNotExists
 	}
@@ -332,6 +314,15 @@ func (sr *servicesRegistry) addFromConfig() {
 			log.Report(log.SrcSVC, svcOpAddFromConfig, svcOcCfgCreateError, cfg.Protocol, cfg.Transport, cfg.Entry, cfg.Alias, err.Error())
 		}
 	}
+}
+
+func (sr *servicesRegistry) findService(key *defs.ServiceKey, alias string) *serviceInfo {
+	if key != nil {
+		return sr.services[*key]
+	} else if alias != "" {
+		return sr.aliases[alias]
+	}
+	return nil
 }
 
 func (sr *servicesRegistry) findServiceCfg(key *defs.ServiceKey) (int, bool) {

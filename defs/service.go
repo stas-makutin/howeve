@@ -66,7 +66,7 @@ type ServiceRegistry interface {
 	Discovery(id uuid.UUID, stop bool) ([]*DiscoveryEntry, error)
 
 	Add(key *ServiceKey, params RawParamValues, alias string) error
-	Alias(key *ServiceKey, alias string) error
+	Alias(key *ServiceKey, oldAlias string, newAlias string) error
 	Remove(key *ServiceKey, alias string) error
 	Status(key *ServiceKey, alias string) (ServiceStatus, bool)
 	List(listFn ListFunc)
