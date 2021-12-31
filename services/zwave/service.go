@@ -139,7 +139,7 @@ func (svc *Service) openTimeout() time.Duration {
 }
 
 func (svc *Service) outgoingMaxTTL() time.Duration {
-	outgoingMaxTTL := time.Millisecond * 15000
+	outgoingMaxTTL := time.Millisecond * 10000
 	if v, ok := svc.params[defs.ParamNameOutgoingMaxTTL]; ok {
 		outgoingMaxTTL = time.Duration(v.(uint32)) * time.Millisecond
 		if outgoingMaxTTL <= 0 {
