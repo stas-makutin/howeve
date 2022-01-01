@@ -23,9 +23,13 @@ const (
 	ErrorNoDiscoveryID
 	ErrorDiscoveryPending
 	ErrorDiscoveryFailed
+	ErrorServiceNoKey
+	ErrorServiceNoID
 	ErrorServiceExists
 	ErrorServiceAliasExists
 	ErrorServiceInitialize
+	ErrorServiceKeyNotExists
+	ErrorServiceAliasNotExists
 )
 
 // ErrorInfo - error
@@ -70,6 +74,10 @@ func newErrorInfo(code ErrorCode, err error, args ...interface{}) (e *ErrorInfo)
 		e.Message = fmt.Sprintf("The discovery request %s not completed yet", args...)
 	case ErrorDiscoveryFailed:
 		e.Message = fmt.Sprintf("The discovery has failed, reason: %s", err.Error())
+	case ErrorServiceNoKey:
+		e.Message = "The service key fields (protocol, transport, entry) are required"
+	case ErrorServiceNoID:
+		e.Message = "Either service key fields (protocol, transport, entry) or service alias are required"
 	case ErrorServiceExists:
 		e.Message = fmt.Sprintf(
 			"The service exists already for %s (%d) protocol, %s (%d) transport, and %s entry",
@@ -86,6 +94,15 @@ func newErrorInfo(code ErrorCode, err error, args ...interface{}) (e *ErrorInfo)
 			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
 			args[2], err.Error(),
 		)
+	case ErrorServiceKeyNotExists:
+		e.Message = fmt.Sprintf(
+			"The service not exists for %s (%d) protocol, %s (%d) transport, and %s entry",
+			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			args[2],
+		)
+	case ErrorServiceAliasNotExists:
+		e.Message = fmt.Sprintf("The service with alias %s not exists", args...)
 	}
 	return
 }
@@ -122,4 +139,11 @@ func handleProtocolErrors(err error, protocol defs.ProtocolIdentifier, transport
 		return newErrorInfo(ErrorInvalidProtocolTransport, err, protocol, transport)
 	}
 	return nil
+}
+
+func handleServiceNotExistsError(key *defs.ServiceKey, alias string) *ErrorInfo {
+	if key != nil {
+		return newErrorInfo(ErrorServiceKeyNotExists, defs.ErrServiceNotExists, key.Protocol, key.Transport, key.Entry)
+	}
+	return newErrorInfo(ErrorServiceAliasNotExists, defs.ErrServiceNotExists, alias)
 }

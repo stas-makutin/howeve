@@ -48,11 +48,16 @@ type RemoveServiceResult struct {
 	*StatusReply
 }
 
+// ChangeServiceAliasQuery - change service alias request payload
+type ChangeServiceAliasQuery struct {
+	*ServiceID
+	NewAlias string `json:"newAlias,omitempty"`
+}
+
 // ChangeServiceAlias - change service alias request
 type ChangeServiceAlias struct {
 	RequestHeader
-	*ServiceID
-	NewAlias string `json:"newAlias,omitempty"`
+	*ChangeServiceAliasQuery
 }
 
 // ChangeServiceAlias - change service alias result
@@ -73,18 +78,29 @@ type ServiceStatusResult struct {
 	*StatusReply
 }
 
+// SendToService - send message to service request input
+type SendToServiceInput struct {
+	*ServiceID
+	Payload []byte `json:"payload,omitempty"`
+}
+
 // SendToService - send message to service
 type SendToService struct {
 	RequestHeader
-	*ServiceID
-	Payload []byte `json:"payload,omitempty"`
+	*SendToServiceInput
+}
+
+// SendToServiceOutput - send message to service result payload
+type SendToServiceOutput struct {
+	ResponseHeader
+	*StatusReply
+	*defs.Message
 }
 
 // SendToServiceResult - send message to service result
 type SendToServiceResult struct {
 	ResponseHeader
-	*StatusReply
-	*defs.Message
+	*SendToServiceOutput
 }
 
 // DiscoveryStarted event contains information about started discovery query

@@ -7,23 +7,23 @@ import (
 
 func handleAddService(event *AddService) {
 	r := &AddServiceResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
-	key, errorInfo := makeServiceKey(event.Protocol, event.Transport, event.Entry)
+	errorInfo := validateServiceKey(event.ServiceKey)
 	if errorInfo == nil {
-		if err := defs.Services.Add(key, event.Params, event.Alias); err == nil {
+		if err := defs.Services.Add(event.ServiceKey, event.Params, event.Alias); err == nil {
 			r.Success = true
 		} else {
 			switch err {
 			case defs.ErrServiceExists:
-				errorInfo = newErrorInfo(ErrorServiceExists, err, key.Protocol, key.Transport, key.Entry)
+				errorInfo = newErrorInfo(ErrorServiceExists, err, event.Protocol, event.Transport, event.Entry)
 			case defs.ErrAliasExists:
 				errorInfo = newErrorInfo(ErrorServiceAliasExists, err, event.Alias)
 			default:
-				errorInfo = handleProtocolErrors(err, key.Protocol, key.Transport)
+				errorInfo = handleProtocolErrors(err, event.Protocol, event.Transport)
 				if errorInfo == nil {
 					errorInfo = handleParamsErrors(err)
 				}
 				if errorInfo == nil {
-					errorInfo = newErrorInfo(ErrorServiceInitialize, err, key.Protocol, key.Transport, key.Entry)
+					errorInfo = newErrorInfo(ErrorServiceInitialize, err, event.Protocol, event.Transport, event.Entry)
 				}
 			}
 		}
@@ -34,21 +34,71 @@ func handleAddService(event *AddService) {
 
 func handleRemoveService(event *RemoveService) {
 	r := &RemoveServiceResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
+	if errorInfo == nil {
+		if err := defs.Services.Remove(event.ServiceKey, event.Alias); err == nil {
+			r.Success = true
+		} else {
+			errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
+		}
+	}
+	r.Error = errorInfo
 	Dispatcher.Send(r)
 }
 
 func handleChangeServiceAlias(event *ChangeServiceAlias) {
 	r := &ChangeServiceAliasResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
+	if errorInfo == nil {
+		if err := defs.Services.Alias(event.ServiceKey, event.Alias, event.NewAlias); err == nil {
+			r.Success = true
+		} else {
+			errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
+		}
+	}
+	r.Error = errorInfo
 	Dispatcher.Send(r)
 }
 
 func handleServiceStatus(event *ServiceStatus) {
 	r := &ServiceStatusResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
+	if errorInfo == nil {
+		if status, exists := defs.Services.Status(event.ServiceKey, event.Alias); exists {
+			if status == defs.ErrStatusGood {
+				r.Success = true
+			} else {
+				// TODO
+			}
+		} else {
+			errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
+		}
+	}
+	r.Error = errorInfo
 	Dispatcher.Send(r)
 }
 
 func handleSendToService(event *SendToService) {
 	r := &SendToServiceResult{ResponseHeader: event.Associate()}
+	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
+	if errorInfo == nil {
+		if message, err := defs.Services.Send(event.ServiceKey, event.Alias, event.Payload); err == nil {
+			r.Message = message
+			r.Success = true
+		} else {
+			switch err {
+			case defs.ErrServiceNotExists:
+				errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
+			case defs.ErrBadPayload:
+				// TODO
+			case defs.ErrSendBusy:
+				// TODO
+			default:
+				// TODO
+			}
+		}
+	}
+	r.Error = errorInfo
 	Dispatcher.Send(r)
 }
 

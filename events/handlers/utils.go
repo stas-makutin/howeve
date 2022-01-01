@@ -19,10 +19,20 @@ func buildParamsInfo(p defs.Params) (pie map[string]*ParamInfoEntry) {
 	return
 }
 
-func makeServiceKey(protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, entry string) (*defs.ServiceKey, *ErrorInfo) {
-	_, _, err := defs.ResolveProtocolAndTransport(protocol, transport)
-	if errorInfo := handleProtocolErrors(err, protocol, transport); errorInfo != nil {
-		return nil, errorInfo
+func validateServiceKey(key *defs.ServiceKey) *ErrorInfo {
+	if key != nil {
+		_, _, err := defs.ResolveProtocolAndTransport(key.Protocol, key.Transport)
+		return handleProtocolErrors(err, key.Protocol, key.Transport)
 	}
-	return &defs.ServiceKey{Protocol: protocol, Transport: transport, Entry: entry}, nil
+	return newErrorInfo(ErrorServiceNoKey, nil)
+}
+
+func validateServiceID(key *defs.ServiceKey, alias string) *ErrorInfo {
+	if key != nil {
+		return validateServiceKey(key)
+	}
+	if alias == "" {
+		return newErrorInfo(ErrorServiceNoID, nil)
+	}
+	return nil
 }
