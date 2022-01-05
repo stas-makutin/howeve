@@ -1,6 +1,7 @@
 package httpsrv
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -206,6 +207,142 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 	return &handlers.AddService{ServiceEntry: q}, true, nil
 }
 
+func parseRemoveService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ServiceID
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ServiceID{}
+
+		if protocol := r.Form.Get("protocol"); protocol != "" {
+			if transport := r.Form.Get("transport"); transport != "" {
+				pid, err := strconv.ParseUint(protocol, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				tid, err := strconv.ParseUint(transport, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				q.ServiceKey = &defs.ServiceKey{
+					Protocol:  defs.ProtocolIdentifier(pid),
+					Transport: defs.TransportIdentifier(tid),
+					Entry:     r.Form.Get("entry"),
+				}
+			}
+		}
+		q.Alias = r.Form.Get("alias")
+	}
+	return &handlers.RemoveService{ServiceID: q}, true, nil
+}
+
+func parseChangeServiceAlias(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ChangeServiceAliasQuery
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ChangeServiceAliasQuery{}
+
+		if protocol := r.Form.Get("protocol"); protocol != "" {
+			if transport := r.Form.Get("transport"); transport != "" {
+				pid, err := strconv.ParseUint(protocol, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				tid, err := strconv.ParseUint(transport, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				q.ServiceKey = &defs.ServiceKey{
+					Protocol:  defs.ProtocolIdentifier(pid),
+					Transport: defs.TransportIdentifier(tid),
+					Entry:     r.Form.Get("entry"),
+				}
+			}
+		}
+		q.Alias = r.Form.Get("alias")
+		q.NewAlias = r.Form.Get("newAlias")
+	}
+	return &handlers.ChangeServiceAlias{ChangeServiceAliasQuery: q}, true, nil
+}
+
+func parseServiceStatus(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ServiceID
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ServiceID{}
+
+		if protocol := r.Form.Get("protocol"); protocol != "" {
+			if transport := r.Form.Get("transport"); transport != "" {
+				pid, err := strconv.ParseUint(protocol, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				tid, err := strconv.ParseUint(transport, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				q.ServiceKey = &defs.ServiceKey{
+					Protocol:  defs.ProtocolIdentifier(pid),
+					Transport: defs.TransportIdentifier(tid),
+					Entry:     r.Form.Get("entry"),
+				}
+			}
+		}
+		q.Alias = r.Form.Get("alias")
+	}
+	return &handlers.ServiceStatus{ServiceID: q}, true, nil
+}
+
 func parseSendToService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	return nil, true, nil
+	var q *handlers.SendToServiceInput
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.SendToServiceInput{}
+
+		if protocol := r.Form.Get("protocol"); protocol != "" {
+			if transport := r.Form.Get("transport"); transport != "" {
+				pid, err := strconv.ParseUint(protocol, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				tid, err := strconv.ParseUint(transport, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				q.ServiceKey = &defs.ServiceKey{
+					Protocol:  defs.ProtocolIdentifier(pid),
+					Transport: defs.TransportIdentifier(tid),
+					Entry:     r.Form.Get("entry"),
+				}
+			}
+		}
+		q.Alias = r.Form.Get("alias")
+		if q.Payload, err = base64.StdEncoding.DecodeString(r.Form.Get("payload")); err != nil {
+			return nil, true, err
+		}
+	}
+	return &handlers.SendToService{SendToServiceInput: q}, true, nil
 }

@@ -30,6 +30,10 @@ const (
 	ErrorServiceInitialize
 	ErrorServiceKeyNotExists
 	ErrorServiceAliasNotExists
+	ErrorServiceStatusBad
+	ErrorServiceBadPayload
+	ErrorServiceSendBusy
+	ErrorOtherError
 )
 
 // ErrorInfo - error
@@ -103,6 +107,14 @@ func newErrorInfo(code ErrorCode, err error, args ...interface{}) (e *ErrorInfo)
 		)
 	case ErrorServiceAliasNotExists:
 		e.Message = fmt.Sprintf("The service with alias %s not exists", args...)
+	case ErrorServiceStatusBad:
+		e.Message = err.Error()
+	case ErrorServiceBadPayload:
+		e.Message = "The payload is not valid for the service"
+	case ErrorServiceSendBusy:
+		e.Message = "The service is too busy and unable to send the message"
+	case ErrorOtherError:
+		e.Message = err.Error()
 	}
 	return
 }

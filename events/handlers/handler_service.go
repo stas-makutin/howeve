@@ -65,10 +65,10 @@ func handleServiceStatus(event *ServiceStatus) {
 	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
 	if errorInfo == nil {
 		if status, exists := defs.Services.Status(event.ServiceKey, event.Alias); exists {
-			if status == defs.ErrStatusGood {
+			if status == nil || status == defs.ErrStatusGood {
 				r.Success = true
 			} else {
-				// TODO
+				errorInfo = newErrorInfo(ErrorServiceStatusBad, status)
 			}
 		} else {
 			errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
@@ -90,11 +90,11 @@ func handleSendToService(event *SendToService) {
 			case defs.ErrServiceNotExists:
 				errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
 			case defs.ErrBadPayload:
-				// TODO
+				errorInfo = newErrorInfo(ErrorServiceBadPayload, err)
 			case defs.ErrSendBusy:
-				// TODO
+				errorInfo = newErrorInfo(ErrorServiceSendBusy, err)
 			default:
-				// TODO
+				errorInfo = newErrorInfo(ErrorOtherError, err)
 			}
 		}
 	}

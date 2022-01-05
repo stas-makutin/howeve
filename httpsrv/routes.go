@@ -73,7 +73,28 @@ func setupRoutes(mux *http.ServeMux) {
 			},
 		},
 		{
-			"service/send", func(w http.ResponseWriter, r *http.Request) {
+			"/service/remove", func(w http.ResponseWriter, r *http.Request) {
+				handleEvents(w, r, reflect.TypeOf(&handlers.RemoveServiceResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
+					return parseRemoveService(w, r)
+				})
+			},
+		},
+		{
+			"/service/alias", func(w http.ResponseWriter, r *http.Request) {
+				handleEvents(w, r, reflect.TypeOf(&handlers.ChangeServiceAliasResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
+					return parseChangeServiceAlias(w, r)
+				})
+			},
+		},
+		{
+			"/service/status", func(w http.ResponseWriter, r *http.Request) {
+				handleEvents(w, r, reflect.TypeOf(&handlers.ServiceStatusResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
+					return parseServiceStatus(w, r)
+				})
+			},
+		},
+		{
+			"/service/send", func(w http.ResponseWriter, r *http.Request) {
 				handleEvents(w, r, reflect.TypeOf(&handlers.SendToServiceResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
 					return parseSendToService(w, r)
 				})
