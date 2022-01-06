@@ -24,6 +24,8 @@ func (t *Task) handleEvents(event interface{}) {
 		handleChangeServiceAlias(e)
 	case *ServiceStatus:
 		handleServiceStatus(e)
+	case *ListServices:
+		handleListServices(e)
 	case *SendToService:
 		handleSendToService(e)
 	}

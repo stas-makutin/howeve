@@ -78,6 +78,37 @@ type ServiceStatusResult struct {
 	*StatusReply
 }
 
+// ListServicesInput - get list of services request inputs
+type ListServicesInput struct {
+	Protocols  []defs.ProtocolIdentifier  `json:"protocols,omitempty"`
+	Transports []defs.TransportIdentifier `json:"transports,omitempty"`
+	Entries    []string                   `json:"entries,omitempty"`
+	Aliases    []string                   `json:"aliases,omitempty"`
+}
+
+// ListServices - get list of services request
+type ListServices struct {
+	RequestHeader
+	*ListServicesInput
+}
+
+// ListServicesEntry - service information for services list result
+type ListServicesEntry struct {
+	*ServiceID
+	*StatusReply
+}
+
+// ListServicesOutput - get list of services result
+type ListServicesOutput struct {
+	Services []ListServicesEntry `json:"services,omitempty"`
+}
+
+// ListServicesResult - get list of services result envelope
+type ListServicesResult struct {
+	ResponseHeader
+	*ListServicesOutput
+}
+
 // SendToService - send message to service request input
 type SendToServiceInput struct {
 	*ServiceID

@@ -78,6 +78,66 @@ func handleServiceStatus(event *ServiceStatus) {
 	Dispatcher.Send(r)
 }
 
+func handleListServices(event *ListServices) {
+	r := &ListServicesResult{ResponseHeader: event.Associate()}
+	defs.Services.List(func(key *defs.ServiceKey, alias string, status defs.ServiceStatus) bool {
+		found := 0b1111
+		if len(event.Protocols) > 0 {
+			mask := 0b0001
+			found &= ^mask
+			for _, protocol := range event.Protocols {
+				if key.Protocol == protocol {
+					found |= mask
+					break
+				}
+			}
+		}
+		if len(event.Transports) > 0 {
+			mask := 0b0010
+			found &= ^mask
+			for _, transport := range event.Transports {
+				if key.Transport == transport {
+					found |= mask
+					break
+				}
+			}
+		}
+		if len(event.Entries) > 0 {
+			mask := 0b0100
+			found &= ^mask
+			for _, entry := range event.Entries {
+				if key.Entry == entry {
+					found |= mask
+					break
+				}
+			}
+		}
+		if len(event.Aliases) > 0 {
+			mask := 0b1000
+			found &= ^mask
+			for _, aliasFilter := range event.Aliases {
+				if alias == aliasFilter {
+					found |= mask
+					break
+				}
+			}
+		}
+		if found == 0b1111 {
+			statusReply := &StatusReply{Success: false}
+			if status == nil || status == defs.ErrStatusGood {
+				statusReply.Success = true
+			} else {
+				statusReply.Error = newErrorInfo(ErrorServiceStatusBad, status)
+			}
+			r.Services = append(r.Services, ListServicesEntry{
+				&ServiceID{ServiceKey: key, Alias: alias}, statusReply,
+			})
+		}
+		return false
+	})
+	Dispatcher.Send(r)
+}
+
 func handleSendToService(event *SendToService) {
 	r := &SendToServiceResult{ResponseHeader: event.Associate()}
 	errorInfo := validateServiceID(event.ServiceKey, event.Alias)

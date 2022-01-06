@@ -27,11 +27,17 @@ type Message struct {
 	Payload []byte       `json:"payload"`
 }
 
+// MessageFunc is a the callback function used in MessageLog methods. Returnning true will stop messages iteration
+type MessageFunc func(message *Message) bool
+
 // MessageLog defines message log interface
 type MessageLog interface {
 	Persist()
 	Register(key *ServiceKey, payload []byte, state MessageState) *Message
 	UpdateState(id uuid.UUID, state MessageState) (*ServiceKey, *Message)
+	Get(id uuid.UUID) *Message
+	After(id uuid.UUID, fn MessageFunc) (first, last *Message)
+	List(from, to time.Time, fn MessageFunc) (first, last *Message)
 }
 
 // Messages provides access to MessageLog implementation (set in messages module)

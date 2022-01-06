@@ -57,7 +57,7 @@ const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
 // ParamNameOutgoingMaxTTL parameter name for the maximum time to live of outgoing messages
 const ParamNameOutgoingMaxTTL = "outgoingMaxTTL"
 
-// ListFunc is a the callback function used in ServiceRegistry List method. Returnningtrue will stop services iteration
+// ListFunc is a the callback function used in ServiceRegistry List method. Returnning true will stop services iteration
 type ListFunc func(key *ServiceKey, alias string, status ServiceStatus) bool
 
 // ServiceRegistry defines possible operations with services

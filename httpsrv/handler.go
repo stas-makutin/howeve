@@ -310,6 +310,53 @@ func parseServiceStatus(w http.ResponseWriter, r *http.Request) (events.Targeted
 	return &handlers.ServiceStatus{ServiceID: q}, true, nil
 }
 
+func parseListServices(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
+	var q *handlers.ListServicesInput
+	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
+		if err != nil {
+			return nil, true, err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return nil, true, err
+		}
+		q = &handlers.ListServicesInput{}
+		for _, v := range r.Form["protocols"] {
+			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
+				n, err := strconv.ParseUint(vp, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				q.Protocols = append(q.Protocols, defs.ProtocolIdentifier(n))
+			}
+		}
+		for _, v := range r.Form["transports"] {
+			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
+				n, err := strconv.ParseUint(vp, 10, 8)
+				if err != nil {
+					return nil, true, err
+				}
+				q.Transports = append(q.Transports, defs.TransportIdentifier(n))
+			}
+		}
+		for _, v := range r.Form["entries"] {
+			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
+				if vp != "" {
+					q.Entries = append(q.Entries, vp)
+				}
+			}
+		}
+		for _, v := range r.Form["aliases"] {
+			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
+				if vp != "" {
+					q.Aliases = append(q.Aliases, vp)
+				}
+			}
+		}
+	}
+	return &handlers.ListServices{ListServicesInput: q}, true, nil
+}
+
 func parseSendToService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
 	var q *handlers.SendToServiceInput
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {

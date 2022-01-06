@@ -94,6 +94,13 @@ func setupRoutes(mux *http.ServeMux) {
 			},
 		},
 		{
+			"/service/list", func(w http.ResponseWriter, r *http.Request) {
+				handleEvents(w, r, reflect.TypeOf(&handlers.ListServicesResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
+					return parseListServices(w, r)
+				})
+			},
+		},
+		{
 			"/service/send", func(w http.ResponseWriter, r *http.Request) {
 				handleEvents(w, r, reflect.TypeOf(&handlers.SendToServiceResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
 					return parseSendToService(w, r)

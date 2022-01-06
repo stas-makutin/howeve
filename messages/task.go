@@ -206,12 +206,101 @@ func (ml *messageLog) UpdateState(id uuid.UUID, state defs.MessageState) (*defs.
 					return entry.ServiceKey, entry.Message
 				}
 				index++
+				if index >= length {
+					break
+				}
 				fentry = ml.log.entries[index]
-				if index >= length || !fentry.Time.Equal(entry.Time) {
+				if !fentry.Time.Equal(entry.Time) {
 					break
 				}
 			}
 		}
+	}
+	return nil, nil
+}
+
+func (ml *messageLog) Get(id uuid.UUID) *defs.Message {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
+	entry := ml.log.findByID(id)
+	if entry != nil {
+		return entry.Message
+	}
+	return nil
+}
+
+// After iterates messages after message with provided id, if any
+// Function returns first (oldest) and last (newest) messages, if any
+func (ml *messageLog) After(id uuid.UUID, fn defs.MessageFunc) (first, last *defs.Message) {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
+
+	entry := ml.log.findByID(id)
+	if entry != nil {
+		if index, found := ml.log.findByTime(entry.Time); found {
+			length := len(ml.log.entries)
+
+			fentry := ml.log.entries[index]
+			found = false
+			for {
+				if fentry.ID == entry.ID {
+					found = true
+					break
+				}
+				index++
+				if index >= length {
+					break
+				}
+				fentry = ml.log.entries[index]
+				if !fentry.Time.Equal(entry.Time) {
+					break
+				}
+			}
+
+			if found {
+				for index < length {
+					if fn(ml.log.entries[index].Message) {
+						break
+					}
+					index++
+				}
+			}
+		}
+	}
+
+	if len(ml.log.entries) > 0 {
+		return ml.log.entries[0].Message, ml.log.entries[len(ml.log.entries)-1].Message
+	}
+	return nil, nil
+}
+
+// List iterates messages within provided time range, inclusive. Both from and to values could be 0 which means from oldest and until
+// newest messages correspondingly. Function returns first (oldest) and last (newest) messages, if any
+func (ml *messageLog) List(from, to time.Time, fn defs.MessageFunc) (first, last *defs.Message) {
+	ml.lock.Lock()
+	defer ml.lock.Unlock()
+
+	index := 0
+	found := true
+	if !from.IsZero() {
+		index, found = ml.log.findByTime(from)
+	}
+	if found {
+		length := len(ml.log.entries)
+		for index < length {
+			entry := ml.log.entries[index]
+			if !to.IsZero() && entry.Time.After(to) {
+				break
+			}
+			if fn(entry.Message) {
+				break
+			}
+			index++
+		}
+	}
+
+	if len(ml.log.entries) > 0 {
+		return ml.log.entries[0].Message, ml.log.entries[len(ml.log.entries)-1].Message
 	}
 	return nil, nil
 }

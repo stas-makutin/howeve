@@ -35,6 +35,8 @@ const (
 	queryChangeServiceAliasResult
 	queryServiceStatus
 	queryServiceStatusResult
+	queryListServices
+	queryListServicesResult
 	querySendToService
 	querySendToServiceResult
 )
@@ -51,6 +53,7 @@ var queryTypeMap = map[string]queryType{
 	"removeService": queryRemoveService, "removeServiceResult": queryRemoveServiceResult,
 	"changeServiceAlias": queryChangeServiceAlias, "changeServiceAliasResult": queryChangeServiceAliasResult,
 	"serviceStatus": queryServiceStatus, "serviceStatusResult": queryServiceStatusResult,
+	"listServices": queryListServices, "listServicesResult": queryListServicesResult,
 	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
 }
 var queryNameMap map[queryType]string
@@ -152,6 +155,12 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			return err
 		}
 		c.Payload = &p
+	case queryListServices:
+		var p handlers.ListServicesInput
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
 	case querySendToService:
 		var p handlers.SendToServiceInput
 		if err := json.Unmarshal(data, &p); err != nil {
@@ -190,6 +199,8 @@ func (c *Query) toEvent() interface{} {
 		return &handlers.ChangeServiceAlias{RequestHeader: *handlers.NewRequestHeader(c.ID), ChangeServiceAliasQuery: c.Payload.(*handlers.ChangeServiceAliasQuery)}
 	case queryServiceStatus:
 		return &handlers.ServiceStatus{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceID: c.Payload.(*handlers.ServiceID)}
+	case queryListServices:
+		return &handlers.ListServices{RequestHeader: *handlers.NewRequestHeader(c.ID), ListServicesInput: c.Payload.(*handlers.ListServicesInput)}
 	case querySendToService:
 		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID), SendToServiceInput: c.Payload.(*handlers.SendToServiceInput)}
 	}
@@ -229,6 +240,8 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryChangeServiceAliasResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.ServiceStatusResult:
 		return &Query{Type: queryServiceStatusResult, ID: e.TraceID(), Payload: e.StatusReply}
+	case *handlers.ListServicesResult:
+		return &Query{Type: queryListServicesResult, ID: e.TraceID(), Payload: e.ListServicesOutput}
 	case *handlers.SendToServiceResult:
 		return &Query{Type: querySendToServiceResult, ID: e.TraceID(), Payload: e.SendToServiceOutput}
 	}
