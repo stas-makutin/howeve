@@ -219,27 +219,31 @@ func (ml *messageLog) UpdateState(id uuid.UUID, state defs.MessageState) (*defs.
 	return nil, nil
 }
 
-func (ml *messageLog) Get(id uuid.UUID) *defs.Message {
+// Get returns single message and associated service key for provided message id
+func (ml *messageLog) Get(id uuid.UUID) (*defs.ServiceKey, *defs.Message) {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
 	entry := ml.log.findByID(id)
 	if entry != nil {
-		return entry.Message
+		return entry.ServiceKey, entry.Message
 	}
-	return nil
+	return nil, nil
 }
 
 // After iterates messages after message with provided id, if any
-// Function returns first (oldest) and last (newest) messages, if any
-func (ml *messageLog) After(id uuid.UUID, fn defs.MessageFunc) (first, last *defs.Message) {
+// Function returns number of messages in the log, first (oldest) and last (newest) messages, if any
+func (ml *messageLog) After(id uuid.UUID, fn defs.MessageFunc) (count int, first, last *defs.Message) {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
+
+	length := len(ml.log.entries)
+	if length <= 0 {
+		return 0, nil, nil
+	}
 
 	entry := ml.log.findByID(id)
 	if entry != nil {
 		if index, found := ml.log.findByTime(entry.Time); found {
-			length := len(ml.log.entries)
-
 			fentry := ml.log.entries[index]
 			found = false
 			for {
@@ -268,17 +272,19 @@ func (ml *messageLog) After(id uuid.UUID, fn defs.MessageFunc) (first, last *def
 		}
 	}
 
-	if len(ml.log.entries) > 0 {
-		return ml.log.entries[0].Message, ml.log.entries[len(ml.log.entries)-1].Message
-	}
-	return nil, nil
+	return length, ml.log.entries[0].Message, ml.log.entries[length-1].Message
 }
 
 // List iterates messages within provided time range, inclusive. Both from and to values could be 0 which means from oldest and until
-// newest messages correspondingly. Function returns first (oldest) and last (newest) messages, if any
-func (ml *messageLog) List(from, to time.Time, fn defs.MessageFunc) (first, last *defs.Message) {
+// newest messages correspondingly. Function returns number of messages in the log, first (oldest) and last (newest) messages, if any
+func (ml *messageLog) List(from, to time.Time, fn defs.MessageFunc) (count int, first, last *defs.Message) {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
+
+	length := len(ml.log.entries)
+	if length <= 0 {
+		return length, nil, nil
+	}
 
 	index := 0
 	found := true
@@ -286,7 +292,6 @@ func (ml *messageLog) List(from, to time.Time, fn defs.MessageFunc) (first, last
 		index, found = ml.log.findByTime(from)
 	}
 	if found {
-		length := len(ml.log.entries)
 		for index < length {
 			entry := ml.log.entries[index]
 			if !to.IsZero() && entry.Time.After(to) {
@@ -299,8 +304,5 @@ func (ml *messageLog) List(from, to time.Time, fn defs.MessageFunc) (first, last
 		}
 	}
 
-	if len(ml.log.entries) > 0 {
-		return ml.log.entries[0].Message, ml.log.entries[len(ml.log.entries)-1].Message
-	}
-	return nil, nil
+	return length, ml.log.entries[0].Message, ml.log.entries[length-1].Message
 }

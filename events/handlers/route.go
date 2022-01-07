@@ -28,5 +28,13 @@ func (t *Task) handleEvents(event interface{}) {
 		handleListServices(e)
 	case *SendToService:
 		handleSendToService(e)
+	case *GetMessage:
+		handleGetMessage(e)
+	case *GetMessagesInfo:
+		handleGetMessagesInfo(e)
+	case *MessagesAfter:
+		handleMessagesAfter(e)
+	case *ListMessages:
+		handleListMessages(e)
 	}
 }

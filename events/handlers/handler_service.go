@@ -164,11 +164,13 @@ func handleSendToService(event *SendToService) {
 
 func SendDiscoveryStarted(id uuid.UUID, protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, params defs.RawParamValues) {
 	Dispatcher.SendAsync(&DiscoveryStarted{
-		Header:    *NewHeader(""),
-		ID:        id,
-		Protocol:  protocol,
-		Transport: transport,
-		Params:    params,
+		Header: *NewHeader(""),
+		DiscoveryRequest: &DiscoveryRequest{
+			ID:        id,
+			Protocol:  protocol,
+			Transport: transport,
+			Params:    params,
+		},
 	})
 }
 

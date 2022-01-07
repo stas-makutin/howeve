@@ -134,13 +134,18 @@ type SendToServiceResult struct {
 	*SendToServiceOutput
 }
 
-// DiscoveryStarted event contains information about started discovery query
-type DiscoveryStarted struct {
-	Header
+// DiscoveryRequest contains information about started discovery query
+type DiscoveryRequest struct {
 	ID        uuid.UUID                `json:"id"`
 	Protocol  defs.ProtocolIdentifier  `json:"protocol"`
 	Transport defs.TransportIdentifier `json:"transport"`
 	Params    defs.RawParamValues      `json:"params,omitempty"`
+}
+
+// DiscoveryStarted event contains information about started discovery query
+type DiscoveryStarted struct {
+	Header
+	*DiscoveryRequest
 }
 
 // DiscoveryResult defines discovery results

@@ -35,9 +35,9 @@ type MessageLog interface {
 	Persist()
 	Register(key *ServiceKey, payload []byte, state MessageState) *Message
 	UpdateState(id uuid.UUID, state MessageState) (*ServiceKey, *Message)
-	Get(id uuid.UUID) *Message
-	After(id uuid.UUID, fn MessageFunc) (first, last *Message)
-	List(from, to time.Time, fn MessageFunc) (first, last *Message)
+	Get(id uuid.UUID) (*ServiceKey, *Message)
+	After(id uuid.UUID, fn MessageFunc) (count int, first, last *Message)
+	List(from, to time.Time, fn MessageFunc) (count int, first, last *Message)
 }
 
 // Messages provides access to MessageLog implementation (set in messages module)

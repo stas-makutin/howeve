@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
@@ -27,6 +28,8 @@ const (
 	queryProtocolDiscoverResult
 	queryProtocolDiscovery
 	queryProtocolDiscoveryResult
+	queryProtocolDiscoveryStarted
+	queryProtocolDiscoveryFinished
 	queryAddService
 	queryAddServiceResult
 	queryRemoveService
@@ -39,6 +42,17 @@ const (
 	queryListServicesResult
 	querySendToService
 	querySendToServiceResult
+	queryGetMessage
+	queryGetMessageResult
+	queryGetMessagesInfo
+	queryGetMessagesInfoResult
+	queryMessagesAfter
+	queryMessagesAfterResult
+	queryListMessages
+	queryListMessagesResult
+	queryNewMessage
+	queryDropMessage
+	queryUpdateMessageState
 )
 
 var queryTypeMap = map[string]queryType{
@@ -55,6 +69,10 @@ var queryTypeMap = map[string]queryType{
 	"serviceStatus": queryServiceStatus, "serviceStatusResult": queryServiceStatusResult,
 	"listServices": queryListServices, "listServicesResult": queryListServicesResult,
 	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
+	"getMessage": queryGetMessage, "getMessageResult": queryGetMessageResult,
+	"messagesInfo": queryGetMessagesInfo, "messagesInfoResult": queryGetMessagesInfoResult,
+	"messagesAfter": queryMessagesAfter, "messagesAfterResult": queryMessagesAfterResult,
+	"messagesList": queryListMessages, "messagesListResult": queryListMessagesResult,
 }
 var queryNameMap map[queryType]string
 
@@ -167,6 +185,24 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			return err
 		}
 		c.Payload = &p
+	case queryGetMessage:
+		var p uuid.UUID
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case queryMessagesAfter:
+		var p handlers.MessagesAfterInput
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case queryListMessages:
+		var p handlers.ListMessagesInput
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
 	}
 	return nil
 }
@@ -203,6 +239,14 @@ func (c *Query) toEvent() interface{} {
 		return &handlers.ListServices{RequestHeader: *handlers.NewRequestHeader(c.ID), ListServicesInput: c.Payload.(*handlers.ListServicesInput)}
 	case querySendToService:
 		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID), SendToServiceInput: c.Payload.(*handlers.SendToServiceInput)}
+	case queryGetMessage:
+		return &handlers.GetMessage{RequestHeader: *handlers.NewRequestHeader(c.ID), ID: c.Payload.(uuid.UUID)}
+	case queryGetMessagesInfo:
+		return &handlers.GetMessagesInfo{RequestHeader: *handlers.NewRequestHeader(c.ID)}
+	case queryMessagesAfter:
+		return &handlers.MessagesAfter{RequestHeader: *handlers.NewRequestHeader(c.ID), MessagesAfterInput: c.Payload.(*handlers.MessagesAfterInput)}
+	case queryListMessages:
+		return &handlers.ListMessages{RequestHeader: *handlers.NewRequestHeader(c.ID), ListMessagesInput: c.Payload.(*handlers.ListMessagesInput)}
 	}
 	return nil
 }
@@ -232,6 +276,10 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryProtocolDiscoverResult, ID: e.TraceID(), Payload: e.ProtocolDiscoverOutput}
 	case *handlers.ProtocolDiscoveryResult:
 		return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.DiscoveryResult}
+	case *handlers.DiscoveryStarted:
+		return &Query{Type: queryProtocolDiscoveryStarted, ID: e.TraceID(), Payload: e.DiscoveryRequest}
+	case *handlers.DiscoveryFinished:
+		return &Query{Type: queryProtocolDiscoveryFinished, ID: e.TraceID(), Payload: e.DiscoveryResult}
 	case *handlers.AddServiceResult:
 		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.RemoveServiceResult:
@@ -244,6 +292,20 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: queryListServicesResult, ID: e.TraceID(), Payload: e.ListServicesOutput}
 	case *handlers.SendToServiceResult:
 		return &Query{Type: querySendToServiceResult, ID: e.TraceID(), Payload: e.SendToServiceOutput}
+	case *handlers.GetMessageResult:
+		return &Query{Type: queryGetMessageResult, ID: e.TraceID(), Payload: e.MessageEntry}
+	case *handlers.GetMessagesInfoResult:
+		return &Query{Type: queryGetMessagesInfoResult, ID: e.TraceID(), Payload: e.MessagesInfo}
+	case *handlers.MessagesAfterResult:
+		return &Query{Type: queryMessagesAfterResult, ID: e.TraceID(), Payload: e.ListMessagesOutput}
+	case *handlers.ListMessagesResult:
+		return &Query{Type: queryListMessagesResult, ID: e.TraceID(), Payload: e.ListMessagesOutput}
+	case *handlers.NewMessage:
+		return &Query{Type: queryNewMessage, ID: e.TraceID(), Payload: e.MessageEntry}
+	case *handlers.DropMessage:
+		return &Query{Type: queryDropMessage, ID: e.TraceID(), Payload: e.MessageEntry}
+	case *handlers.UpdateMessageState:
+		return &Query{Type: queryUpdateMessageState, ID: e.TraceID(), Payload: e.UpdateMessageStateData}
 	}
 	return nil
 }
