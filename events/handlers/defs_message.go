@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/stas-makutin/howeve/defs"
 )
@@ -49,48 +47,6 @@ type GetMessageResult struct {
 	*MessageEntry
 }
 
-// MessageInfo contains single message information
-type MessageInfo struct {
-	ID   uuid.UUID `json:"id"`
-	Time time.Time `json:"time"`
-}
-
-// MessagesInfo - message log information
-type MessagesInfo struct {
-	Count int          `json:"count"`
-	First *MessageInfo `json:"first,omitempty"`
-	Last  *MessageInfo `json:"last,omitempty"`
-}
-
-// GetMessagesInfo defines get message log information request
-type GetMessagesInfo struct {
-	RequestHeader
-}
-
-// GetMessagesInfoResult defines get message log information result
-type GetMessagesInfoResult struct {
-	ResponseHeader
-	*MessagesInfo
-}
-
-// MessagesAfterInput - get messages after particular message inputs
-type MessagesAfterInput struct {
-	ID uuid.UUID `json:"id"`
-	*ListMessagesFilters
-}
-
-// MessagesAfter - get messages after particular message request
-type MessagesAfter struct {
-	RequestHeader
-	*MessagesAfterInput
-}
-
-// MessagesAfterResult - get messages after particular message result
-type MessagesAfterResult struct {
-	ResponseHeader
-	*ListMessagesOutput
-}
-
 // ListMessagesFilters defines filters which could be applied to the list of messages
 type ListMessagesFilters struct {
 	// TODO
@@ -98,8 +54,6 @@ type ListMessagesFilters struct {
 
 // ListMessagesInput defines list messages request inputs
 type ListMessagesInput struct {
-	From *time.Time `json:"from,omitempty"`
-	To   *time.Time `json:"to,omitempty"`
 	*ListMessagesFilters
 }
 
@@ -112,7 +66,7 @@ type ListMessages struct {
 // ListMessagesOutput defines list messages outputs
 type ListMessagesOutput struct {
 	Messages []*MessageEntry `json:"messages,omitempty"`
-	Info     *MessagesInfo   `json:"info"`
+	Count    int             `json:"count"`
 }
 
 // ListMessagesResult defines list messages result

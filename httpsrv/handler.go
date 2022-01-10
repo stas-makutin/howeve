@@ -409,23 +409,6 @@ func parseGetMessage(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 	return &handlers.GetMessage{ID: q}, true, nil
 }
 
-func parseMessagesAfter(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.MessagesAfterInput
-	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
-		if err != nil {
-			return nil, true, err
-		}
-	} else {
-		if err := r.ParseForm(); err != nil {
-			return nil, true, err
-		}
-		q = &handlers.MessagesAfterInput{}
-
-		// TODO
-	}
-	return &handlers.MessagesAfter{MessagesAfterInput: q}, true, nil
-}
-
 func parseListMessages(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
 	var q *handlers.ListMessagesInput
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {

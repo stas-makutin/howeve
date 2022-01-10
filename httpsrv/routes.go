@@ -115,20 +115,6 @@ func setupRoutes(mux *http.ServeMux) {
 			},
 		},
 		{
-			"/messages/info", func(w http.ResponseWriter, r *http.Request) {
-				handleEvents(w, r, reflect.TypeOf(&handlers.GetMessagesInfoResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
-					return &handlers.GetMessagesInfo{}, true, nil
-				})
-			},
-		},
-		{
-			"/messages/after", func(w http.ResponseWriter, r *http.Request) {
-				handleEvents(w, r, reflect.TypeOf(&handlers.MessagesAfterResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
-					return parseMessagesAfter(w, r)
-				})
-			},
-		},
-		{
 			"/messages/list", func(w http.ResponseWriter, r *http.Request) {
 				handleEvents(w, r, reflect.TypeOf(&handlers.ListMessagesResult{}), func(h *http.Request) (events.TargetedRequest, bool, error) {
 					return parseListMessages(w, r)

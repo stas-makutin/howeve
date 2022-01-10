@@ -81,3 +81,27 @@ func (m *messages) findByTime(t time.Time) (int, bool) {
 	})
 	return index, index < length && m.entries[index].Time.Equal(t)
 }
+
+func (m *messages) findIndexByID(id uuid.UUID) (int, *message) {
+	entry := m.entriesById[id]
+	if entry != nil {
+		if index, found := m.findByTime(entry.Time); found {
+			length := len(m.entries)
+			fentry := m.entries[index]
+			for {
+				if fentry.ID == entry.ID {
+					return index, entry
+				}
+				index++
+				if index >= length {
+					break
+				}
+				fentry = m.entries[index]
+				if !fentry.Time.Equal(entry.Time) {
+					break
+				}
+			}
+		}
+	}
+	return 0, nil
+}

@@ -47,18 +47,6 @@ func handleGetMessage(event *GetMessage) {
 	Dispatcher.Send(r)
 }
 
-func handleGetMessagesInfo(event *GetMessagesInfo) {
-	r := &GetMessagesInfoResult{ResponseHeader: event.Associate()}
-	// TODO
-	Dispatcher.Send(r)
-
-}
-func handleMessagesAfter(event *MessagesAfter) {
-	r := &MessagesAfterResult{ResponseHeader: event.Associate()}
-	// TODO
-	Dispatcher.Send(r)
-
-}
 func handleListMessages(event *ListMessages) {
 	r := &ListMessagesResult{ResponseHeader: event.Associate()}
 	// TODO

@@ -27,6 +27,9 @@ type Message struct {
 	Payload []byte       `json:"payload"`
 }
 
+// MessageFindFunc is a the callback function used in MessageLog to find first message in the List method
+type MessageFindFunc func() (int, bool)
+
 // MessageFunc is a the callback function used in MessageLog methods. Returnning true will stop messages iteration
 type MessageFunc func(message *Message) bool
 
@@ -36,8 +39,12 @@ type MessageLog interface {
 	Register(key *ServiceKey, payload []byte, state MessageState) *Message
 	UpdateState(id uuid.UUID, state MessageState) (*ServiceKey, *Message)
 	Get(id uuid.UUID) (*ServiceKey, *Message)
-	After(id uuid.UUID, fn MessageFunc) (count int, first, last *Message)
-	List(from, to time.Time, fn MessageFunc) (count int, first, last *Message)
+	List(find MessageFindFunc, filter MessageFunc) int
+
+	// non thread safe
+	FindByIndex(index int, exclusive bool) MessageFindFunc
+	FindByID(id uuid.UUID, exclusive bool) MessageFindFunc
+	FindByTime(time time.Time, exclusive bool) MessageFindFunc
 }
 
 // Messages provides access to MessageLog implementation (set in messages module)

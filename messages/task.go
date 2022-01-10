@@ -190,31 +190,14 @@ func (ml *messageLog) Register(key *defs.ServiceKey, payload []byte, state defs.
 func (ml *messageLog) UpdateState(id uuid.UUID, state defs.MessageState) (*defs.ServiceKey, *defs.Message) {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
-	entry := ml.log.findByID(id)
-	if entry != nil {
-		if index, found := ml.log.findByTime(entry.Time); found {
-			length := len(ml.log.entries)
-			fentry := ml.log.entries[index]
-			for {
-				if fentry.ID == entry.ID {
-					prevState := entry.State
-					entry.Time = time.Now().UTC()
-					entry.State = state
-					copy(ml.log.entries[index:], ml.log.entries[index+1:])
-					ml.log.entries[length-1] = entry
-					handlers.SendUpdateMessageState(entry.ServiceKey, entry.Message, prevState)
-					return entry.ServiceKey, entry.Message
-				}
-				index++
-				if index >= length {
-					break
-				}
-				fentry = ml.log.entries[index]
-				if !fentry.Time.Equal(entry.Time) {
-					break
-				}
-			}
-		}
+	if index, entry := ml.log.findIndexByID(id); entry != nil {
+		prevState := entry.State
+		entry.Time = time.Now().UTC()
+		entry.State = state
+		copy(ml.log.entries[index:], ml.log.entries[index+1:])
+		ml.log.entries[len(ml.log.entries)-1] = entry
+		handlers.SendUpdateMessageState(entry.ServiceKey, entry.Message, prevState)
+		return entry.ServiceKey, entry.Message
 	}
 	return nil, nil
 }
@@ -230,79 +213,68 @@ func (ml *messageLog) Get(id uuid.UUID) (*defs.ServiceKey, *defs.Message) {
 	return nil, nil
 }
 
-// After iterates messages after message with provided id, if any
-// Function returns number of messages in the log, first (oldest) and last (newest) messages, if any
-func (ml *messageLog) After(id uuid.UUID, fn defs.MessageFunc) (count int, first, last *defs.Message) {
+// List messages using filter callback starting from message, found by find callback
+func (ml *messageLog) List(find defs.MessageFindFunc, filter defs.MessageFunc) int {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
 
 	length := len(ml.log.entries)
-	if length <= 0 {
-		return 0, nil, nil
-	}
-
-	entry := ml.log.findByID(id)
-	if entry != nil {
-		if index, found := ml.log.findByTime(entry.Time); found {
-			fentry := ml.log.entries[index]
-			found = false
-			for {
-				if fentry.ID == entry.ID {
-					found = true
-					break
-				}
-				index++
-				if index >= length {
-					break
-				}
-				fentry = ml.log.entries[index]
-				if !fentry.Time.Equal(entry.Time) {
-					break
-				}
-			}
-
-			if found {
-				for index < length {
-					if fn(ml.log.entries[index].Message) {
-						break
-					}
-					index++
-				}
-			}
-		}
-	}
-
-	return length, ml.log.entries[0].Message, ml.log.entries[length-1].Message
-}
-
-// List iterates messages within provided time range, inclusive. Both from and to values could be 0 which means from oldest and until
-// newest messages correspondingly. Function returns number of messages in the log, first (oldest) and last (newest) messages, if any
-func (ml *messageLog) List(from, to time.Time, fn defs.MessageFunc) (count int, first, last *defs.Message) {
-	ml.lock.Lock()
-	defer ml.lock.Unlock()
-
-	length := len(ml.log.entries)
-	if length <= 0 {
-		return length, nil, nil
-	}
-
-	index := 0
-	found := true
-	if !from.IsZero() {
-		index, found = ml.log.findByTime(from)
-	}
-	if found {
+	index, ok := find()
+	if ok {
 		for index < length {
-			entry := ml.log.entries[index]
-			if !to.IsZero() && entry.Time.After(to) {
-				break
-			}
-			if fn(entry.Message) {
+			if filter(ml.log.entries[index].Message) {
 				break
 			}
 			index++
 		}
 	}
+	return length
+}
 
-	return length, ml.log.entries[0].Message, ml.log.entries[length-1].Message
+// FindByIndex returns function which search for message with provided index (exclusive false) or next index (exclusive true)
+func (ml *messageLog) FindByIndex(index int, exclusive bool) defs.MessageFindFunc {
+	if exclusive {
+		index += 1
+	}
+	return func() (int, bool) {
+		if index >= 0 && index < len(ml.log.entries) {
+			return index, true
+		}
+		return 0, false
+	}
+}
+
+// FindByID returns function which search for message with provided id (exclusive false) or next message (exclusive true)
+func (ml *messageLog) FindByID(id uuid.UUID, exclusive bool) defs.MessageFindFunc {
+	return func() (int, bool) {
+		if index, entry := ml.log.findIndexByID(id); entry != nil {
+			if exclusive {
+				index += 1
+				if index >= len(ml.log.entries) {
+					return 0, false
+				}
+			}
+			return index, true
+		}
+		return 0, false
+	}
+}
+
+// FindByTime returns function which search for message with time equal (exclusive false) or after provided
+func (ml *messageLog) FindByTime(time time.Time, exclusive bool) defs.MessageFindFunc {
+	return func() (int, bool) {
+		length := len(ml.log.entries)
+		index, _ := ml.log.findByTime(time)
+		for index < length {
+			entry := ml.log.entries[index]
+			if !exclusive && entry.Time.Equal(time) {
+				return index, true
+			}
+			if entry.Time.After(time) {
+				return index, true
+			}
+			index++
+		}
+		return 0, false
+	}
 }

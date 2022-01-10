@@ -30,10 +30,6 @@ func (t *Task) handleEvents(event interface{}) {
 		handleSendToService(e)
 	case *GetMessage:
 		handleGetMessage(e)
-	case *GetMessagesInfo:
-		handleGetMessagesInfo(e)
-	case *MessagesAfter:
-		handleMessagesAfter(e)
 	case *ListMessages:
 		handleListMessages(e)
 	}

@@ -44,10 +44,6 @@ const (
 	querySendToServiceResult
 	queryGetMessage
 	queryGetMessageResult
-	queryGetMessagesInfo
-	queryGetMessagesInfoResult
-	queryMessagesAfter
-	queryMessagesAfterResult
 	queryListMessages
 	queryListMessagesResult
 	queryNewMessage
@@ -70,8 +66,6 @@ var queryTypeMap = map[string]queryType{
 	"listServices": queryListServices, "listServicesResult": queryListServicesResult,
 	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
 	"getMessage": queryGetMessage, "getMessageResult": queryGetMessageResult,
-	"messagesInfo": queryGetMessagesInfo, "messagesInfoResult": queryGetMessagesInfoResult,
-	"messagesAfter": queryMessagesAfter, "messagesAfterResult": queryMessagesAfterResult,
 	"messagesList": queryListMessages, "messagesListResult": queryListMessagesResult,
 }
 var queryNameMap map[queryType]string
@@ -191,12 +185,6 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			return err
 		}
 		c.Payload = &p
-	case queryMessagesAfter:
-		var p handlers.MessagesAfterInput
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
 	case queryListMessages:
 		var p handlers.ListMessagesInput
 		if err := json.Unmarshal(data, &p); err != nil {
@@ -241,10 +229,6 @@ func (c *Query) toEvent() interface{} {
 		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID), SendToServiceInput: c.Payload.(*handlers.SendToServiceInput)}
 	case queryGetMessage:
 		return &handlers.GetMessage{RequestHeader: *handlers.NewRequestHeader(c.ID), ID: c.Payload.(uuid.UUID)}
-	case queryGetMessagesInfo:
-		return &handlers.GetMessagesInfo{RequestHeader: *handlers.NewRequestHeader(c.ID)}
-	case queryMessagesAfter:
-		return &handlers.MessagesAfter{RequestHeader: *handlers.NewRequestHeader(c.ID), MessagesAfterInput: c.Payload.(*handlers.MessagesAfterInput)}
 	case queryListMessages:
 		return &handlers.ListMessages{RequestHeader: *handlers.NewRequestHeader(c.ID), ListMessagesInput: c.Payload.(*handlers.ListMessagesInput)}
 	}
@@ -294,10 +278,6 @@ func queryFromEvent(event interface{}) *Query {
 		return &Query{Type: querySendToServiceResult, ID: e.TraceID(), Payload: e.SendToServiceOutput}
 	case *handlers.GetMessageResult:
 		return &Query{Type: queryGetMessageResult, ID: e.TraceID(), Payload: e.MessageEntry}
-	case *handlers.GetMessagesInfoResult:
-		return &Query{Type: queryGetMessagesInfoResult, ID: e.TraceID(), Payload: e.MessagesInfo}
-	case *handlers.MessagesAfterResult:
-		return &Query{Type: queryMessagesAfterResult, ID: e.TraceID(), Payload: e.ListMessagesOutput}
 	case *handlers.ListMessagesResult:
 		return &Query{Type: queryListMessagesResult, ID: e.TraceID(), Payload: e.ListMessagesOutput}
 	case *handlers.NewMessage:
