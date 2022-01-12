@@ -222,7 +222,7 @@ func (ml *messageLog) List(find defs.MessageFindFunc, filter defs.MessageFunc) i
 	index, ok := find()
 	if ok {
 		for index < length {
-			if filter(ml.log.entries[index].Message) {
+			if filter(index, ml.log.entries[index].Message) {
 				break
 			}
 			index++
@@ -231,8 +231,8 @@ func (ml *messageLog) List(find defs.MessageFindFunc, filter defs.MessageFunc) i
 	return length
 }
 
-// FindByIndex returns function which search for message with provided index (exclusive false) or next index (exclusive true)
-func (ml *messageLog) FindByIndex(index int, exclusive bool) defs.MessageFindFunc {
+// FromIndex returns function which search for message with provided index (exclusive false) or next index (exclusive true)
+func (ml *messageLog) FromIndex(index int, exclusive bool) defs.MessageFindFunc {
 	if exclusive {
 		index += 1
 	}
@@ -244,8 +244,8 @@ func (ml *messageLog) FindByIndex(index int, exclusive bool) defs.MessageFindFun
 	}
 }
 
-// FindByID returns function which search for message with provided id (exclusive false) or next message (exclusive true)
-func (ml *messageLog) FindByID(id uuid.UUID, exclusive bool) defs.MessageFindFunc {
+// FromID returns function which search for message with provided id (exclusive false) or next message (exclusive true)
+func (ml *messageLog) FromID(id uuid.UUID, exclusive bool) defs.MessageFindFunc {
 	return func() (int, bool) {
 		if index, entry := ml.log.findIndexByID(id); entry != nil {
 			if exclusive {
@@ -260,8 +260,8 @@ func (ml *messageLog) FindByID(id uuid.UUID, exclusive bool) defs.MessageFindFun
 	}
 }
 
-// FindByTime returns function which search for message with time equal (exclusive false) or after provided
-func (ml *messageLog) FindByTime(time time.Time, exclusive bool) defs.MessageFindFunc {
+// FromTime returns function which search for message with time equal (exclusive false) or after provided
+func (ml *messageLog) FromTime(time time.Time, exclusive bool) defs.MessageFindFunc {
 	return func() (int, bool) {
 		length := len(ml.log.entries)
 		index, _ := ml.log.findByTime(time)

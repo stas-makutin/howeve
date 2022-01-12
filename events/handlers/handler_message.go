@@ -49,6 +49,6 @@ func handleGetMessage(event *GetMessage) {
 
 func handleListMessages(event *ListMessages) {
 	r := &ListMessagesResult{ResponseHeader: event.Associate()}
-	// TODO
+
 	Dispatcher.Send(r)
 }
