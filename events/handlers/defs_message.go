@@ -49,31 +49,21 @@ type GetMessageResult struct {
 	*MessageEntry
 }
 
-// PayloadSequence defines single payload content match sequence
-type PayloadSequence struct {
-	At       *int   `json:"at,omitempty"`
-	End      bool   `json:"end,omitempty"`
-	Sequence []byte `json:"seq,omitempty"`
-}
-
-// PayloadMatch defines set of sequences which need to match to payload content
-type PayloadMatch struct {
-	Match []PayloadSequence `json:"match"`
-}
-
 // ListMessagesInput defines list messages request inputs
 type ListMessagesInput struct {
-	FromIndex      *int                `json:"fromIndex,omitempty"`
-	FromID         *uuid.UUID          `json:"fromId,omitempty"`
-	FromTime       *time.Time          `json:"fromTime,omitempty"`
-	FromExclusive  bool                `json:"fromExclusive,omitempty"`
-	UntilIndex     *int                `json:"untilIndex,omitempty"`
-	UntilID        *uuid.UUID          `json:"untilId,omitempty"`
-	UntilTime      *time.Time          `json:"untilTime,omitempty"`
-	UntilExclusive bool                `json:"untilExclusive,omitempty"`
-	Count          int                 `json:"count,omitempty"`
-	States         []defs.MessageState `json:"states,omitempty"`
-	Payloads       []PayloadMatch      `json:"payloads,omitempty"`
+	FromIndex        *int                  `json:"fromIndex,omitempty"`
+	FromID           *uuid.UUID            `json:"fromId,omitempty"`
+	FromTime         *time.Time            `json:"fromTime,omitempty"`
+	FromExclusive    bool                  `json:"fromExclusive,omitempty"`
+	UntilIndex       *int                  `json:"untilIndex,omitempty"`
+	UntilID          *uuid.UUID            `json:"untilId,omitempty"`
+	UntilTime        *time.Time            `json:"untilTime,omitempty"`
+	UntilExclusive   bool                  `json:"untilExclusive,omitempty"`
+	Count            int                   `json:"count"`
+	CountAfterFilter bool                  `json:"countAfterFilter,omitempty"`
+	Services         []ServiceID           `json:"services,omitempty"`
+	States           []defs.MessageState   `json:"states,omitempty"`
+	Payloads         [][]defs.PayloadMatch `json:"payloads,omitempty"`
 }
 
 // ListMessages defines list messages request
@@ -84,7 +74,7 @@ type ListMessages struct {
 
 // ListMessagesOutput defines list messages outputs
 type ListMessagesOutput struct {
-	Messages []*MessageEntry `json:"messages,omitempty"`
+	Messages []*MessageEntry `json:"messages,omitempty"` // TODO - split message and service
 	Count    int             `json:"count"`
 }
 

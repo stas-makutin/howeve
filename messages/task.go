@@ -222,7 +222,7 @@ func (ml *messageLog) List(find defs.MessageFindFunc, filter defs.MessageFunc) i
 	index, ok := find()
 	if ok {
 		for index < length {
-			if filter(index, ml.log.entries[index].Message) {
+			if filter(index, ml.log.entries[index].ServiceKey, ml.log.entries[index].Message) {
 				break
 			}
 			index++
@@ -233,11 +233,17 @@ func (ml *messageLog) List(find defs.MessageFindFunc, filter defs.MessageFunc) i
 
 // FromIndex returns function which search for message with provided index (exclusive false) or next index (exclusive true)
 func (ml *messageLog) FromIndex(index int, exclusive bool) defs.MessageFindFunc {
+	if index < 0 {
+		index = len(ml.log.entries) + index
+		if index < 0 {
+			index = 0
+		}
+	}
 	if exclusive {
 		index += 1
 	}
 	return func() (int, bool) {
-		if index >= 0 && index < len(ml.log.entries) {
+		if index < len(ml.log.entries) {
 			return index, true
 		}
 		return 0, false
