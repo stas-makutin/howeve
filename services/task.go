@@ -215,6 +215,29 @@ func (sr *servicesRegistry) List(listFn defs.ListFunc) {
 	}
 }
 
+// ResolveIDs resolves service IDs (i.e. keys + aliases) in bulk
+func (sr *servicesRegistry) ResolveIDs(out defs.ResolveIDsOutput, in defs.ResolveIDsInput) {
+	if in != nil && out != nil {
+		sr.lock.Lock()
+		defer sr.lock.Unlock()
+
+		for {
+			key, alias, stop := in()
+
+			si := sr.findService(key, alias)
+			if si != nil {
+				key = si.key
+				alias = si.alias
+			}
+			out(key, alias)
+
+			if stop {
+				break
+			}
+		}
+	}
+}
+
 // Send sends payload to the service identified by (in order of priority): 1) service key; 2) alias
 func (sr *servicesRegistry) Send(key *defs.ServiceKey, alias string, payload []byte) (*defs.Message, error) {
 	sr.lock.Lock()

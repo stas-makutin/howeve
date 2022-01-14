@@ -63,15 +63,42 @@ func handleListMessages(event *ListMessages) {
 		fromFn = defs.Messages.FromIndex(0, false)
 	}
 
+	serviceIndices := make(map[defs.ServiceKey]int)
 	itFn = func(index int, key *defs.ServiceKey, message *defs.Message) bool {
-		r.Messages = append(r.Messages, &MessageEntry{ServiceKey: key, Message: message})
+		serviceIndex, ok := serviceIndices[*key]
+		if !ok {
+			serviceIndex = len(r.Services)
+			r.Services = append(r.Services, &ServiceID{ServiceKey: key})
+			serviceIndices[*key] = serviceIndex
+		}
+		r.Messages = append(r.Messages, &ListMessage{Message: message, ServiceIndex: serviceIndex})
 		return false
 	}
+
+	count := event.Count
+	if count > 10000 {
+		count = 10000
+	}
+
 	if event.CountAfterFilter {
-		itFn = defs.UntilCounter(event.Count, itFn)
+		itFn = defs.UntilCounter(count, itFn)
 	}
 	if len(event.Services) > 0 {
-		// TODO
+		var serviceKeys []*defs.ServiceKey
+		i := 0
+		defs.Services.ResolveIDs(
+			func(key *defs.ServiceKey, alias string) {
+				if key != nil {
+					serviceKeys = append(serviceKeys, key)
+				}
+			},
+			func() (*defs.ServiceKey, string, bool) {
+				si := event.Services[i]
+				i += 1
+				return si.ServiceKey, si.Alias, i >= len(event.Services)
+			},
+		)
+		itFn = defs.WithServices(serviceKeys, itFn)
 	}
 	if len(event.States) > 0 {
 		itFn = defs.WithStates(event.States, itFn)
@@ -87,10 +114,23 @@ func handleListMessages(event *ListMessages) {
 		itFn = defs.UntilTime(*event.UntilTime, event.UntilExclusive, itFn)
 	}
 	if !event.CountAfterFilter {
-		itFn = defs.UntilCounter(event.Count, itFn)
+		itFn = defs.UntilCounter(count, itFn)
 	}
 
 	r.Count = defs.Messages.List(fromFn, itFn)
+
+	if len(r.Services) > 0 {
+		i := -1
+		defs.Services.ResolveIDs(
+			func(key *defs.ServiceKey, alias string) {
+				r.Services[i].Alias = alias
+			},
+			func() (*defs.ServiceKey, string, bool) {
+				i += 1
+				return r.Services[i].ServiceKey, "", i+1 >= len(r.Services)
+			},
+		)
+	}
 
 	Dispatcher.Send(r)
 }

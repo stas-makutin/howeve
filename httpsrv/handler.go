@@ -404,7 +404,10 @@ func parseGetMessage(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		// TODO
+		q, err = uuid.Parse(r.Form.Get("id"))
+		if err != nil {
+			return nil, true, err
+		}
 	}
 	return &handlers.GetMessage{ID: q}, true, nil
 }
@@ -420,8 +423,18 @@ func parseListMessages(w http.ResponseWriter, r *http.Request) (events.TargetedR
 			return nil, true, err
 		}
 		q = &handlers.ListMessagesInput{}
+		n, err := strconv.ParseInt(r.Form.Get("index"), 10, 8)
+		if err != nil {
+			return nil, true, err
+		}
+		index := int(n)
+		q.FromIndex = &index
 
-		// TODO
+		n, err = strconv.ParseInt(r.Form.Get("count"), 10, 8)
+		if err != nil {
+			return nil, true, err
+		}
+		q.Count = int(n)
 	}
 	return &handlers.ListMessages{ListMessagesInput: q}, true, nil
 }

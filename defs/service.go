@@ -60,6 +60,12 @@ const ParamNameOutgoingMaxTTL = "outgoingMaxTTL"
 // ListFunc is a the callback function used in ServiceRegistry List method. Returnning true will stop services iteration
 type ListFunc func(key *ServiceKey, alias string, status ServiceStatus) bool
 
+// ResolveIDsInput is the input iteration method for ServiceREgistry ResoveIDs
+type ResolveIDsInput func() (key *ServiceKey, alias string, stop bool)
+
+// ResolveIDsInput is the output method for ServiceREgistry ResoveIDs
+type ResolveIDsOutput func(key *ServiceKey, alias string)
+
 // ServiceRegistry defines possible operations with services
 type ServiceRegistry interface {
 	Discover(protocol ProtocolIdentifier, transport TransportIdentifier, params RawParamValues) (uuid.UUID, error)
@@ -70,6 +76,8 @@ type ServiceRegistry interface {
 	Remove(key *ServiceKey, alias string) error
 	Status(key *ServiceKey, alias string) (ServiceStatus, bool)
 	List(listFn ListFunc)
+
+	ResolveIDs(out ResolveIDsOutput, in ResolveIDsInput)
 
 	Send(key *ServiceKey, alias string, payload []byte) (*Message, error)
 }

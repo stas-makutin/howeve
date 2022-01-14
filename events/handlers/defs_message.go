@@ -61,7 +61,7 @@ type ListMessagesInput struct {
 	UntilExclusive   bool                  `json:"untilExclusive,omitempty"`
 	Count            int                   `json:"count"`
 	CountAfterFilter bool                  `json:"countAfterFilter,omitempty"`
-	Services         []ServiceID           `json:"services,omitempty"`
+	Services         []*ServiceID          `json:"services,omitempty"`
 	States           []defs.MessageState   `json:"states,omitempty"`
 	Payloads         [][]defs.PayloadMatch `json:"payloads,omitempty"`
 }
@@ -72,10 +72,17 @@ type ListMessages struct {
 	*ListMessagesInput
 }
 
+// ListMessage contains message info for the list messages response
+type ListMessage struct {
+	ServiceIndex int `json:"serviceIndex"`
+	*defs.Message
+}
+
 // ListMessagesOutput defines list messages outputs
 type ListMessagesOutput struct {
-	Messages []*MessageEntry `json:"messages,omitempty"` // TODO - split message and service
-	Count    int             `json:"count"`
+	Services []*ServiceID   `json:"services,omitempty"`
+	Messages []*ListMessage `json:"messages,omitempty"`
+	Count    int            `json:"count"`
 }
 
 // ListMessagesResult defines list messages result

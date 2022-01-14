@@ -139,13 +139,13 @@ func WithStates(states []MessageState, next MessageFunc) MessageFunc {
 }
 
 // WithPayload filters messages based on their services
-func WithServices(services []ServiceKey, next MessageFunc) MessageFunc {
+func WithServices(services []*ServiceKey, next MessageFunc) MessageFunc {
 	if len(services) <= 0 {
 		return next
 	}
 	return func(index int, key *ServiceKey, message *Message) bool {
 		for _, service := range services {
-			if service == *key {
+			if *service == *key {
 				if next != nil {
 					return next(index, key, message)
 				}
