@@ -49,6 +49,8 @@ const (
 	queryNewMessage
 	queryDropMessage
 	queryUpdateMessageState
+	queryEventSubscribe
+	queryEventSubscribeResult
 )
 
 var queryTypeMap = map[string]queryType{
@@ -67,8 +69,16 @@ var queryTypeMap = map[string]queryType{
 	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
 	"getMessage": queryGetMessage, "getMessageResult": queryGetMessageResult,
 	"messagesList": queryListMessages, "messagesListResult": queryListMessagesResult,
+	"eventSubscribe": queryEventSubscribe, "eventSubscribeResult": queryEventSubscribeResult,
 }
 var queryNameMap map[queryType]string
+
+// Query struct
+type Query struct {
+	Type    queryType
+	ID      string
+	Payload interface{}
+}
 
 func init() {
 	queryNameMap = make(map[queryType]string)
@@ -77,11 +87,18 @@ func init() {
 	}
 }
 
-// Query struct
-type Query struct {
-	Type    queryType
-	ID      string
-	Payload interface{}
+// UnmarshalJSON func for SubscriptionEvent value
+func (event *SubscriptionEvent) UnmarshalJSON(data []byte) error {
+	var name string
+	err := json.Unmarshal(data, &name)
+	if err != nil {
+		return err
+	}
+	if ev, ok := subscriptionEventNameMap[name]; ok {
+		*event = ev
+		return nil
+	}
+	return fmt.Errorf("unknown subsctiption event name '%v'", name)
 }
 
 // UnmarshalJSON func
@@ -187,6 +204,12 @@ func (c *Query) unmarshalPayload(data []byte) error {
 		c.Payload = &p
 	case queryListMessages:
 		var p handlers.ListMessagesInput
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case queryEventSubscribe:
+		var p Subscription
 		if err := json.Unmarshal(data, &p); err != nil {
 			return err
 		}

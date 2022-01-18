@@ -53,11 +53,14 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 	defer conn.Close()
 
 	writeCh := make(chan interface{}, 32)
+	subscriptions := newSocketSubscription()
 
 	var id events.SubscriberID
 	id = handlers.Dispatcher.Subscribe(func(event interface{}) {
 		toWrite := false
-		if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
+		if subscriptions.subscribed(event) {
+			toWrite = true
+		} else if te, ok := event.(events.TargetedResponse); ok && te.Receiver() == id {
 			toWrite = true
 		}
 		if toWrite {
@@ -111,7 +114,15 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 
 			// process message
 			n := queryNameMap[q.Type]
-			if event := q.toTargetedRequest(ctx, id); event != nil {
+			if q.Type == queryEventSubscribe {
+				eo := handlers.EventOrdinal.Next()
+				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
+				subscriptions.subscribe(q.Payload.(*Subscription))
+				eo = handlers.EventOrdinal.Next()
+				if writeQuery(conn, co, eo, &Query{Type: queryEventSubscribeResult, ID: q.ID}) {
+					break
+				}
+			} else if event := q.toTargetedRequest(ctx, id); event != nil {
 				var eo handlers.Ordinal
 				if ti, ok := event.(handlers.TraceInfo); ok {
 					eo = ti.Ordinal()
