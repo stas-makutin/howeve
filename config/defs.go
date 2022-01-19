@@ -24,13 +24,19 @@ type LogConfig struct {
 
 // HTTPServerConfig defines configuration entries for the HTTP server
 type HTTPServerConfig struct {
-	Port              int          `yaml:"port,omitempty" json:"port,omitempty"`
-	MaxConnections    uint         `yaml:"maxConnections,omitempty" json:"maxConnections,omitempty"`
-	ReadTimeout       DurationType `yaml:"readTimeout,omitempty" json:"readTimeout,omitempty"`
-	ReadHeaderTimeout DurationType `yaml:"readHeaderTimeout,omitempty" json:"readHeaderTimeout,omitempty"`
-	WriteTimeout      DurationType `yaml:"writeTimeout,omitempty" json:"writeTimeout,omitempty"`
-	IdleTimeout       DurationType `yaml:"idleTimeout,omitempty" json:"idleTimeout,omitempty"`
-	MaxHeaderBytes    SizeType     `yaml:"maxHeaderBytes,omitempty" json:"maxHeaderBytes,omitempty"`
+	Port              int             `yaml:"port,omitempty" json:"port,omitempty"`
+	MaxConnections    uint            `yaml:"maxConnections,omitempty" json:"maxConnections,omitempty"`
+	ReadTimeout       DurationType    `yaml:"readTimeout,omitempty" json:"readTimeout,omitempty"`
+	ReadHeaderTimeout DurationType    `yaml:"readHeaderTimeout,omitempty" json:"readHeaderTimeout,omitempty"`
+	WriteTimeout      DurationType    `yaml:"writeTimeout,omitempty" json:"writeTimeout,omitempty"`
+	IdleTimeout       DurationType    `yaml:"idleTimeout,omitempty" json:"idleTimeout,omitempty"`
+	MaxHeaderBytes    SizeType        `yaml:"maxHeaderBytes,omitempty" json:"maxHeaderBytes,omitempty"`
+	Directories       []HTTPDirectory `yaml:"dirs,omitempty" json:"dirs,omitempty"`
+}
+
+type HTTPDirectory struct {
+	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+	Dir  string `yaml:"dir,omitempty" json:"dir,omitempty"`
 }
 
 // ServiceConfig defines configuration of active services

@@ -78,6 +78,7 @@ func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
 	ml.maxSize = 0
 	if ml.cfg != nil {
 		ml.maxSize = int(ml.cfg.MaxSize.Value())
+		ml.autoPersists = ml.cfg.AutoPesist.Value()
 	}
 	if ml.maxSize <= 0 {
 		ml.maxSize = 10 * 1024 * 1024
@@ -87,7 +88,6 @@ func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
 		ml.maxSize = 1024 * 1024 * 1024
 	}
 
-	ml.autoPersists = ml.cfg.AutoPesist.Value()
 	if ml.autoPersists < 1*time.Second {
 		ml.autoPersists = 6 * time.Hour
 	}

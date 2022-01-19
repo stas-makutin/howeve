@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
-func setupRoutes(mux *http.ServeMux) {
+func setupRoutes(mux *http.ServeMux, dirs []config.HTTPDirectory) {
 
 	mux.Handle("/socket", handlerCtxFunc(handleWebsocket))
 
@@ -123,5 +124,10 @@ func setupRoutes(mux *http.ServeMux) {
 		},
 	} {
 		mux.Handle(rt.route, handlerFunc(rt.handler))
+	}
+
+	// static file directories
+	for _, dir := range dirs {
+		mux.Handle(dir.Path, http.FileServer(http.Dir(dir.Dir)))
 	}
 }
