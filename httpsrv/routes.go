@@ -7,9 +7,21 @@ import (
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
+	"github.com/stas-makutin/howeve/log"
 )
 
-func setupRoutes(mux *http.ServeMux, dirs []config.HTTPDirectory) {
+// log constants
+const (
+	// operation
+	haOpAddFromConfig = "C"
+
+	// operation codes
+	haOcRouteConflict = "R"
+)
+
+func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
+
+	routes := make(map[string]struct{})
 
 	mux.Handle("/socket", handlerCtxFunc(handleWebsocket))
 
@@ -124,10 +136,16 @@ func setupRoutes(mux *http.ServeMux, dirs []config.HTTPDirectory) {
 		},
 	} {
 		mux.Handle(rt.route, handlerFunc(rt.handler))
+		routes[rt.route] = struct{}{}
 	}
 
-	// static file directories
-	for _, dir := range dirs {
-		mux.Handle(dir.Path, http.FileServer(http.Dir(dir.Dir)))
+	// static assets
+	for _, st := range assets {
+		if _, ok := routes[st.Route]; ok {
+			log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcRouteConflict, st.Route)
+		} else {
+			mux.Handle(st.Route, http.StripPrefix(st.Route, http.FileServer(http.Dir(st.Path))))
+			routes[st.Route] = struct{}{}
+		}
 	}
 }

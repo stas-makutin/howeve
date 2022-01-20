@@ -68,7 +68,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 	router := http.NewServeMux()
 
-	setupRoutes(router, t.hc.cfg.Directories)
+	setupRoutes(router, t.hc.cfg.Assets)
 
 	var handler http.Handler = router
 	if log.Enabled() {

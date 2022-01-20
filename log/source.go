@@ -1,5 +1,8 @@
 package log
 
+// SrcHTTPAssets - HTTP static assets sources
+const SrcHTTPAssets = "A"
+
 // SrcHTTP - HTTP log sources
 const SrcHTTP = "H"
 
