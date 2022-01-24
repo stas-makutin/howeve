@@ -19,11 +19,14 @@ const (
 	haOcRouteConflict = "R"
 )
 
+const webSocketRoute = "/socket"
+
 func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 
 	routes := make(map[string]struct{})
 
-	mux.Handle("/socket", handlerCtxFunc(handleWebsocket))
+	mux.Handle(webSocketRoute, handlerCtxFunc(handleWebsocket))
+	routes[webSocketRoute] = struct{}{}
 
 	for _, rt := range []struct {
 		route   string
@@ -140,12 +143,13 @@ func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 	}
 
 	// static assets
-	for _, st := range assets {
-		if _, ok := routes[st.Route]; ok {
-			log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcRouteConflict, st.Route)
+	for _, ast := range assets {
+		if _, ok := routes[ast.Route]; ok || ast.Route == "" {
+			log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcRouteConflict, ast.Route)
 		} else {
-			mux.Handle(st.Route, http.StripPrefix(st.Route, http.FileServer(http.Dir(st.Path))))
-			routes[st.Route] = struct{}{}
+			a := asset(ast)
+			mux.Handle(ast.Route, handlerFunc(a.ServeHTTP))
+			routes[ast.Route] = struct{}{}
 		}
 	}
 }

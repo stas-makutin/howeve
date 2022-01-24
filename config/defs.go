@@ -34,11 +34,6 @@ type HTTPServerConfig struct {
 	Assets            []HTTPAsset  `yaml:"assets,omitempty" json:"assets,omitempty"`
 }
 
-type HTTPAsset struct {
-	Route string `yaml:"route,omitempty" json:"route,omitempty"`
-	Path  string `yaml:"path,omitempty" json:"path,omitempty"`
-}
-
 // ServiceConfig defines configuration of active services
 type ServiceConfig struct {
 	Alias     string            `yaml:"alias,omitempty" json:"alias,omitempty"`
