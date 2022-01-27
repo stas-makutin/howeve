@@ -35,6 +35,8 @@ var ServiceTasks []ServiceTaskEntry
 var serviceTaskCtx ServiceTaskContext
 var serviceTaskStop uint32
 var serviceTaskClose uint32
+var serviceLock sync.Mutex
+var serviceIndex int
 
 // RunServiceTasks func
 func RunServiceTasks(errorLog *log.Logger, cfgFile string) {
@@ -46,9 +48,10 @@ func RunServiceTasks(errorLog *log.Logger, cfgFile string) {
 	// run tasks
 	prevErrorMsg := ""
 	for atomic.LoadUint32(&serviceTaskClose) == 0 {
-		var index int = -1
+		serviceIndex = -1
 
 		errorMsg := ""
+		serviceLock.Lock()
 		for i, te := range ServiceTasks {
 			for atomic.LoadUint32(&serviceTaskStop) != 0 {
 				break
@@ -57,8 +60,9 @@ func RunServiceTasks(errorLog *log.Logger, cfgFile string) {
 				errorMsg = fmt.Sprintf("%v task failed to open: %v", te.Name, err)
 				break
 			}
-			index = i
+			serviceIndex = i
 		}
+		serviceLock.Unlock()
 		if errorMsg != "" {
 			if prevErrorMsg != errorMsg {
 				prevErrorMsg = errorMsg
@@ -73,12 +77,14 @@ func RunServiceTasks(errorLog *log.Logger, cfgFile string) {
 		atomic.StoreUint32(&serviceTaskStop, 0)
 
 		var closeErrorMsg strings.Builder
-		for ; index >= 0; index-- {
-			te := ServiceTasks[index]
+		serviceLock.Lock()
+		for ; serviceIndex >= 0; serviceIndex-- {
+			te := ServiceTasks[serviceIndex]
 			if err := te.Task.Close(&serviceTaskCtx); err != nil {
 				utils.WriteStringln(&closeErrorMsg, fmt.Sprintf("%v task failed to close: %v", te.Name, err))
 			}
 		}
+		serviceLock.Unlock()
 		if closeErrorMsg.Len() > 0 {
 			serviceTaskCtx.Log.Print(closeErrorMsg.String())
 			break // fatal error, stopping
@@ -89,9 +95,12 @@ func RunServiceTasks(errorLog *log.Logger, cfgFile string) {
 // StopServiceTasks func
 func StopServiceTasks() {
 	atomic.StoreUint32(&serviceTaskStop, 1)
-	for _, te := range ServiceTasks {
+	serviceLock.Lock()
+	for index := serviceIndex; index >= 0; index-- {
+		te := ServiceTasks[index]
 		te.Task.Stop(&serviceTaskCtx)
 	}
+	serviceLock.Unlock()
 }
 
 // EndServiceTasks func

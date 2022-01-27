@@ -2,15 +2,124 @@ package httpsrv
 
 import (
 	"fmt"
+	"html"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/log"
+)
+
+// log constants
+const (
+	// operation
+	haOpAddFromConfig = "C"
+
+	// operation codes
+	haOcRouteConflict = "R"
+	// exclusion pattern invalid
+	haOcExcludeInvalid = "E"
+	// inclusion pattern invalid
+	haOcIncludeInvalid = "I"
 )
 
 type asset config.HTTPAsset
+
+func (a *asset) valid(routes map[string]struct{}) bool {
+	rc := true
+	if _, ok := routes[a.Route]; ok || a.Route == "" {
+		log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcRouteConflict, a.Route)
+		rc = false
+	}
+	for _, pattern := range a.Excludes {
+		if _, err := filepath.Match(pattern, "/"); err != nil {
+			log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcExcludeInvalid, a.Route, pattern)
+			rc = false
+		}
+	}
+	for _, pattern := range a.Includes {
+		if _, err := filepath.Match(pattern, "/"); err != nil {
+			log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcIncludeInvalid, a.Route, pattern)
+			rc = false
+		}
+	}
+	return rc
+}
+
+func (a *asset) checkVisibility(path string) bool {
+	name := filepath.Base(path)
+	if (a.Flags & config.HAFShowHidden) == 0 {
+		if strings.HasPrefix(name, ".") {
+			return false
+		}
+	}
+	if len(a.Excludes) > 0 {
+		for _, pattern := range a.Excludes {
+			if m, err := filepath.Match(pattern, path); m || err != nil {
+				return false
+			}
+			if m, err := filepath.Match(pattern, filepath.Base(path)); m || err != nil {
+				return false
+			}
+		}
+	}
+	if len(a.Includes) > 0 {
+		for _, pattern := range a.Includes {
+			if m, err := filepath.Match(pattern, path); !m || err != nil {
+				if m, err := filepath.Match(pattern, filepath.Base(path)); !m || err != nil {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, path string, modtime time.Time, root bool) {
+	files, err := os.ReadDir(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if !modtime.IsZero() {
+		w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
+		if r.Method == "GET" || r.Method == "HEAD" {
+			ims := r.Header.Get("If-Modified-Since")
+			for _, layout := range []string{http.TimeFormat, time.RFC850, time.ANSIC} {
+				t, err := time.Parse(layout, ims)
+				if err == nil {
+					mt := modtime.Truncate(time.Second)
+					if mt.Before(t) || mt.Equal(t) {
+						return
+					}
+					break
+				}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, "<pre>\n")
+	if !root {
+		fmt.Fprintf(w, "<a href=\"..\">..</a>\n")
+	}
+	for _, file := range files {
+		name := file.Name()
+		if a.checkVisibility(filepath.Join(path, name)) {
+			if file.IsDir() {
+				name += "/"
+			}
+			url := url.URL{Path: name}
+			fmt.Fprintf(w, "<a href=\"%s\">%s</a>\n", html.EscapeString(url.String()), html.EscapeString(name))
+		}
+	}
+	fmt.Fprintf(w, "</pre>\n")
+}
 
 func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasPrefix(r.URL.Path, a.Route) {
@@ -28,31 +137,9 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	path = filepath.Clean(path)
 
-	if len(a.Excludes) > 0 {
-		for _, pattern := range a.Excludes {
-			if m, err := filepath.Match(pattern, path); m {
-				http.NotFound(w, r)
-				return
-			} else if err != nil {
-				appendLogFields(r, fmt.Sprintf("invalid exclude pattern %s: %v", pattern, err.Error()))
-			}
-			if m, _ := filepath.Match(pattern, filepath.Base(path)); m {
-				http.NotFound(w, r)
-				return
-			}
-		}
-	}
-	if len(a.Includes) > 0 {
-		for _, pattern := range a.Includes {
-			if m, err := filepath.Match(pattern, path); !m {
-				if m, _ := filepath.Match(pattern, filepath.Base(path)); !m {
-					http.NotFound(w, r)
-					return
-				}
-			} else if err != nil {
-				appendLogFields(r, fmt.Sprintf("invalid include pattern %s: %v", pattern, err.Error()))
-			}
-		}
+	if !a.checkVisibility(path) {
+		http.NotFound(w, r)
+		return
 	}
 
 	fi, err := os.Stat(path)
@@ -82,7 +169,7 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if noIndexFile {
 			if (a.Flags & config.HAFDirListing) != 0 {
-				http.ServeFile(w, r, path)
+				a.dirListing(w, r, path, fi.ModTime(), root)
 			} else {
 				http.NotFound(w, r)
 			}

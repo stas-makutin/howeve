@@ -7,16 +7,6 @@ import (
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
-	"github.com/stas-makutin/howeve/log"
-)
-
-// log constants
-const (
-	// operation
-	haOpAddFromConfig = "C"
-
-	// operation codes
-	haOcRouteConflict = "R"
 )
 
 const webSocketRoute = "/socket"
@@ -144,12 +134,10 @@ func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 
 	// static assets
 	for _, ast := range assets {
-		if _, ok := routes[ast.Route]; ok || ast.Route == "" {
-			log.Report(log.SrcHTTPAssets, haOpAddFromConfig, haOcRouteConflict, ast.Route)
-		} else {
-			a := asset(ast)
+		a := asset(ast)
+		if a.valid(routes) {
 			mux.Handle(ast.Route, handlerFunc(a.ServeHTTP))
-			routes[ast.Route] = struct{}{}
+			routes[a.Route] = struct{}{}
 		}
 	}
 }
