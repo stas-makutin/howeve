@@ -52,8 +52,11 @@ func (a *asset) valid(routes map[string]struct{}) bool {
 
 func (a *asset) checkVisibility(path string) bool {
 	name := filepath.Base(path)
+	if name == "" {
+		return false
+	}
 	if (a.Flags & config.HAFShowHidden) == 0 {
-		if strings.HasPrefix(name, ".") {
+		if name[0:1] == "." {
 			return false
 		}
 	}
@@ -80,12 +83,6 @@ func (a *asset) checkVisibility(path string) bool {
 }
 
 func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, path string, modtime time.Time, root bool) {
-	files, err := os.ReadDir(path)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
 	if !modtime.IsZero() {
 		w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
 		if r.Method == "GET" || r.Method == "HEAD" {
@@ -101,6 +98,12 @@ func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, path string, 
 				}
 			}
 		}
+	}
+
+	files, err := os.ReadDir(path)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
