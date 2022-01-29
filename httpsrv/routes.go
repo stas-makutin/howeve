@@ -136,7 +136,7 @@ func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 	for _, ast := range assets {
 		a := asset(ast)
 		if a.valid(routes) {
-			mux.Handle(ast.Route, handlerFunc(a.ServeHTTP))
+			mux.Handle(ast.Route, &a)
 			routes[a.Route] = struct{}{}
 		}
 	}

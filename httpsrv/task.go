@@ -72,7 +72,7 @@ func (t *Task) Open(ctx *tasks.ServiceTaskContext) error {
 
 	var handler http.Handler = router
 	if log.Enabled() {
-		handler = logHandler()(handler)
+		handler = logHandler(handler)
 	}
 
 	baseCtx, cancel := context.WithCancel(context.WithValue(context.Background(), handlerContextKey, &t.hc))
