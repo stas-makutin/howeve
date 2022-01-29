@@ -1,6 +1,7 @@
 package httpsrv
 
 import (
+	"compress/gzip"
 	"net/http"
 	"reflect"
 
@@ -136,7 +137,11 @@ func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 	for _, ast := range assets {
 		a := asset(ast)
 		if a.valid(routes) {
-			mux.Handle(ast.Route, &a)
+			var handler http.Handler = &a
+			if (a.Flags & config.HAFGZipContent) != 0 {
+				handler = gzipHandler(handler, gzip.BestCompression)
+			}
+			mux.Handle(ast.Route, handler)
 			routes[a.Route] = struct{}{}
 		}
 	}

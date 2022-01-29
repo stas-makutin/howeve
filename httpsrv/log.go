@@ -29,6 +29,12 @@ func (w *logResponseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
+func (w *logResponseWriter) Flush() {
+	if fw, ok := w.ResponseWriter.(http.Flusher); ok {
+		fw.Flush()
+	}
+}
+
 func (w *logResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if hj, ok := w.ResponseWriter.(http.Hijacker); ok {
 		return hj.Hijack()
