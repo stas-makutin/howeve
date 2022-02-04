@@ -14,7 +14,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
-require github.com/google/uuid v1.3.0
+require (
+	github.com/google/uuid v1.3.0
+	github.com/hexops/vecty v0.6.0
+)
 
 require (
 	github.com/creack/goselect v0.1.2 // indirect
