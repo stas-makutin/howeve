@@ -15,12 +15,14 @@ const (
 	HAFShowHidden = HttpAssetFlag(1 << iota)
 	HAFDirListing
 	HAFGZipContent
+	HAFFlat
 )
 
 var httpAssetFlagMap = map[string]HttpAssetFlag{
 	"show-hidden": HAFShowHidden,
 	"dir-listing": HAFDirListing,
 	"gzip":        HAFGZipContent,
+	"flat":        HAFFlat,
 }
 
 func (flags *HttpAssetFlag) UnmarshalYAML(node *yaml.Node) (err error) {

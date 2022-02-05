@@ -132,11 +132,20 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	path := r.URL.Path[len(a.Route):]
 	root := false
-	if path == "" {
-		path = a.Path
-		root = true
+	if (a.Flags & config.HAFFlat) != 0 {
+		if path == "" || strings.HasSuffix(path, "/") {
+			path = a.Path
+			root = true
+		} else {
+			path = filepath.Join(a.Path, filepath.Base(path))
+		}
 	} else {
-		path = filepath.Join(a.Path, path)
+		if path == "" {
+			path = a.Path
+			root = true
+		} else {
+			path = filepath.Join(a.Path, path)
+		}
 	}
 	path = filepath.Clean(path)
 
