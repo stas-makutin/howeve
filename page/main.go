@@ -10,9 +10,6 @@ import (
 	"github.com/hexops/vecty/prop"
 )
 
-var drawerOpen bool = false
-var drawer vecty.Component
-
 var console = newJsConsole()
 
 type jsConsole struct {
@@ -35,6 +32,8 @@ func (jc *jsConsole) log(v interface{}) {
 }
 
 func main() {
+	dispatcherSubscribe(onAction)
+
 	vecty.SetTitle("Howeve Test Page")
 
 	setViewport()
@@ -53,7 +52,7 @@ func main() {
 	for js.Global().Get("mdc").IsUndefined() {
 		time.Sleep(tickTime)
 		if waitTime < tickTime {
-			panic("Failed to initialize MDC.")
+			panic("failed to initialize MDC")
 		}
 		waitTime -= tickTime
 	}
@@ -83,6 +82,24 @@ func addScript() {
 	script := js.Global().Get("document").Call("createElement", "script")
 	script.Set("src", "./material-components-web.min.js")
 	js.Global().Get("document").Get("head").Call("appendChild", script)
+}
+
+type displayDrawer bool
+
+type pageViewStore struct {
+	drawerOpen bool
+}
+
+var store = &pageViewStore{drawerOpen: false}
+
+func onAction(event interface{}) {
+	switch e := event.(type) {
+	case displayDrawer:
+		store.drawerOpen = bool(e)
+	default:
+		return
+	}
+	dispatch(change{store})
 }
 
 type Header struct {
@@ -119,8 +136,7 @@ func (ch *Header) Render() vecty.ComponentOrHTML {
 						vecty.Class("material-icons", "mdc-top-app-bar__navigation-icon", "mdc-icon-button"),
 						vecty.Attribute("aria-label", "Open navigation menu"),
 						event.Click(func(e *vecty.Event) {
-							drawerOpen = true
-							vecty.Rerender(drawer)
+							dispatch(displayDrawer(true))
 						}),
 					),
 					vecty.Text("menu"),
@@ -138,6 +154,7 @@ func (ch *Header) Render() vecty.ComponentOrHTML {
 
 type ModalDrawer struct {
 	vecty.Core
+	drawerOpen bool
 }
 
 func newModalDrawer() (r *ModalDrawer) {
@@ -151,9 +168,7 @@ func (ch *ModalDrawer) mdcInitialized() {
 		"attachTo", js.Global().Get("document").Call("querySelector", ".mdc-drawer--modal"),
 	)
 	jsDrawer.Call("listen", "MDCDrawer:closed", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		js.Global().Get("console").Call("log", "drawer closed!")
-		drawerOpen = false
-		vecty.Rerender(drawer)
+		dispatch(displayDrawer(false))
 		return nil
 	}))
 
@@ -162,12 +177,19 @@ func (ch *ModalDrawer) mdcInitialized() {
 	)
 }
 
+func (ch *ModalDrawer) onChange(event interface{}) {
+	if s, ok := event.(*pageViewStore); ok {
+		ch.drawerOpen = s.drawerOpen
+		vecty.Rerender(ch)
+	}
+}
+
 func (ch *ModalDrawer) Render() vecty.ComponentOrHTML {
 	return elem.Aside(
 		vecty.Markup(
 			vecty.Class("mdc-drawer", "mdc-drawer--modal"),
 			vecty.MarkupIf(
-				drawerOpen,
+				ch.drawerOpen,
 				vecty.Class("mdc-drawer--open"),
 			),
 		),
@@ -275,10 +297,9 @@ type PageView struct {
 }
 
 func (p *PageView) Render() vecty.ComponentOrHTML {
-	drawer = newModalDrawer()
 	return elem.Body(
 		newHeader(),
-		drawer,
+		newModalDrawer(),
 		&ModalDrawerScrim{},
 		elem.Main(
 			vecty.Markup(
