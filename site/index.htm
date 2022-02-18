@@ -14,6 +14,7 @@
             const response = await fetch("page.wasm"); 
             const buffer = await response.arrayBuffer(); 
             const obj = await WebAssembly.instantiate(buffer, go.importObject); 
+            go.argv.push("/site")
             go.run(obj.instance); 
          } 
          fetchAndInstantiate(); 

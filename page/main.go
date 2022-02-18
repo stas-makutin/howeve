@@ -5,9 +5,6 @@ import (
 	"time"
 
 	"github.com/hexops/vecty"
-	"github.com/hexops/vecty/elem"
-	"github.com/hexops/vecty/event"
-	"github.com/hexops/vecty/prop"
 )
 
 var console = newJsConsole()
@@ -32,7 +29,7 @@ func (jc *jsConsole) log(v interface{}) {
 }
 
 func main() {
-	dispatcherSubscribe(onAction)
+	// dispatcherSubscribe(onAction)
 
 	vecty.SetTitle("Howeve Test Page")
 
@@ -40,7 +37,7 @@ func main() {
 	addStyles()
 	addScript()
 
-	page := &PageView{}
+	page := &pageMain{}
 
 	if err := vecty.RenderInto("body", page); err != nil {
 		panic(err)
@@ -74,7 +71,7 @@ func addStyles() {
 	vecty.AddStylesheet("./material-icons.css")
 
 	style := js.Global().Get("document").Call("createElement", "style")
-	style.Set("innerHTML", "body { margin: 0; }")
+	style.Set("innerHTML", stylesheet)
 	js.Global().Get("document").Get("head").Call("appendChild", style)
 }
 
@@ -84,6 +81,7 @@ func addScript() {
 	js.Global().Get("document").Get("head").Call("appendChild", script)
 }
 
+/*
 type displayDrawer bool
 
 type pageViewStore struct {
@@ -309,3 +307,4 @@ func (p *PageView) Render() vecty.ComponentOrHTML {
 		),
 	)
 }
+*/

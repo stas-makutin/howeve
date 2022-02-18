@@ -25,11 +25,11 @@ func (ch *mdcTab) Render() vecty.ComponentOrHTML {
 			vecty.Class("mdc-tab"),
 			vecty.Attribute("role", "tab"),
 			vecty.Attribute("tabIndex", "0"),
-		),
-		vecty.MarkupIf(
-			ch.active,
-			vecty.Class("mdc-tab--active"),
-			vecty.Attribute("aria-selected", "true"),
+			vecty.MarkupIf(
+				ch.active,
+				vecty.Class("mdc-tab--active"),
+				vecty.Attribute("aria-selected", "true"),
+			),
 		),
 		elem.Span(
 			vecty.Markup(
@@ -45,13 +45,15 @@ func (ch *mdcTab) Render() vecty.ComponentOrHTML {
 		elem.Span(
 			vecty.Markup(
 				vecty.Class("mdc-tab-indicator"),
-			),
-			vecty.MarkupIf(
-				ch.active,
-				vecty.Class("mdc-tab-indicator--active"),
+				vecty.MarkupIf(
+					ch.active,
+					vecty.Class("mdc-tab-indicator--active"),
+				),
 			),
 			elem.Span(
-				vecty.Class("mdc-tab-indicator__content", "mdc-tab-indicator__content--underline"),
+				vecty.Markup(
+					vecty.Class("mdc-tab-indicator__content", "mdc-tab-indicator__content--underline"),
+				),
 			),
 		),
 		elem.Span(
@@ -64,20 +66,27 @@ func (ch *mdcTab) Render() vecty.ComponentOrHTML {
 
 type mdcTabBar struct {
 	vecty.Core
-	id   string
-	tabs []vecty.ComponentOrHTML
+	id          string
+	activatedFn func(tabIndex int)
+	tabs        vecty.List
 }
 
-func newMdcTabBar(id string, tabs ...vecty.ComponentOrHTML) (r *mdcTabBar) {
-	r = &mdcTabBar{id: id, tabs: tabs}
+func newMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.ComponentOrHTML) (r *mdcTabBar) {
+	r = &mdcTabBar{id: id, activatedFn: activatedFn, tabs: tabs}
 	subscribeGlobal(r)
 	return
 }
 
 func (ch *mdcTabBar) mdcInitialized() {
-	js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
+	tabBar := js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.id),
 	)
+	tabBar.Call("listen", "MDCTabBar:activated", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			ch.activatedFn(args[0].Get("detail").Get("index").Int())
+		}
+		return nil
+	}))
 }
 
 func (ch *mdcTabBar) Render() vecty.ComponentOrHTML {
@@ -101,6 +110,11 @@ func (ch *mdcTabBar) Render() vecty.ComponentOrHTML {
 					),
 					ch.tabs,
 				),
+			),
+		),
+		elem.Div(
+			vecty.Markup(
+				vecty.Class("tab-bar-divider"),
 			),
 		),
 	)

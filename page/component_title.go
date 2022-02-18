@@ -12,7 +12,7 @@ type title struct {
 func (ch *title) Render() vecty.ComponentOrHTML {
 	return elem.Section(
 		vecty.Markup(
-			vecty.Class("title"),
+			vecty.Class("app-title"),
 		),
 		elem.Div(
 			vecty.Markup(

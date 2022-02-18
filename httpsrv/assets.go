@@ -132,20 +132,11 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	path := r.URL.Path[len(a.Route):]
 	root := false
-	if (a.Flags & config.HAFFlat) != 0 {
-		if path == "" || strings.HasSuffix(path, "/") {
-			path = a.Path
-			root = true
-		} else {
-			path = filepath.Join(a.Path, filepath.Base(path))
-		}
+	if path == "" {
+		path = a.Path
+		root = true
 	} else {
-		if path == "" {
-			path = a.Path
-			root = true
-		} else {
-			path = filepath.Join(a.Path, path)
-		}
+		path = filepath.Join(a.Path, path)
 	}
 	path = filepath.Clean(path)
 
@@ -155,6 +146,15 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fi, err := os.Stat(path)
+	if os.IsNotExist(err) && (a.Flags&config.HAFFlat) != 0 {
+		path = filepath.Clean(filepath.Join(a.Path, filepath.Base(path)))
+		fi, err = os.Stat(path)
+		if os.IsNotExist(err) {
+			path = filepath.Clean(a.Path)
+			root = true
+			fi, err = os.Stat(path)
+		}
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			http.NotFound(w, r)
