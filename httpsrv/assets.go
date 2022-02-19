@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -50,8 +51,8 @@ func (a *asset) valid(routes map[string]struct{}) bool {
 	return rc
 }
 
-func (a *asset) checkVisibility(path string) bool {
-	name := filepath.Base(path)
+func (a *asset) checkVisibility(trgPath string) bool {
+	name := filepath.Base(trgPath)
 	if name == "" {
 		return false
 	}
@@ -62,18 +63,18 @@ func (a *asset) checkVisibility(path string) bool {
 	}
 	if len(a.Excludes) > 0 {
 		for _, pattern := range a.Excludes {
-			if m, err := filepath.Match(pattern, path); m || err != nil {
+			if m, err := filepath.Match(pattern, trgPath); m || err != nil {
 				return false
 			}
-			if m, err := filepath.Match(pattern, filepath.Base(path)); m || err != nil {
+			if m, err := filepath.Match(pattern, filepath.Base(trgPath)); m || err != nil {
 				return false
 			}
 		}
 	}
 	if len(a.Includes) > 0 {
 		for _, pattern := range a.Includes {
-			if m, err := filepath.Match(pattern, path); !m || err != nil {
-				if m, err := filepath.Match(pattern, filepath.Base(path)); !m || err != nil {
+			if m, err := filepath.Match(pattern, trgPath); !m || err != nil {
+				if m, err := filepath.Match(pattern, filepath.Base(trgPath)); !m || err != nil {
 					return false
 				}
 			}
@@ -82,7 +83,7 @@ func (a *asset) checkVisibility(path string) bool {
 	return true
 }
 
-func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, path string, modtime time.Time, root bool) {
+func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, trgPath string, modtime time.Time, root bool) {
 	if !modtime.IsZero() {
 		w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
 		if r.Method == "GET" || r.Method == "HEAD" {
@@ -100,7 +101,7 @@ func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, path string, 
 		}
 	}
 
-	files, err := os.ReadDir(path)
+	files, err := os.ReadDir(trgPath)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -113,7 +114,7 @@ func (a *asset) dirListing(w http.ResponseWriter, r *http.Request, path string, 
 	}
 	for _, file := range files {
 		name := file.Name()
-		if a.checkVisibility(filepath.Join(path, name)) {
+		if a.checkVisibility(filepath.Join(trgPath, name)) {
 			if file.IsDir() {
 				name += "/"
 			}
@@ -130,29 +131,68 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := r.URL.Path[len(a.Route):]
+	relPath := r.URL.Path[len(a.Route):]
+	trgPath := relPath
 	root := false
-	if path == "" {
-		path = a.Path
+	if trgPath == "" {
+		trgPath = a.Path
 		root = true
 	} else {
-		path = filepath.Join(a.Path, path)
+		trgPath = filepath.Join(a.Path, trgPath)
 	}
-	path = filepath.Clean(path)
+	trgPath = filepath.Clean(trgPath)
 
-	if !a.checkVisibility(path) {
+	if !a.checkVisibility(trgPath) {
 		http.NotFound(w, r)
 		return
 	}
 
-	fi, err := os.Stat(path)
+	fi, err := os.Stat(trgPath)
 	if os.IsNotExist(err) && (a.Flags&config.HAFFlat) != 0 {
-		path = filepath.Clean(filepath.Join(a.Path, filepath.Base(path)))
-		fi, err = os.Stat(path)
-		if os.IsNotExist(err) {
-			path = filepath.Clean(a.Path)
+		// in flat mode all paths "flats" into asset directory to support client-based routing
+		// main idea of this mode that if some path is not exists it always translated to asset path
+		// example:
+		//   asset route: /a/
+		//   asset path: my/page
+		//   assets which exists: my/page/file, my/page/dir/file1, my/page/dir/sub/file2
+		//   request paths translation:
+		//      /a/ -> my/page
+		//      /a/file -> my/page/file
+		//      /a/client_route -> my/page
+		//      /a/dir/file1 -> my/page/dir/file1
+		//      /a/dir/sub/file2 -> my/page/dir/file2
+		// and special cases:
+		//      /a/b/b/b/file -> my/page/file
+		//      /a/b/b/b/dir/file1 -> my/page/dir/file1
+		//      /a/b/b/b/dir/sub/file1 -> my/page/dir/sub/file1
+		tryPath := ""
+		relPath, base := path.Split(relPath)
+		count := 0
+		for {
+			relPath = path.Dir(relPath)
+			if base != "" {
+				tryPath = path.Join(base, tryPath)
+				trgPath = filepath.Clean(filepath.Join(a.Path, tryPath))
+				fi, err = os.Stat(trgPath)
+				if err == nil {
+					break
+				}
+				if count > 64 {
+					// limit the number of allowed subdirectories for protection
+					http.NotFound(w, r)
+					return
+				}
+				count++
+			}
+			if relPath == "." || relPath == "" {
+				break
+			}
+			base = path.Base(relPath)
+		}
+		if err != nil {
+			trgPath = filepath.Clean(a.Path)
 			root = true
-			fi, err = os.Stat(path)
+			fi, err = os.Stat(trgPath)
 		}
 	}
 	if err != nil {
@@ -169,11 +209,11 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		noIndexFile := true
 		if root && len(a.IndexFiles) > 0 {
 			for _, indexFile := range a.IndexFiles {
-				indexPath := filepath.Join(path, indexFile)
+				indexPath := filepath.Join(trgPath, indexFile)
 				if ifi, err := os.Stat(indexPath); err == nil && !ifi.IsDir() {
 					appendLogFields(r, indexFile)
 					fi = ifi
-					path = indexPath
+					trgPath = indexPath
 					noIndexFile = false
 					break
 				}
@@ -181,7 +221,7 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if noIndexFile {
 			if (a.Flags & config.HAFDirListing) != 0 {
-				a.dirListing(w, r, path, fi.ModTime(), root)
+				a.dirListing(w, r, trgPath, fi.ModTime(), root)
 			} else {
 				http.NotFound(w, r)
 			}
@@ -189,7 +229,7 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(trgPath)
 	if err != nil {
 		appendLogFields(r, err.Error())
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -197,5 +237,5 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	http.ServeContent(w, r, path, fi.ModTime(), f)
+	http.ServeContent(w, r, trgPath, fi.ModTime(), f)
 }
