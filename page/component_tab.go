@@ -69,6 +69,7 @@ type mdcTabBar struct {
 	id          string
 	activatedFn func(tabIndex int)
 	tabs        vecty.List
+	jsTabBar    js.Value
 }
 
 func newMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.ComponentOrHTML) (r *mdcTabBar) {
@@ -78,10 +79,10 @@ func newMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.Compo
 }
 
 func (ch *mdcTabBar) mdcInitialized() {
-	tabBar := js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
+	ch.jsTabBar = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.id),
 	)
-	tabBar.Call("listen", "MDCTabBar:activated", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	ch.jsTabBar.Call("listen", "MDCTabBar:activated", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			ch.activatedFn(args[0].Get("detail").Get("index").Int())
 		}

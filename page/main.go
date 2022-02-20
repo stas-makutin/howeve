@@ -37,8 +37,7 @@ func main() {
 	addStyles()
 	addScript()
 
-	page := &pageMain{}
-
+	page := newPageMain()
 	if err := vecty.RenderInto("body", page); err != nil {
 		panic(err)
 	}

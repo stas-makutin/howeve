@@ -29,10 +29,16 @@ func init() {
 	if len(os.Args) >= 2 {
 		basePath = strings.TrimSuffix(os.Args[1], "/")
 	}
+
 	routesPaths = map[pageRoute]string{}
 	for routePath, route := range routes {
 		routesPaths[route] = routePath
 	}
+
+	js.Global().Get("window").Call("addEventListener", "popstate", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		dispatch(getRoute())
+		return nil
+	}))
 }
 
 func getLocation() (path string) {
@@ -62,6 +68,7 @@ func getRoute() pageRoute {
 func toRoute(route pageRoute) bool {
 	if routePath, ok := routesPaths[route]; ok {
 		setLocation(basePath + routePath)
+		dispatch(route)
 		return true
 	}
 	return false
