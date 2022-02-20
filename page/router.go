@@ -44,7 +44,6 @@ func init() {
 func getLocation() (path string) {
 	location := js.Global().Get("window").Get("location")
 	path = location.Get("pathname").String()
-	// hash = location.Get("hash")
 	return
 }
 

@@ -139,7 +139,7 @@ func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 		if a.valid(routes) {
 			var handler http.Handler = &a
 			if (a.Flags & config.HAFGZipContent) != 0 {
-				handler = gzipHandler(handler, gzip.BestCompression)
+				handler = gzipHandler(handler, a.GzipIncludes, a.GzipExcludes, gzip.BestCompression)
 			}
 			mux.Handle(ast.Route, handler)
 			routes[a.Route] = struct{}{}

@@ -60,10 +60,12 @@ func (flags HttpAssetFlag) MarshalJSON() ([]byte, error) {
 }
 
 type HTTPAsset struct {
-	Route      string        `yaml:"route,omitempty" json:"route,omitempty"`
-	Path       string        `yaml:"path,omitempty" json:"path,omitempty"`
-	IndexFiles []string      `yaml:"indexFiles,omitempty" json:"indexFiles,omitempty"`
-	Includes   []string      `yaml:"includes,omitempty" json:"includes,omitempty"`
-	Excludes   []string      `yaml:"excludes,omitempty" json:"excludes,omitempty"`
-	Flags      HttpAssetFlag `yaml:"flags,omitempty" json:"flags,omitempty"`
+	Route        string        `yaml:"route,omitempty" json:"route,omitempty"`
+	Path         string        `yaml:"path,omitempty" json:"path,omitempty"`
+	IndexFiles   []string      `yaml:"indexFiles,omitempty" json:"indexFiles,omitempty"`
+	Includes     []string      `yaml:"includes,omitempty" json:"includes,omitempty"`
+	Excludes     []string      `yaml:"excludes,omitempty" json:"excludes,omitempty"`
+	GzipIncludes []string      `yaml:"gzipIncludes,omitempty" json:"gzipIncludes,omitempty"`
+	GzipExcludes []string      `yaml:"gzipExcludes,omitempty" json:"gzipExcludes,omitempty"`
+	Flags        HttpAssetFlag `yaml:"flags,omitempty" json:"flags,omitempty"`
 }

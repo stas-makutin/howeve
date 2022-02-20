@@ -3,6 +3,7 @@ package httpsrv
 import (
 	"compress/gzip"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -27,11 +28,41 @@ func (w *gzipResponseWriter) Flush() {
 	}
 }
 
-func gzipHandler(next http.Handler, level int) http.Handler {
+func gzipDisabled(r *http.Request, includes, excludes []string) bool {
+	if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		return true
+	}
+
+	trgPath := r.URL.Path
+
+	if len(excludes) > 0 {
+		for _, pattern := range excludes {
+			if m, err := path.Match(pattern, trgPath); m || err != nil {
+				return true
+			}
+			if m, err := path.Match(pattern, path.Base(trgPath)); m || err != nil {
+				return true
+			}
+		}
+	}
+	if len(includes) > 0 {
+		for _, pattern := range includes {
+			if m, err := path.Match(pattern, trgPath); !m || err != nil {
+				if m, err := path.Match(pattern, path.Base(trgPath)); !m || err != nil {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func gzipHandler(next http.Handler, includes, excludes []string, level int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Vary", "Accept-Encoding")
 
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		if gzipDisabled(r, includes, excludes) {
 			next.ServeHTTP(w, r)
 			return
 		}
