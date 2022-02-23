@@ -3,45 +3,54 @@ package main
 import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/stas-makutin/howeve/page/actions"
+	"github.com/stas-makutin/howeve/page/components"
+	"github.com/stas-makutin/howeve/page/core"
+	"github.com/stas-makutin/howeve/page/views"
 )
 
 type pageMain struct {
 	vecty.Core
-	viewRoute pageRoute
-	tabBar    *mdcTabBar
+	viewRoute core.PageRoute
+	tabBar    *components.MdcTabBar
 }
 
 func newPageMain() (r *pageMain) {
 	r = &pageMain{}
-	subscribeGlobal(r)
+	actions.SubscribeGlobal(r)
 	return
 }
 
-func (ch *pageMain) routeChange(route pageRoute) {
+func (ch *pageMain) OnRouteChange(route core.PageRoute) {
 	if ch.viewRoute != route {
 		ch.viewRoute = route
-		if ch.tabBar != nil && !(ch.tabBar.jsTabBar.IsUndefined() || ch.tabBar.jsTabBar.IsNull()) {
-			ch.tabBar.jsTabBar.Call("activateTab", int(route))
+		if ch.tabBar != nil && !(ch.tabBar.JsTabBar.IsUndefined() || ch.tabBar.JsTabBar.IsNull()) {
+			ch.tabBar.JsTabBar.Call("activateTab", int(route))
 		}
 	}
 }
 
 func (ch *pageMain) tabChange(tabIndex int) {
-	route := pageRoute(tabIndex)
+	route := core.PageRoute(tabIndex)
 	if ch.viewRoute != route {
 		ch.viewRoute = route
-		toRoute(route)
+		core.ToRoute(route)
 	}
 }
 
+func (ch *pageMain) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
 func (ch *pageMain) Render() vecty.ComponentOrHTML {
-	ch.viewRoute = getRoute()
-	ch.tabBar = newMdcTabBar(
+	ch.viewRoute = core.GetRoute()
+	ch.tabBar = components.NewMdcTabBar(
 		"top-tab", ch.tabChange,
-		newMdcTab("Protocols", ch.viewRoute == ProtocolViewRoute),
-		newMdcTab("Services", ch.viewRoute == ServicesViewRoute),
-		newMdcTab("Messages", ch.viewRoute == MessagesViewRoute),
-		&title{},
+		components.NewMdcTab("Protocols", ch.viewRoute == core.ProtocolViewRoute),
+		components.NewMdcTab("Services", ch.viewRoute == core.ServicesViewRoute),
+		components.NewMdcTab("Messages", ch.viewRoute == core.MessagesViewRoute),
+		&components.Title{},
 	)
 	return elem.Body(ch.tabBar, newViewMain())
 }
@@ -52,20 +61,28 @@ type viewMain struct {
 
 func newViewMain() (r *viewMain) {
 	r = &viewMain{}
-	subscribeGlobal(r)
+	actions.SubscribeGlobal(r)
 	return
 }
 
-func (ch *viewMain) routeChange(route pageRoute) {
+func (ch *viewMain) OnRouteChange(route core.PageRoute) {
 	vecty.Rerender(ch)
 }
 
+func (ch *viewMain) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
 func (ch *viewMain) Render() vecty.ComponentOrHTML {
-	route := getRoute()
+	route := core.GetRoute()
 	return elem.Main(
-		vecty.If(route == ProtocolViewRoute, &viewProtocols{}),
-		vecty.If(route == ServicesViewRoute, &viewServices{}),
-		vecty.If(route == MessagesViewRoute, &viewMessages{}),
-		vecty.If(route == NotFoundRoute, &viewNotFound{}),
+		vecty.Markup(
+			vecty.Class("view"),
+		),
+		vecty.If(route == core.ProtocolViewRoute, views.NewViewProtocols()),
+		vecty.If(route == core.ServicesViewRoute, &views.ViewServices{}),
+		vecty.If(route == core.MessagesViewRoute, &views.ViewMessages{}),
+		vecty.If(route == core.NotFoundRoute, &views.ViewNotFound{}),
 	)
 }

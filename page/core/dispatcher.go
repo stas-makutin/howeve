@@ -1,19 +1,19 @@
-package main
+package core
 
 // subscriberID identifier type for the subscriber
-type subscriberID int
+type SubscriberID int
 
 // subscriberFn function signature for the subscriber
-type subscriberFn func(event interface{})
+type SubscriberFn func(event interface{})
 
 //
 var (
-	subscribers      = make(map[subscriberID]subscriberFn)
-	lastSubscriberID subscriberID
+	subscribers      = make(map[SubscriberID]SubscriberFn)
+	lastSubscriberID SubscriberID
 )
 
 // subscribe func
-func dispatcherSubscribe(fn subscriberFn) (id subscriberID) {
+func DispatcherSubscribe(fn SubscriberFn) (id SubscriberID) {
 	for {
 		lastSubscriberID++
 		id = lastSubscriberID
@@ -26,12 +26,12 @@ func dispatcherSubscribe(fn subscriberFn) (id subscriberID) {
 }
 
 // unsubscribe func
-func dispatcherUnsubscribe(id subscriberID) {
+func DispatcherUnsubscribe(id SubscriberID) {
 	delete(subscribers, id)
 }
 
 // dispatch func
-func dispatch(event interface{}, receivers ...subscriberID) {
+func Dispatch(event interface{}, receivers ...SubscriberID) {
 	if len(receivers) > 0 {
 		for _, id := range receivers {
 			if fn, ok := subscribers[id]; ok {

@@ -13,4 +13,24 @@ body {
 #top-tab .app-title {
 	padding: 0 16px 0 16px
 }
+.mdc-data-table__header-cell {
+	font-weight: bold;
+}
+.view {
+	position: relative;
+}
+.view-loading {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	zIndex: 100;
+	vertical-align: middle;
+	opacity: 70%;
+}
+.view-loading__progress {
+	margin: 10% 50%;
+	opacity: 100%;
+}
 `

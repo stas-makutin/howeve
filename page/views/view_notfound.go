@@ -1,4 +1,4 @@
-package main
+package views
 
 import (
 	"github.com/hexops/vecty"
@@ -6,11 +6,16 @@ import (
 	"github.com/hexops/vecty/prop"
 )
 
-type viewNotFound struct {
+type ViewNotFound struct {
 	vecty.Core
 }
 
-func (ch *viewNotFound) Render() vecty.ComponentOrHTML {
+func (ch *ViewNotFound) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
+func (ch *ViewNotFound) Render() vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(
 			vecty.Class("mdc-layout-grid"),

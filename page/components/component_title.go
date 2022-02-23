@@ -1,18 +1,23 @@
-package main
+package components
 
 import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 )
 
-type title struct {
+type Title struct {
 	vecty.Core
 }
 
-func (ch *title) Render() vecty.ComponentOrHTML {
+func (ch *Title) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
+func (ch *Title) Render() vecty.ComponentOrHTML {
 	return elem.Section(
 		vecty.Markup(
-			vecty.Class("app-title"),
+			vecty.Class("app-Title"),
 		),
 		elem.Div(
 			vecty.Markup(

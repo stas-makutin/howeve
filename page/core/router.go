@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"os"
@@ -6,10 +6,10 @@ import (
 	"syscall/js"
 )
 
-type pageRoute int
+type PageRoute int
 
 const (
-	ProtocolViewRoute = pageRoute(iota)
+	ProtocolViewRoute = PageRoute(iota)
 	ServicesViewRoute
 	MessagesViewRoute
 	NotFoundRoute
@@ -17,42 +17,42 @@ const (
 
 var basePath = ""
 
-var routes = map[string]pageRoute{
+var routes = map[string]PageRoute{
 	"/":         ProtocolViewRoute,
 	"/services": ServicesViewRoute,
 	"/messages": MessagesViewRoute,
 }
 
-var routesPaths map[pageRoute]string
+var routesPaths map[PageRoute]string
 
 func init() {
 	if len(os.Args) >= 2 {
 		basePath = strings.TrimSuffix(os.Args[1], "/")
 	}
 
-	routesPaths = map[pageRoute]string{}
+	routesPaths = map[PageRoute]string{}
 	for routePath, route := range routes {
 		routesPaths[route] = routePath
 	}
 
 	js.Global().Get("window").Call("addEventListener", "popstate", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		dispatch(getRoute())
+		Dispatch(GetRoute())
 		return nil
 	}))
 }
 
-func getLocation() (path string) {
+func GetLocation() (path string) {
 	location := js.Global().Get("window").Get("location")
 	path = location.Get("pathname").String()
 	return
 }
 
-func setLocation(url string) {
+func SetLocation(url string) {
 	js.Global().Get("history").Call("pushState", nil, "", url)
 }
 
-func getRoute() pageRoute {
-	path := getLocation()
+func GetRoute() PageRoute {
+	path := GetLocation()
 	if strings.HasPrefix(path, basePath) {
 		path = path[len(basePath):len(path)]
 		for routePath, route := range routes {
@@ -64,10 +64,10 @@ func getRoute() pageRoute {
 	return NotFoundRoute
 }
 
-func toRoute(route pageRoute) bool {
+func ToRoute(route PageRoute) bool {
 	if routePath, ok := routesPaths[route]; ok {
-		setLocation(basePath + routePath)
-		dispatch(route)
+		SetLocation(basePath + routePath)
+		Dispatch(route)
 		return true
 	}
 	return false

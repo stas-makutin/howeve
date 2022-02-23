@@ -1,15 +1,20 @@
-package main
+package views
 
 import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 )
 
-type viewProtocols struct {
+type ViewMessages struct {
 	vecty.Core
 }
 
-func (ch *viewProtocols) Render() vecty.ComponentOrHTML {
+func (ch *ViewMessages) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
+func (ch *ViewMessages) Render() vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(
 			vecty.Class("mdc-layout-grid__inner"),
@@ -18,7 +23,7 @@ func (ch *viewProtocols) Render() vecty.ComponentOrHTML {
 			vecty.Markup(
 				vecty.Class("mdc-layout-grid__cell", "mdc-layout-grid__cell--span-12"),
 			),
-			vecty.Text("Protocols View"),
+			vecty.Text("Messages View"),
 		),
 	)
 }

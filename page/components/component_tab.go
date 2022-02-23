@@ -1,4 +1,4 @@
-package main
+package components
 
 import (
 	"syscall/js"
@@ -6,27 +6,33 @@ import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/actions"
 )
 
-type mdcTab struct {
+type MdcTab struct {
 	vecty.Core
-	text   string
-	active bool
+	Text   string
+	Active bool
 }
 
-func newMdcTab(text string, active bool) (r *mdcTab) {
-	r = &mdcTab{text: text, active: active}
+func NewMdcTab(text string, active bool) (r *MdcTab) {
+	r = &MdcTab{Text: text, Active: active}
 	return
 }
 
-func (ch *mdcTab) Render() vecty.ComponentOrHTML {
+func (ch *MdcTab) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
+func (ch *MdcTab) Render() vecty.ComponentOrHTML {
 	return elem.Button(
 		vecty.Markup(
 			vecty.Class("mdc-tab"),
 			vecty.Attribute("role", "tab"),
 			vecty.Attribute("tabIndex", "0"),
 			vecty.MarkupIf(
-				ch.active,
+				ch.Active,
 				vecty.Class("mdc-tab--active"),
 				vecty.Attribute("aria-selected", "true"),
 			),
@@ -39,14 +45,14 @@ func (ch *mdcTab) Render() vecty.ComponentOrHTML {
 				vecty.Markup(
 					vecty.Class("mdc-tab__text-label"),
 				),
-				vecty.Text(ch.text),
+				vecty.Text(ch.Text),
 			),
 		),
 		elem.Span(
 			vecty.Markup(
 				vecty.Class("mdc-tab-indicator"),
 				vecty.MarkupIf(
-					ch.active,
+					ch.Active,
 					vecty.Class("mdc-tab-indicator--active"),
 				),
 			),
@@ -64,36 +70,41 @@ func (ch *mdcTab) Render() vecty.ComponentOrHTML {
 	)
 }
 
-type mdcTabBar struct {
+type MdcTabBar struct {
 	vecty.Core
-	id          string
-	activatedFn func(tabIndex int)
-	tabs        vecty.List
-	jsTabBar    js.Value
+	ID          string
+	ActivatedFn func(tabIndex int)
+	Tabs        vecty.List
+	JsTabBar    js.Value
 }
 
-func newMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.ComponentOrHTML) (r *mdcTabBar) {
-	r = &mdcTabBar{id: id, activatedFn: activatedFn, tabs: tabs}
-	subscribeGlobal(r)
+func NewMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.ComponentOrHTML) (r *MdcTabBar) {
+	r = &MdcTabBar{ID: id, ActivatedFn: activatedFn, Tabs: tabs}
+	actions.SubscribeGlobal(r)
 	return
 }
 
-func (ch *mdcTabBar) mdcInitialized() {
-	ch.jsTabBar = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
-		"attachTo", js.Global().Get("document").Call("getElementById", ch.id),
+func (ch *MdcTabBar) OnLoad() {
+	ch.JsTabBar = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
+		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
-	ch.jsTabBar.Call("listen", "MDCTabBar:activated", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	ch.JsTabBar.Call("listen", "MDCTabBar:activated", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
-			ch.activatedFn(args[0].Get("detail").Get("index").Int())
+			ch.ActivatedFn(args[0].Get("detail").Get("index").Int())
 		}
 		return nil
 	}))
 }
 
-func (ch *mdcTabBar) Render() vecty.ComponentOrHTML {
+func (ch *MdcTabBar) Copy() vecty.Component {
+	cpy := *ch
+	return &cpy
+}
+
+func (ch *MdcTabBar) Render() vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(
-			prop.ID(ch.id),
+			prop.ID(ch.ID),
 			vecty.Class("mdc-tab-bar"),
 			vecty.Attribute("role", "tablist"),
 		),
@@ -109,7 +120,7 @@ func (ch *mdcTabBar) Render() vecty.ComponentOrHTML {
 					vecty.Markup(
 						vecty.Class("mdc-tab-scroller__scroll-content"),
 					),
-					ch.tabs,
+					ch.Tabs,
 				),
 			),
 		),
