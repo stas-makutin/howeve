@@ -10,28 +10,42 @@ import (
 
 type ViewProtocols struct {
 	vecty.Core
-	loading bool
+	rendered   bool
+	loading    bool
+	useSockets bool
 }
 
 func NewViewProtocols() (r *ViewProtocols) {
-	r = &ViewProtocols{loading: true}
-	actions.SubscribeGlobal(r)
+	store := actions.GetProtocolViewStore()
+	r = &ViewProtocols{
+		rendered:   false,
+		loading:    store.Loading,
+		useSockets: store.UseSocket,
+	}
+	actions.Subscribe(r)
 	return
 }
 
-func (ch *ViewProtocols) OnLoad() {
-	actions.ProtocolViewRegister()
-}
-
 func (ch *ViewProtocols) OnChange(event interface{}) {
-	if s, ok := event.(*actions.ProtocolViewStore); ok {
-		ch.loading = s.Loading
-		vecty.Rerender(ch)
+	if store, ok := event.(*actions.ProtocolViewStore); ok {
+		ch.loading = store.Loading
+		ch.useSockets = store.UseSocket
+		if ch.rendered {
+			vecty.Rerender(ch)
+		}
 	}
 }
 
+func (ch *ViewProtocols) Mount() {
+	core.Dispatch(&actions.ProtocolsLoad{Force: false, UseSocket: ch.useSockets})
+}
+
+func (ch *ViewProtocols) changeUseSocket(checked, disabled bool) {
+	core.Dispatch(actions.ProtocolsUseSocket(checked))
+}
+
 func (ch *ViewProtocols) refresh() {
-	core.Dispatch(actions.ProtocolsLoadFetch)
+	core.Dispatch(&actions.ProtocolsLoad{Force: true, UseSocket: ch.useSockets})
 }
 
 func (ch *ViewProtocols) Copy() vecty.Component {
@@ -40,6 +54,7 @@ func (ch *ViewProtocols) Copy() vecty.Component {
 }
 
 func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
+	ch.rendered = true
 	return elem.Div(
 		vecty.Markup(
 			vecty.Class("mdc-layout-grid"),
@@ -54,7 +69,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 					vecty.Class("mdc-layout-grid__cell"),
 				),
 				components.NewMdcButton("pt-refresh", "Refresh", false),
-				components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", false, false),
+				components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 			),
 
 			elem.Div(

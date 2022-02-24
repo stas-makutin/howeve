@@ -13,16 +13,10 @@ var (
 )
 
 // subscribe func
-func DispatcherSubscribe(fn SubscriberFn) (id SubscriberID) {
-	for {
-		lastSubscriberID++
-		id = lastSubscriberID
-		if _, exists := subscribers[id]; !exists {
-			subscribers[id] = fn
-			break
-		}
-	}
-	return
+func DispatcherSubscribe(fn SubscriberFn) SubscriberID {
+	lastSubscriberID++
+	subscribers[lastSubscriberID] = fn
+	return lastSubscriberID
 }
 
 // unsubscribe func

@@ -5,28 +5,38 @@ import (
 
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
-	"github.com/stas-makutin/howeve/page/actions"
 )
 
 type MdcCheckbox struct {
 	vecty.Core
-	ID       string
-	Label    string
-	Checked  bool
-	Disabled bool
+	ID         string
+	Label      string
+	Checked    bool
+	Disabled   bool
+	changeFn   func(checked, disabled bool)
+	jsCheckbox js.Value
 }
 
-func NewMdcCheckbox(id string, label string, checked, disabled bool) (r *MdcCheckbox) {
-	r = &MdcCheckbox{ID: id, Label: label, Checked: checked, Disabled: disabled}
-	actions.SubscribeGlobal(r)
+func NewMdcCheckbox(id string, label string, checked, disabled bool, changeFn func(checked, disabled bool)) (r *MdcCheckbox) {
+	r = &MdcCheckbox{ID: id, Label: label, Checked: checked, Disabled: disabled, changeFn: changeFn}
 	return
 }
 
-func (ch *MdcCheckbox) OnLoad() {
-	js.Global().Get("mdc").Get("checkbox").Get("MDCCheckbox").Call(
+func (ch *MdcCheckbox) Mount() {
+	ch.jsCheckbox = js.Global().Get("mdc").Get("checkbox").Get("MDCCheckbox").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
+}
+
+func (ch *MdcCheckbox) Unmount() {
+	ch.jsCheckbox.Call("destroy")
+}
+
+func (ch *MdcCheckbox) onClick(event *vecty.Event) {
+	ch.Checked = ch.jsCheckbox.Get("checked").Bool()
+	ch.changeFn(ch.Checked, ch.Disabled)
 }
 
 func (ch *MdcCheckbox) Copy() vecty.Component {
@@ -48,6 +58,7 @@ func (ch *MdcCheckbox) Render() vecty.ComponentOrHTML {
 					ch.Disabled,
 					vecty.Class("mdc-checkbox--disabled"),
 				),
+				event.Click(ch.onClick),
 			),
 			elem.Input(
 				vecty.Markup(

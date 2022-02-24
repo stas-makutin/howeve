@@ -6,7 +6,6 @@ import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/prop"
-	"github.com/stas-makutin/howeve/page/actions"
 )
 
 type MdcTab struct {
@@ -80,11 +79,10 @@ type MdcTabBar struct {
 
 func NewMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.ComponentOrHTML) (r *MdcTabBar) {
 	r = &MdcTabBar{ID: id, ActivatedFn: activatedFn, Tabs: tabs}
-	actions.SubscribeGlobal(r)
 	return
 }
 
-func (ch *MdcTabBar) OnLoad() {
+func (ch *MdcTabBar) Mount() {
 	ch.JsTabBar = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
@@ -94,6 +92,10 @@ func (ch *MdcTabBar) OnLoad() {
 		}
 		return nil
 	}))
+}
+
+func (ch *MdcTabBar) Unmount() {
+	ch.JsTabBar.Call("destroy")
 }
 
 func (ch *MdcTabBar) Copy() vecty.Component {

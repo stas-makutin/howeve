@@ -17,7 +17,7 @@ type pageMain struct {
 
 func newPageMain() (r *pageMain) {
 	r = &pageMain{}
-	actions.SubscribeGlobal(r)
+	actions.Subscribe(r)
 	return
 }
 
@@ -61,7 +61,7 @@ type viewMain struct {
 
 func newViewMain() (r *viewMain) {
 	r = &viewMain{}
-	actions.SubscribeGlobal(r)
+	actions.Subscribe(r)
 	return
 }
 

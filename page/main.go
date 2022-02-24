@@ -16,12 +16,7 @@ func main() {
 	addStyles()
 	addScript()
 
-	page := newPageMain()
-	if err := vecty.RenderInto("body", page); err != nil {
-		panic(err)
-	}
-
-	// wait for MDC
+	// wait for MDC script
 	waitTime := 6 * time.Second
 	tickTime := 100 * time.Microsecond
 	for js.Global().Get("mdc").IsUndefined() {
@@ -30,6 +25,11 @@ func main() {
 			panic("failed to initialize MDC")
 		}
 		waitTime -= tickTime
+	}
+
+	page := newPageMain()
+	if err := vecty.RenderInto("body", page); err != nil {
+		panic(err)
 	}
 
 	core.Dispatch(actions.LoadEvent(0))

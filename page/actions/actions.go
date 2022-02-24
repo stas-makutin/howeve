@@ -22,7 +22,7 @@ type RouteNotifier interface {
 	OnRouteChange(route core.PageRoute)
 }
 
-func SubscribeGlobal(r interface{}) {
+func Subscribe(r interface{}) {
 	core.DispatcherSubscribe(func(event interface{}) {
 		switch e := event.(type) {
 		case LoadEvent:
