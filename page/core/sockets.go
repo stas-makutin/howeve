@@ -6,42 +6,46 @@ type WebSocket struct {
 	jsSocket js.Value
 }
 
-func NewWebSocket(url string, messageFn func(data []byte), errorFn func(), closeFn func(), openFn func()) *WebSocket {
+func NewWebSocket(url string) *WebSocket {
 	return &WebSocket{
 		jsSocket: js.Global().Get("WebSocket").New(url),
 	}
 }
 
-func (ws *WebSocket) onMessage(fn func(data string)) {
+func (ws *WebSocket) OnMessage(fn func(data string)) {
 	ws.jsSocket.Call("addEventListener", "message", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
-			fn(args[0].String())
+			fn(args[0].Get("data").String())
 		}
 		return nil
 	}))
 }
 
-func (ws *WebSocket) onError(fn func()) {
+func (ws *WebSocket) OnError(fn func()) {
 	ws.jsSocket.Call("addEventListener", "error", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		fn()
 		return nil
 	}))
 }
 
-func (ws *WebSocket) onOpen(fn func()) {
+func (ws *WebSocket) OnOpen(fn func()) {
 	ws.jsSocket.Call("addEventListener", "open", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		fn()
 		return nil
 	}))
 }
 
-func (ws *WebSocket) onClose(fn func()) {
+func (ws *WebSocket) OnClose(fn func()) {
 	ws.jsSocket.Call("addEventListener", "close", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		fn()
 		return nil
 	}))
 }
 
-func (ws *WebSocket) send(data string) {
+func (ws *WebSocket) Send(data string) {
 	ws.jsSocket.Call("send", data)
+}
+
+func (ws *WebSocket) Close() {
+	ws.jsSocket.Call("close")
 }

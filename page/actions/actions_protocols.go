@@ -1,6 +1,9 @@
 package actions
 
 import (
+	"encoding/json"
+
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/page/core"
 )
 
@@ -24,6 +27,16 @@ type ProtocolsLoadFailed struct {
 }
 
 func protocolsLoadSockets() {
+	socket := core.NewWebSocket(core.WebSocketUrl())
+	socket.OnOpen(func() {
+		q := &api.Query{Type: api.QueryProtocolInfo}
+		b, _ := json.Marshal(q)
+		socket.Send(string(b))
+	})
+	socket.OnMessage(func(data string) {
+		core.Console.Log(data)
+		socket.Close()
+	})
 }
 
 func protocolsLoadFetch() {

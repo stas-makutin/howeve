@@ -24,6 +24,7 @@ var routes = map[string]PageRoute{
 }
 
 var routesPaths map[PageRoute]string
+var httpUrlBase, wsUrl string
 
 func init() {
 	if len(os.Args) >= 2 {
@@ -39,6 +40,26 @@ func init() {
 		Dispatch(GetRoute())
 		return nil
 	}))
+
+	// build url base
+	location := js.Global().Get("window").Get("location")
+	host := location.Get("host").String()
+	httpUrlBase = location.Get("protocol").String()
+	if httpUrlBase == "https:" {
+		wsUrl = "wss://"
+	} else {
+		wsUrl = "ws://"
+	}
+	httpUrlBase += "//" + host
+	wsUrl += host + "/socket"
+}
+
+func HTTPUrl(path string) string {
+	return httpUrlBase + path
+}
+
+func WebSocketUrl() string {
+	return wsUrl
 }
 
 func GetLocation() (path string) {
