@@ -24,12 +24,6 @@ type AddService struct {
 	*ServiceEntry
 }
 
-// ServiceReply - add new service reply
-type ServiceReply struct {
-	Error   *ErrorInfo `json:"error,omitempty"`
-	Success bool       `json:"success,omitempty"`
-}
-
 // AddServiceResult - add new service result
 type AddServiceResult struct {
 	ResponseHeader
@@ -123,7 +117,6 @@ type SendToService struct {
 
 // SendToServiceOutput - send message to service result payload
 type SendToServiceOutput struct {
-	ResponseHeader
 	*StatusReply
 	*defs.Message
 }

@@ -1,8 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
+
+	"github.com/google/uuid"
 )
 
 // QueryType type
@@ -58,6 +62,7 @@ var queryTypeMap = map[string]QueryType{
 	"protocolInfo": QueryProtocolInfo, "protocolInfoResult": QueryProtocolInfoResult,
 	"discover": QueryProtocolDiscover, "discoverResult": QueryProtocolDiscoverResult,
 	"discovery": QueryProtocolDiscovery, "discoveryResult": QueryProtocolDiscoveryResult,
+	"discoveryStarted": QueryProtocolDiscoveryStarted, "discoveryFinished": QueryProtocolDiscoveryFinished,
 	"addService": QueryAddService, "addServiceResult": QueryAddServiceResult,
 	"removeService": QueryRemoveService, "removeServiceResult": QueryRemoveServiceResult,
 	"changeServiceAlias": QueryChangeServiceAlias, "changeServiceAliasResult": QueryChangeServiceAliasResult,
@@ -66,6 +71,7 @@ var queryTypeMap = map[string]QueryType{
 	"sendTo": QuerySendToService, "sendToResult": QuerySendToServiceResult,
 	"getMessage": QueryGetMessage, "getMessageResult": QueryGetMessageResult,
 	"messagesList": QueryListMessages, "messagesListResult": QueryListMessagesResult,
+	"newMessage": QueryNewMessage, "dropMessage": QueryDropMessage, "updateMessageState": QueryUpdateMessageState,
 	"eventSubscribe": QueryEventSubscribe, "eventSubscribeResult": QueryEventSubscribeResult,
 }
 var queryNameMap map[QueryType]string
@@ -101,6 +107,9 @@ func (c *Query) UnmarshalJSON(data []byte) error {
 	}
 	c.Type = t
 	c.ID = env.ID
+	if bytes.Equal(env.Payload, []byte("null")) {
+		return nil
+	}
 	return c.unmarshalPayload(env.Payload)
 }
 
@@ -117,7 +126,12 @@ func (c *Query) MarshalJSON() ([]byte, error) {
 	}
 	env.Type = n
 	env.ID = c.ID
-	env.Payload = c.Payload
+	if c.Payload != nil {
+		v := reflect.ValueOf(c.Payload)
+		if !(v.Kind() == reflect.Ptr && v.IsNil()) {
+			env.Payload = c.Payload
+		}
+	}
 	return json.Marshal(env)
 }
 
@@ -135,76 +149,105 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			return err
 		}
 		c.Payload = &p
-		/*
-			case QueryProtocolInfo:
-				if len(data) > 0 {
-					var p handlers.ProtocolInfoFilter
-					if err := json.Unmarshal(data, &p); err != nil {
-						return err
-					}
-					c.Payload = &p
-				}
-			case QueryProtocolDiscover:
-				var p handlers.ProtocolDiscoverInput
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryProtocolDiscovery:
-				var p handlers.ProtocolDiscoveryInput
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryAddService:
-				var p handlers.ServiceEntry
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryRemoveService:
-				var p handlers.ServiceID
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryChangeServiceAlias:
-				var p handlers.ChangeServiceAliasQuery
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryServiceStatus:
-				var p handlers.ServiceID
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryListServices:
-				var p handlers.ListServicesInput
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QuerySendToService:
-				var p handlers.SendToServiceInput
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryGetMessage:
-				var p uuid.UUID
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-			case QueryListMessages:
-				var p handlers.ListMessagesInput
-				if err := json.Unmarshal(data, &p); err != nil {
-					return err
-				}
-				c.Payload = &p
-		*/
+	case QueryTransportListResult:
+		var p TransportListResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryProtocolInfo:
+		if len(data) > 0 {
+			var p ProtocolInfo
+			if err := json.Unmarshal(data, &p); err != nil {
+				return err
+			}
+			c.Payload = &p
+		}
+	case QueryProtocolInfoResult:
+		var p ProtocolInfoResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryProtocolDiscover:
+		var p ProtocolDiscover
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryProtocolDiscoverResult:
+		var p ProtocolDiscoverResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryProtocolDiscovery:
+		var p ProtocolDiscovery
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryProtocolDiscoveryResult, QueryProtocolDiscoveryFinished:
+		var p ProtocolDiscoveryResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryProtocolDiscoveryStarted:
+		var p ProtocolDiscoveryStarted
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryAddService:
+		var p ServiceEntry
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryAddServiceResult, QueryRemoveServiceResult, QueryChangeServiceAliasResult, QueryServiceStatusResult:
+		var p StatusReply
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryRemoveService, QueryServiceStatus:
+		var p ServiceID
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryChangeServiceAlias:
+		var p ChangeServiceAlias
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryListServices:
+		var p ListServices
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryListServicesResult:
+		var p ListServicesResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QuerySendToService:
+		var p SendToService
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QuerySendToServiceResult:
+		var p SendToServiceResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+
 	case QueryEventSubscribe:
 		var p Subscription
 		if err := json.Unmarshal(data, &p); err != nil {
@@ -233,50 +276,50 @@ func NewQueryTransportList(id string) *Query {
 	return &Query{Type: QueryTransportList, ID: id}
 }
 
-func NewQueryProtocolInfo(id string) *Query {
-	return &Query{Type: QueryProtocolInfo, ID: id}
+func NewQueryProtocolInfo(id string, p *ProtocolInfo) *Query {
+	return &Query{Type: QueryProtocolInfo, ID: id, Payload: p}
 }
 
-func NewQueryProtocolDiscover(id string) *Query {
-	return &Query{Type: QueryProtocolDiscover, ID: id}
+func NewQueryProtocolDiscover(id string, p *ProtocolDiscover) *Query {
+	return &Query{Type: QueryProtocolDiscover, ID: id, Payload: p}
 }
 
-func NewQueryProtocolDiscovery(id string) *Query {
-	return &Query{Type: QueryProtocolDiscovery, ID: id}
+func NewQueryProtocolDiscovery(id string, p *ProtocolDiscovery) *Query {
+	return &Query{Type: QueryProtocolDiscovery, ID: id, Payload: p}
 }
 
-func NewQueryAddService(id string) *Query {
-	return &Query{Type: QueryAddService, ID: id}
+func NewQueryAddService(id string, p *ServiceEntry) *Query {
+	return &Query{Type: QueryAddService, ID: id, Payload: p}
 }
 
-func NewQueryRemoveService(id string) *Query {
-	return &Query{Type: QueryRemoveService, ID: id}
+func NewQueryRemoveService(id string, p *ServiceID) *Query {
+	return &Query{Type: QueryRemoveService, ID: id, Payload: p}
 }
 
-func NewQueryChangeServiceAlias(id string) *Query {
-	return &Query{Type: QueryChangeServiceAlias, ID: id}
+func NewQueryChangeServiceAlias(id string, p *ChangeServiceAlias) *Query {
+	return &Query{Type: QueryChangeServiceAlias, ID: id, Payload: p}
 }
 
-func NewQueryServiceStatus(id string) *Query {
-	return &Query{Type: QueryServiceStatus, ID: id}
+func NewQueryServiceStatus(id string, p *ServiceID) *Query {
+	return &Query{Type: QueryServiceStatus, ID: id, Payload: p}
 }
 
-func NewQueryListServices(id string) *Query {
-	return &Query{Type: QueryListServices, ID: id}
+func NewQueryListServices(id string, p *ListServices) *Query {
+	return &Query{Type: QueryListServices, ID: id, Payload: p}
 }
 
-func NewQuerySendToService(id string) *Query {
-	return &Query{Type: QuerySendToService, ID: id}
+func NewQuerySendToService(id string, p *SendToService) *Query {
+	return &Query{Type: QuerySendToService, ID: id, Payload: p}
 }
 
-func NewQueryGetMessage(id string) *Query {
-	return &Query{Type: QueryGetMessage, ID: id}
+func NewQueryGetMessage(id string, p uuid.UUID) *Query {
+	return &Query{Type: QueryGetMessage, ID: id, Payload: p}
 }
 
-func NewQueryListMessages(id string) *Query {
-	return &Query{Type: QueryListMessages, ID: id}
+func NewQueryListMessages(id string, p *ListMessages) *Query {
+	return &Query{Type: QueryListMessages, ID: id, Payload: p}
 }
 
-func NewQueryEventSubscribe(id string) *Query {
-	return &Query{Type: QueryEventSubscribe, ID: id}
+func NewQueryEventSubscribe(id string, p *Subscription) *Query {
+	return &Query{Type: QueryEventSubscribe, ID: id, Payload: p}
 }
