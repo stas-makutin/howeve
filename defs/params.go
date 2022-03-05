@@ -1,9 +1,10 @@
 package defs
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/stas-makutin/howeve/api"
 )
 
 // ParamType type of parameter type enum
@@ -70,12 +71,6 @@ type ParamInfo struct {
 
 // Params type defines named parameter collection
 type Params map[string]*ParamInfo
-
-// RawParamValues defines raw parameter values - before parsing
-type RawParamValues map[string]string
-
-// ParamValues type defines named parameter values
-type ParamValues map[string]interface{}
 
 const (
 	UnknownParamName = iota
@@ -185,8 +180,8 @@ func (p Params) Parse(name, value string) (interface{}, error) {
 }
 
 // ParseValues function validates parameters and parses their value. Returns values map or parameter name + associated error
-func (p Params) ParseValues(values RawParamValues) (ParamValues, error) {
-	rv := make(ParamValues)
+func (p Params) ParseValues(values api.RawParamValues) (api.ParamValues, error) {
+	rv := make(api.ParamValues)
 
 	for name, param := range p {
 		value, ok := values[name]
@@ -222,24 +217,4 @@ func (p Params) Merge(subp Params) (result Params) {
 		}
 	}
 	return
-}
-
-// Raw converts parameter-values into their raw form (string-string)
-func (pv ParamValues) Raw() (r RawParamValues) {
-	if len(pv) > 0 {
-		r = make(RawParamValues)
-		for name, value := range pv {
-			r[name] = fmt.Sprint(value)
-		}
-	}
-	return
-}
-
-// Copy creates copy of parameter-values
-func (pv ParamValues) Copy() ParamValues {
-	rv := make(ParamValues)
-	for k, v := range pv {
-		rv[k] = v
-	}
-	return rv
 }

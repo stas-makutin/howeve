@@ -4,158 +4,114 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 )
 
-// ErrorCode type
-type ErrorCode int
-
-// Error codes
-const (
-	ErrorUnknownProtocol = ErrorCode(iota + 1)
-	ErrorUnknownTransport
-	ErrorInvalidProtocolTransport
-	ErrorUnknownParameter
-	ErrorInvalidParameterValue
-	ErrorNoRequiredParameter
-	ErrorNoDiscovery
-	ErrorDiscoveryBusy
-	ErrorNoDiscoveryID
-	ErrorDiscoveryPending
-	ErrorDiscoveryFailed
-	ErrorServiceNoKey
-	ErrorServiceNoID
-	ErrorServiceExists
-	ErrorServiceAliasExists
-	ErrorServiceInitialize
-	ErrorServiceKeyNotExists
-	ErrorServiceAliasNotExists
-	ErrorServiceStatusBad
-	ErrorServiceBadPayload
-	ErrorServiceSendBusy
-	ErrorOtherError
-)
-
-// ErrorInfo - error
-type ErrorInfo struct {
-	Code    ErrorCode     `json:"c"`
-	Message string        `json:"m"`
-	Params  []interface{} `json:"p,omitempty"`
-	err     error
-}
-
 // newErrorInfo - makes error information structure
-func newErrorInfo(code ErrorCode, err error, args ...interface{}) (e *ErrorInfo) {
-	e = &ErrorInfo{Code: code, Params: args, err: err}
+func newErrorInfo(code api.ErrorCode, err error, args ...interface{}) (e *api.ErrorInfo) {
+	e = &api.ErrorInfo{Code: code, Params: args, Err: err}
 	switch code {
-	case ErrorUnknownProtocol:
+	case api.ErrorUnknownProtocol:
 		e.Message = fmt.Sprintf("Unknown protocol identifier %d", args...)
-	case ErrorUnknownTransport:
+	case api.ErrorUnknownTransport:
 		e.Message = fmt.Sprintf("Unknown transport identifier %d", args...)
-	case ErrorInvalidProtocolTransport:
+	case api.ErrorInvalidProtocolTransport:
 		e.Message = fmt.Sprintf(
 			"The protocol %s (%d) doesn't support the transport %s (%d)",
-			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
-			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			defs.ProtocolName(args[0].(api.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(api.TransportIdentifier)), args[1],
 		)
-	case ErrorUnknownParameter:
+	case api.ErrorUnknownParameter:
 		e.Message = fmt.Sprintf("Unknown parameter \"%s\"", args...)
-	case ErrorInvalidParameterValue:
+	case api.ErrorInvalidParameterValue:
 		e.Message = fmt.Sprintf("Unknown value \"%s\" of parameter \"%s\"", args...)
-	case ErrorNoRequiredParameter:
+	case api.ErrorNoRequiredParameter:
 		e.Message = fmt.Sprintf("Required parameter \"%s\" is missing", args...)
-	case ErrorNoDiscovery:
+	case api.ErrorNoDiscovery:
 		e.Message = fmt.Sprintf(
 			"The discovery is not supported for %s (%d) protocol and %s (%d) transport",
-			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
-			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			defs.ProtocolName(args[0].(api.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(api.TransportIdentifier)), args[1],
 		)
-	case ErrorDiscoveryBusy:
+	case api.ErrorDiscoveryBusy:
 		e.Message = "The discovery is not available - too many discovery quieries are executing at this moment"
-	case ErrorNoDiscoveryID:
+	case api.ErrorNoDiscoveryID:
 		e.Message = fmt.Sprintf("The discovery request %s not found", args...)
-	case ErrorDiscoveryPending:
+	case api.ErrorDiscoveryPending:
 		e.Message = fmt.Sprintf("The discovery request %s not completed yet", args...)
-	case ErrorDiscoveryFailed:
+	case api.ErrorDiscoveryFailed:
 		e.Message = fmt.Sprintf("The discovery has failed, reason: %s", err.Error())
-	case ErrorServiceNoKey:
+	case api.ErrorServiceNoKey:
 		e.Message = "The service key fields (protocol, transport, entry) are required"
-	case ErrorServiceNoID:
+	case api.ErrorServiceNoID:
 		e.Message = "Either service key fields (protocol, transport, entry) or service alias are required"
-	case ErrorServiceExists:
+	case api.ErrorServiceExists:
 		e.Message = fmt.Sprintf(
 			"The service exists already for %s (%d) protocol, %s (%d) transport, and %s entry",
-			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
-			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			defs.ProtocolName(args[0].(api.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(api.TransportIdentifier)), args[1],
 			args[2],
 		)
-	case ErrorServiceAliasExists:
+	case api.ErrorServiceAliasExists:
 		e.Message = fmt.Sprintf("The service's alias %s exists already", args...)
-	case ErrorServiceInitialize:
+	case api.ErrorServiceInitialize:
 		e.Message = fmt.Sprintf(
 			"The service initialization failed, %s (%d) protocol, %s (%d) transport, and %s entry, reason: %s",
-			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
-			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			defs.ProtocolName(args[0].(api.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(api.TransportIdentifier)), args[1],
 			args[2], err.Error(),
 		)
-	case ErrorServiceKeyNotExists:
+	case api.ErrorServiceKeyNotExists:
 		e.Message = fmt.Sprintf(
 			"The service not exists for %s (%d) protocol, %s (%d) transport, and %s entry",
-			defs.ProtocolName(args[0].(defs.ProtocolIdentifier)), args[0],
-			defs.TransportName(args[1].(defs.TransportIdentifier)), args[1],
+			defs.ProtocolName(args[0].(api.ProtocolIdentifier)), args[0],
+			defs.TransportName(args[1].(api.TransportIdentifier)), args[1],
 			args[2],
 		)
-	case ErrorServiceAliasNotExists:
+	case api.ErrorServiceAliasNotExists:
 		e.Message = fmt.Sprintf("The service with alias %s not exists", args...)
-	case ErrorServiceStatusBad:
+	case api.ErrorServiceStatusBad:
 		e.Message = err.Error()
-	case ErrorServiceBadPayload:
+	case api.ErrorServiceBadPayload:
 		e.Message = "The payload is not valid for the service"
-	case ErrorServiceSendBusy:
+	case api.ErrorServiceSendBusy:
 		e.Message = "The service is too busy and unable to send the message"
-	case ErrorOtherError:
+	case api.ErrorOtherError:
 		e.Message = err.Error()
 	}
 	return
 }
 
-func (e *ErrorInfo) Error() string {
-	return e.Message
-}
-
-func (e *ErrorInfo) Unwrap() error {
-	return e.err
-}
-
-func handleParamsErrors(err error) *ErrorInfo {
+func handleParamsErrors(err error) *api.ErrorInfo {
 	var pe *defs.ParseError
 	if errors.As(err, &pe) {
 		switch pe.Code {
 		case defs.UnknownParamName:
-			return newErrorInfo(ErrorUnknownParameter, err, pe.Name)
+			return newErrorInfo(api.ErrorUnknownParameter, err, pe.Name)
 		case defs.NoRequiredParam:
-			return newErrorInfo(ErrorNoRequiredParameter, err, pe.Name)
+			return newErrorInfo(api.ErrorNoRequiredParameter, err, pe.Name)
 		}
-		return newErrorInfo(ErrorInvalidParameterValue, err, pe.Value, pe.Name)
+		return newErrorInfo(api.ErrorInvalidParameterValue, err, pe.Value, pe.Name)
 	}
 	return nil
 }
 
-func handleProtocolErrors(err error, protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier) *ErrorInfo {
+func handleProtocolErrors(err error, protocol api.ProtocolIdentifier, transport api.TransportIdentifier) *api.ErrorInfo {
 	switch err {
 	case defs.ErrTransportNotSupported:
-		return newErrorInfo(ErrorUnknownTransport, err, transport)
+		return newErrorInfo(api.ErrorUnknownTransport, err, transport)
 	case defs.ErrProtocolNotSupported:
-		return newErrorInfo(ErrorUnknownProtocol, err, protocol)
+		return newErrorInfo(api.ErrorUnknownProtocol, err, protocol)
 	case defs.ErrNoProtocolTransport:
-		return newErrorInfo(ErrorInvalidProtocolTransport, err, protocol, transport)
+		return newErrorInfo(api.ErrorInvalidProtocolTransport, err, protocol, transport)
 	}
 	return nil
 }
 
-func handleServiceNotExistsError(key *defs.ServiceKey, alias string) *ErrorInfo {
+func handleServiceNotExistsError(key *api.ServiceKey, alias string) *api.ErrorInfo {
 	if key != nil {
-		return newErrorInfo(ErrorServiceKeyNotExists, defs.ErrServiceNotExists, key.Protocol, key.Transport, key.Entry)
+		return newErrorInfo(api.ErrorServiceKeyNotExists, defs.ErrServiceNotExists, key.Protocol, key.Transport, key.Entry)
 	}
-	return newErrorInfo(ErrorServiceAliasNotExists, defs.ErrServiceNotExists, alias)
+	return newErrorInfo(api.ErrorServiceAliasNotExists, defs.ErrServiceNotExists, alias)
 }

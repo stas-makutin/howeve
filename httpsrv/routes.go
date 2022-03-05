@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
 const webSocketRoute = "/socket"
 
-func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
+func setupRoutes(mux *http.ServeMux, assets []api.HTTPAsset) {
 
 	routes := make(map[string]struct{})
 
@@ -138,7 +138,7 @@ func setupRoutes(mux *http.ServeMux, assets []config.HTTPAsset) {
 		a := asset(ast)
 		if a.valid(routes) {
 			var handler http.Handler = &a
-			if (a.Flags & config.HAFGZipContent) != 0 {
+			if (a.Flags & api.HAFGZipContent) != 0 {
 				handler = gzipHandler(handler, a.GzipIncludes, a.GzipExcludes, gzip.BestCompression)
 			}
 			mux.Handle(ast.Route, handler)

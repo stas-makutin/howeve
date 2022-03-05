@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stas-makutin/howeve/api"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,7 +46,7 @@ services:
         param2: value2
 `
 
-	var config Config
+	var config api.Config
 	t.Run("Parse YAML", func(t *testing.T) {
 		if err := yaml.NewDecoder(strings.NewReader(src)).Decode(&config); err != nil {
 			t.Error(err)

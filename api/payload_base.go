@@ -1,5 +1,7 @@
 package api
 
+import "fmt"
+
 // ProtocolListEntry - list of supported protocols
 type ProtocolListEntry struct {
 	ID   ProtocolIdentifier `json:"id"`
@@ -35,6 +37,26 @@ type RawParamValues map[string]string
 
 // ParamValues type defines named parameter values
 type ParamValues map[string]interface{}
+
+// Raw converts parameter-values into their raw form (string-string)
+func (pv ParamValues) Raw() (r RawParamValues) {
+	if len(pv) > 0 {
+		r = make(RawParamValues)
+		for name, value := range pv {
+			r[name] = fmt.Sprint(value)
+		}
+	}
+	return
+}
+
+// Copy creates copy of parameter-values
+func (pv ParamValues) Copy() ParamValues {
+	rv := make(ParamValues)
+	for k, v := range pv {
+		rv[k] = v
+	}
+	return rv
+}
 
 // ProtocolTransportInfoEntry - protocol detaild information
 type ProtocolTransportInfoEntry struct {

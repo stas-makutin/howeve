@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/log"
@@ -46,7 +47,7 @@ type servicesRegistry struct {
 	services map[defs.ServiceKey]*serviceInfo
 	aliases  map[string]*serviceInfo
 
-	cfg []config.ServiceConfig
+	cfg []api.ServiceConfig
 
 	*discoveryRegistry
 }
@@ -59,11 +60,11 @@ func NewTask() *servicesRegistry {
 	return sr
 }
 
-func (sr *servicesRegistry) readConfig(cfg *config.Config, cfgError config.Error) {
+func (sr *servicesRegistry) readConfig(cfg *api.Config, cfgError config.Error) {
 	sr.cfg = cfg.Services
 }
 
-func (sr *servicesRegistry) writeConfig(cfg *config.Config) {
+func (sr *servicesRegistry) writeConfig(cfg *api.Config) {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 	cfg.Services = sr.cfg
@@ -113,7 +114,7 @@ func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues
 		return err
 	}
 
-	sr.cfg = append(sr.cfg, config.ServiceConfig{
+	sr.cfg = append(sr.cfg, api.ServiceConfig{
 		Alias:     alias,
 		Protocol:  defs.ProtocolName(key.Protocol),
 		Transport: defs.TransportName(key.Transport),

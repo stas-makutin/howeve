@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/log"
 )
 
@@ -28,7 +28,7 @@ const (
 	haOcIncludeInvalid = "I"
 )
 
-type asset config.HTTPAsset
+type asset api.HTTPAsset
 
 func (a *asset) valid(routes map[string]struct{}) bool {
 	rc := true
@@ -56,7 +56,7 @@ func (a *asset) checkVisibility(trgPath string) bool {
 	if name == "" {
 		return false
 	}
-	if (a.Flags & config.HAFShowHidden) == 0 {
+	if (a.Flags & api.HAFShowHidden) == 0 {
 		if name[0:1] == "." {
 			return false
 		}
@@ -148,7 +148,7 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fi, err := os.Stat(trgPath)
-	if os.IsNotExist(err) && (a.Flags&config.HAFFlat) != 0 {
+	if os.IsNotExist(err) && (a.Flags&api.HAFFlat) != 0 {
 		// in flat mode all paths "flats" into asset directory to support client-based routing
 		// main idea of this mode that if some path is not exists it always translated to asset path
 		// example:
@@ -220,7 +220,7 @@ func (a *asset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if noIndexFile {
-			if (a.Flags & config.HAFDirListing) != 0 {
+			if (a.Flags & api.HAFDirListing) != 0 {
 				a.dirListing(w, r, trgPath, fi.ModTime(), root)
 			} else {
 				http.NotFound(w, r)

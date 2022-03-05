@@ -4,14 +4,8 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/api"
 )
-
-// ServiceKey struct defines service unique identifier/key
-type ServiceKey struct {
-	Protocol  ProtocolIdentifier  `json:"protocol"`
-	Transport TransportIdentifier `json:"transport"`
-	Entry     string              `json:"entry"`
-}
 
 // ServiceStatus describes the status of the service
 type ServiceStatus error
@@ -24,7 +18,7 @@ type Service interface {
 	Start()
 	Stop()
 	Status() ServiceStatus
-	Send(payload []byte) (*Message, error)
+	Send(payload []byte) (*api.Message, error)
 }
 
 // errors
@@ -58,28 +52,28 @@ const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
 const ParamNameOutgoingMaxTTL = "outgoingMaxTTL"
 
 // ListFunc is a the callback function used in ServiceRegistry List method. Returnning true will stop services iteration
-type ListFunc func(key *ServiceKey, alias string, status ServiceStatus) bool
+type ListFunc func(key *api.ServiceKey, alias string, status ServiceStatus) bool
 
 // ResolveIDsInput is the input iteration method for ServiceREgistry ResoveIDs
-type ResolveIDsInput func() (key *ServiceKey, alias string, stop bool)
+type ResolveIDsInput func() (key *api.ServiceKey, alias string, stop bool)
 
 // ResolveIDsInput is the output method for ServiceREgistry ResoveIDs
-type ResolveIDsOutput func(key *ServiceKey, alias string)
+type ResolveIDsOutput func(key *api.ServiceKey, alias string)
 
 // ServiceRegistry defines possible operations with services
 type ServiceRegistry interface {
-	Discover(protocol ProtocolIdentifier, transport TransportIdentifier, params RawParamValues) (uuid.UUID, error)
+	Discover(protocol api.ProtocolIdentifier, transport api.TransportIdentifier, params api.RawParamValues) (uuid.UUID, error)
 	Discovery(id uuid.UUID, stop bool) ([]*DiscoveryEntry, error)
 
-	Add(key *ServiceKey, params RawParamValues, alias string) error
-	Alias(key *ServiceKey, oldAlias string, newAlias string) error
-	Remove(key *ServiceKey, alias string) error
-	Status(key *ServiceKey, alias string) (ServiceStatus, bool)
+	Add(key *api.ServiceKey, params api.RawParamValues, alias string) error
+	Alias(key *api.ServiceKey, oldAlias string, newAlias string) error
+	Remove(key *api.ServiceKey, alias string) error
+	Status(key *api.ServiceKey, alias string) (ServiceStatus, bool)
 	List(listFn ListFunc)
 
 	ResolveIDs(out ResolveIDsOutput, in ResolveIDsInput)
 
-	Send(key *ServiceKey, alias string, payload []byte) (*Message, error)
+	Send(key *api.ServiceKey, alias string, payload []byte) (*api.Message, error)
 }
 
 // Services provides access to ServiceRegistry implementation (set in services module)

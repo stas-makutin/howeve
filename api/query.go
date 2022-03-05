@@ -247,7 +247,36 @@ func (c *Query) unmarshalPayload(data []byte) error {
 			return err
 		}
 		c.Payload = &p
-
+	case QueryGetMessage:
+		var p uuid.UUID
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryGetMessageResult, QueryNewMessage, QueryDropMessage:
+		var p MessageEntry
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryListMessages:
+		var p ListMessages
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryListMessagesResult:
+		var p ListMessagesResult
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
+	case QueryUpdateMessageState:
+		var p UpdateMessageState
+		if err := json.Unmarshal(data, &p); err != nil {
+			return err
+		}
+		c.Payload = &p
 	case QueryEventSubscribe:
 		var p Subscription
 		if err := json.Unmarshal(data, &p); err != nil {
@@ -256,70 +285,4 @@ func (c *Query) unmarshalPayload(data []byte) error {
 		c.Payload = &p
 	}
 	return nil
-}
-
-// methods to create request queries
-
-func NewQueryRestart(id string) *Query {
-	return &Query{Type: QueryRestart, ID: id}
-}
-
-func NewQueryGetConfig(id string) *Query {
-	return &Query{Type: QueryGetConfig, ID: id}
-}
-
-func NewQueryProtocolList(id string) *Query {
-	return &Query{Type: QueryProtocolList, ID: id}
-}
-
-func NewQueryTransportList(id string) *Query {
-	return &Query{Type: QueryTransportList, ID: id}
-}
-
-func NewQueryProtocolInfo(id string, p *ProtocolInfo) *Query {
-	return &Query{Type: QueryProtocolInfo, ID: id, Payload: p}
-}
-
-func NewQueryProtocolDiscover(id string, p *ProtocolDiscover) *Query {
-	return &Query{Type: QueryProtocolDiscover, ID: id, Payload: p}
-}
-
-func NewQueryProtocolDiscovery(id string, p *ProtocolDiscovery) *Query {
-	return &Query{Type: QueryProtocolDiscovery, ID: id, Payload: p}
-}
-
-func NewQueryAddService(id string, p *ServiceEntry) *Query {
-	return &Query{Type: QueryAddService, ID: id, Payload: p}
-}
-
-func NewQueryRemoveService(id string, p *ServiceID) *Query {
-	return &Query{Type: QueryRemoveService, ID: id, Payload: p}
-}
-
-func NewQueryChangeServiceAlias(id string, p *ChangeServiceAlias) *Query {
-	return &Query{Type: QueryChangeServiceAlias, ID: id, Payload: p}
-}
-
-func NewQueryServiceStatus(id string, p *ServiceID) *Query {
-	return &Query{Type: QueryServiceStatus, ID: id, Payload: p}
-}
-
-func NewQueryListServices(id string, p *ListServices) *Query {
-	return &Query{Type: QueryListServices, ID: id, Payload: p}
-}
-
-func NewQuerySendToService(id string, p *SendToService) *Query {
-	return &Query{Type: QuerySendToService, ID: id, Payload: p}
-}
-
-func NewQueryGetMessage(id string, p uuid.UUID) *Query {
-	return &Query{Type: QueryGetMessage, ID: id, Payload: p}
-}
-
-func NewQueryListMessages(id string, p *ListMessages) *Query {
-	return &Query{Type: QueryListMessages, ID: id, Payload: p}
-}
-
-func NewQueryEventSubscribe(id string, p *Subscription) *Query {
-	return &Query{Type: QueryEventSubscribe, ID: id, Payload: p}
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/config"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events/handlers"
@@ -23,7 +24,7 @@ type messageLog struct {
 	log  *messages
 	size int
 
-	cfg          *config.MessageLogConfig
+	cfg          *api.MessageLogConfig
 	maxSize      int
 	autoPersists time.Duration
 
@@ -72,7 +73,7 @@ func (ml *messageLog) Stop(ctx *tasks.ServiceTaskContext) {
 	ml.save()
 }
 
-func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
+func (ml *messageLog) readConfig(cfg *api.Config, cfgError config.Error) {
 	ml.cfg = cfg.MessageLog
 
 	ml.maxSize = 0
@@ -93,7 +94,7 @@ func (ml *messageLog) readConfig(cfg *config.Config, cfgError config.Error) {
 	}
 }
 
-func (ml *messageLog) writeConfig(cfg *config.Config) {
+func (ml *messageLog) writeConfig(cfg *api.Config) {
 	cfg.MessageLog = ml.cfg
 }
 
@@ -126,7 +127,7 @@ func (ml *messageLog) load() bool {
 		ml.size, err = ml.log.load(ml.cfg.File, ml.maxSize)
 		if err != nil {
 			log.Report(log.SrcMsg, opLoad, err.Error())
-			if ml.cfg.Flags&config.MLFlagIgnoreReadError == 0 {
+			if ml.cfg.Flags&api.MLFlagIgnoreReadError == 0 {
 				return true
 			}
 		}

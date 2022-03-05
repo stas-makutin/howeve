@@ -8,6 +8,11 @@ const (
 	ProtocolZWave = ProtocolIdentifier(iota + 1)
 )
 
+// IsValid verifies if protocol identifer is valid
+func (protocol ProtocolIdentifier) IsValid() bool {
+	return protocol == ProtocolZWave
+}
+
 // TransportIdentifier type
 type TransportIdentifier uint8
 
@@ -15,3 +20,8 @@ type TransportIdentifier uint8
 const (
 	TransportSerial = TransportIdentifier(iota + 1)
 )
+
+// IsValid verifies if protocol identifer is valid
+func (transport TransportIdentifier) IsValid() bool {
+	return transport == TransportSerial
+}

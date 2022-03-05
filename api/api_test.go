@@ -12,11 +12,13 @@ import (
 
 func TestSerialization(t *testing.T) {
 	uid := uuid.New()
+	iv := 1234
+	tv := time.Now()
 	quieries := []*Query{
-		NewQueryRestart("qr"),
+		{Type: QueryRestart, ID: "qr"},
 		{Type: QueryRestartResult, ID: "qrr"},
 
-		NewQueryGetConfig("qgc"),
+		{Type: QueryGetConfig, ID: "qgc"},
 		{
 			Type: QueryGetConfigResult, ID: "qrgc",
 			Payload: &Config{
@@ -24,7 +26,7 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryProtocolList("gpl"),
+		{Type: QueryProtocolList, ID: "gpl"},
 		{
 			Type: QueryProtocolListResult, ID: "qrpl",
 			Payload: &ProtocolListResult{
@@ -35,7 +37,7 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryTransportList("qtl"),
+		{Type: QueryTransportList, ID: "qtl"},
 		{
 			Type: QueryTransportListResult, ID: "qrtl",
 			Payload: &TransportListResult{
@@ -46,11 +48,11 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryProtocolInfo("qpi1", nil),
-		NewQueryProtocolInfo("qpi2", &ProtocolInfo{
+		{Type: QueryProtocolInfo, ID: "qpi1"},
+		{Type: QueryProtocolInfo, ID: "qpi2", Payload: &ProtocolInfo{
 			Protocols:  []ProtocolIdentifier{ProtocolZWave, ProtocolZWave},
 			Transports: []TransportIdentifier{TransportSerial, TransportSerial},
-		}),
+		}},
 		{
 			Type: QueryProtocolInfoResult, ID: "qrpi",
 			Payload: &ProtocolInfoResult{
@@ -83,9 +85,9 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryProtocolDiscover("qpd", &ProtocolDiscover{
+		{Type: QueryProtocolDiscover, ID: "qpd", Payload: &ProtocolDiscover{
 			Protocol: ProtocolZWave, Transport: TransportSerial, Params: RawParamValues{"param1": "value1", "param2": "value2"},
-		}),
+		}},
 		{
 			Type: QueryProtocolDiscoverResult, ID: "qrpd", Payload: ProtocolDiscoverResult{
 				ID:    &uid,
@@ -93,7 +95,7 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryProtocolDiscovery("qpdy", &ProtocolDiscovery{ID: uuid.New(), Stop: true}),
+		{Type: QueryProtocolDiscovery, ID: "qpdy", Payload: &ProtocolDiscovery{ID: uuid.New(), Stop: true}},
 		{
 			Type: QueryProtocolDiscoveryResult, ID: "qrpdy", Payload: &ProtocolDiscoveryResult{
 				ID: uuid.New(), Error: &ErrorInfo{ErrorDiscoveryFailed, "message", []interface{}{1, "aaa", 1.3}, fmt.Errorf("Some error")},
@@ -132,14 +134,14 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryAddService("qas", &ServiceEntry{
+		{Type: QueryAddService, ID: "qas", Payload: &ServiceEntry{
 			&ServiceKey{ProtocolZWave, TransportSerial, "COM3"}, RawParamValues{"p1": "v1", "p2": "v2"}, "Some alias",
-		}),
+		}},
 		{
 			Type: QueryAddServiceResult, ID: "qras", Payload: &StatusReply{nil, true},
 		},
 
-		NewQueryRemoveService("qrs", &ServiceID{&ServiceKey{ProtocolZWave, TransportSerial, ""}, ""}),
+		{Type: QueryRemoveService, ID: "qrs", Payload: &ServiceID{&ServiceKey{ProtocolZWave, TransportSerial, ""}, ""}},
 		{
 			Type: QueryRemoveServiceResult, ID: "qrrs", Payload: &StatusReply{
 				&ErrorInfo{ErrorServiceKeyNotExists, "message", nil, nil},
@@ -147,24 +149,24 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryChangeServiceAlias("qcsa", &ChangeServiceAlias{
+		{Type: QueryChangeServiceAlias, ID: "qcsa", Payload: &ChangeServiceAlias{
 			&ServiceID{&ServiceKey{ProtocolZWave, TransportSerial, "COM5"}, ""}, "Some alias",
-		}),
+		}},
 		{
 			Type: QueryChangeServiceAliasResult, ID: "qrcsa", Payload: &StatusReply{nil, true},
 		},
 
-		NewQueryServiceStatus("qss", &ServiceID{nil, "Some alias"}),
+		{Type: QueryServiceStatus, ID: "qss", Payload: &ServiceID{nil, "Some alias"}},
 		{
 			Type: QueryServiceStatusResult, ID: "qrss", Payload: &StatusReply{nil, true},
 		},
 
-		NewQueryListServices("qls", &ListServices{
+		{Type: QueryListServices, ID: "qls", Payload: &ListServices{
 			Protocols:  []ProtocolIdentifier{ProtocolZWave},
 			Transports: []TransportIdentifier{TransportSerial, TransportSerial},
 			Entries:    []string{"COM1", "COM2"},
 			Aliases:    []string{"Alias 1", "Alias 2"},
-		}),
+		}},
 		{
 			Type: QueryListServicesResult, ID: "qrls", Payload: &ListServicesResult{
 				Services: []ListServicesEntry{
@@ -174,7 +176,7 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQuerySendToService("qsts", &SendToService{&ServiceID{nil, "Alias"}, []byte{0xab, 0xf5, 0xc6, 0xe4, 0xb8}}),
+		{Type: QuerySendToService, ID: "qsts", Payload: &SendToService{&ServiceID{nil, "Alias"}, []byte{0xab, 0xf5, 0xc6, 0xe4, 0xb8}}},
 		{
 			Type: QuerySendToServiceResult, ID: "qrsts", Payload: &SendToServiceResult{
 				&StatusReply{nil, true},
@@ -182,34 +184,80 @@ func TestSerialization(t *testing.T) {
 			},
 		},
 
-		NewQueryGetMessage("qgm", uuid.New()),
+		{Type: QueryGetMessage, ID: "qgm", Payload: uuid.New()},
 		{
-			Type: QueryGetMessageResult, ID: "qrgm",
+			Type: QueryGetMessageResult, ID: "qrgm", Payload: &MessageEntry{
+				&ServiceKey{ProtocolZWave, TransportSerial, "/dev/tty"},
+				&Message{time.Now(), uuid.New(), OutgoingPending, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
+			},
 		},
 
-		NewQueryListMessages("qlm", nil),
+		{Type: QueryListMessages, ID: "qlm1", Payload: &ListMessages{}},
+		{Type: QueryListMessages, ID: "qlm2", Payload: &ListMessages{
+			FromIndex:        &iv,
+			FromID:           &uid,
+			FromTime:         &tv,
+			FromExclusive:    true,
+			UntilIndex:       &iv,
+			UntilID:          &uid,
+			UntilTime:        &tv,
+			UntilExclusive:   true,
+			Count:            5678,
+			CountAfterFilter: true,
+			Services: []*ServiceID{
+				{&ServiceKey{ProtocolZWave, TransportSerial, "COM5"}, ""},
+				{nil, "Alias"},
+			},
+			States: []MessageState{Incoming, OutgoingRejected},
+			Payloads: [][]PayloadMatch{
+				{{[]byte{1, 2, 3, 4, 5}, nil}, {[]byte{6, 7, 8, 9, 0}, &iv}},
+			},
+		}},
 		{
-			Type: QueryListMessagesResult, ID: "qrlm",
+			Type: QueryListMessagesResult, ID: "qrlm", Payload: ListMessagesResult{
+				Count: 3,
+				Services: []*ServiceID{
+					{&ServiceKey{ProtocolZWave, TransportSerial, "COM5"}, ""},
+					{&ServiceKey{ProtocolZWave, TransportSerial, "/dev/tty3"}, "ZSerial"},
+				},
+				Messages: []*ListMessage{
+					{0, &Message{time.Now(), uuid.New(), Incoming, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}}},
+					{0, &Message{time.Now(), uuid.New(), Outgoing, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}}},
+					{1, &Message{time.Now(), uuid.New(), Outgoing, []byte{5, 6, 7, 8, 9, 0}}},
+				},
+			},
 		},
 
 		{
-			Type: QueryNewMessage, ID: "qrnm",
+			Type: QueryNewMessage, ID: "qrnm", Payload: &MessageEntry{
+				&ServiceKey{ProtocolZWave, TransportSerial, "/dev/tty"},
+				&Message{time.Now(), uuid.New(), OutgoingPending, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
+			},
 		},
 		{
-			Type: QueryDropMessage, ID: "qrdm",
+			Type: QueryDropMessage, ID: "qrdm", Payload: &MessageEntry{
+				&ServiceKey{ProtocolZWave, TransportSerial, "/dev/tty"},
+				&Message{time.Now(), uuid.New(), OutgoingPending, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
+			},
 		},
 		{
-			Type: QueryUpdateMessageState, ID: "qrums",
+			Type: QueryUpdateMessageState, ID: "qrums", Payload: &UpdateMessageState{
+				&MessageEntry{
+					&ServiceKey{ProtocolZWave, TransportSerial, "/dev/tty"},
+					&Message{time.Now(), uuid.New(), Outgoing, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
+				},
+				OutgoingPending,
+			},
 		},
 
-		NewQueryEventSubscribe("qes", nil),
-		{
-			Type: QueryEventSubscribeResult, ID: "qres",
-		},
+		{Type: QueryEventSubscribe, ID: "qes", Payload: Subscription{
+			Subscribe: true, AllEvents: true, Events: []SubscriptionEvent{EventNewMessage, EventUpdateMessageState},
+		}},
+		{Type: QueryEventSubscribeResult, ID: "qres"},
 	}
 
 	t.Run("JSON serialization", func(t *testing.T) {
-		for i, query := range quieries[15:16] {
+		for i, query := range quieries {
 			queryType := queryNameMap[query.Type]
 
 			// serialize

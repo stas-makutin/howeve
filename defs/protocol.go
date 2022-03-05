@@ -4,28 +4,22 @@ import (
 	"context"
 	"errors"
 	"strings"
-)
 
-// ProtocolIdentifier type
-type ProtocolIdentifier uint8
-
-// Supported protocols identifiers
-const (
-	ProtocolZWave = ProtocolIdentifier(iota + 1)
+	"github.com/stas-makutin/howeve/api"
 )
 
 // ServiceFunc is a method which creates service or returns error
-type ServiceFunc func(entry string, params ParamValues) (Service, error)
+type ServiceFunc func(entry string, params api.ParamValues) (Service, error)
 
 // DiscoveryEntry - discovery entry - information about service instance detected during discovery
 type DiscoveryEntry struct {
-	ServiceKey
-	ParamValues `json:"params,omitempty"`
-	Description string `json:"description,omitempty"`
+	api.ServiceKey
+	api.ParamValues `json:"params,omitempty"`
+	Description     string `json:"description,omitempty"`
 }
 
 // DiscoveryFunc is a method which returns discovered service entries or error
-type DiscoveryFunc func(ctx context.Context, params ParamValues) ([]*DiscoveryEntry, error)
+type DiscoveryFunc func(ctx context.Context, params api.ParamValues) ([]*DiscoveryEntry, error)
 
 // ProtocolTransportOptions defines transport options specific for the protocol
 type ProtocolTransportOptions struct {
@@ -38,19 +32,14 @@ type ProtocolTransportOptions struct {
 // ProtocolInfo protocol definition structure
 type ProtocolInfo struct {
 	Name       string
-	Transports map[TransportIdentifier]*ProtocolTransportOptions
-}
-
-// IsValid verifies if protocol identifer is valid
-func (protocol ProtocolIdentifier) IsValid() bool {
-	return protocol == ProtocolZWave
+	Transports map[api.TransportIdentifier]*ProtocolTransportOptions
 }
 
 // Protocols contains protocols definitions (defined in service module)
-var Protocols map[ProtocolIdentifier]*ProtocolInfo
+var Protocols map[api.ProtocolIdentifier]*ProtocolInfo
 
 // ProtocolName return name of the transport for provided identifier
-func ProtocolName(p ProtocolIdentifier) string {
+func ProtocolName(p api.ProtocolIdentifier) string {
 	if pi, ok := Protocols[p]; ok {
 		return pi.Name
 	}
@@ -58,7 +47,7 @@ func ProtocolName(p ProtocolIdentifier) string {
 }
 
 // ProtocolByName resolves protocol name into identifier
-func ProtocolByName(name string) (ProtocolIdentifier, bool) {
+func ProtocolByName(name string) (api.ProtocolIdentifier, bool) {
 	for id, pi := range Protocols {
 		if strings.EqualFold(name, pi.Name) {
 			return id, true
@@ -78,7 +67,7 @@ var (
 )
 
 // ResolveProtocolAndTransport resolves protocol-transport pair
-func ResolveProtocolAndTransport(p ProtocolIdentifier, t TransportIdentifier) (*ProtocolTransportOptions, *TransportInfo, error) {
+func ResolveProtocolAndTransport(p api.ProtocolIdentifier, t api.TransportIdentifier) (*ProtocolTransportOptions, *TransportInfo, error) {
 	pi := Protocols[p]
 	if pi == nil {
 		return nil, nil, ErrProtocolNotSupported

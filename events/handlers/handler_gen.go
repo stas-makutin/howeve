@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/stas-makutin/howeve/config"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/tasks"
 )
@@ -11,14 +11,14 @@ func handleRestart(event *Restart) {
 	go tasks.StopServiceTasks()
 }
 
-func handleConfigGet(event *ConfigGet, cfg *config.Config) {
-	Dispatcher.Send(&ConfigGetResult{Config: *cfg, ResponseHeader: event.Associate()})
+func handleConfigGet(event *ConfigGet, cfg *api.Config) {
+	Dispatcher.Send(&ConfigGetResult{Config: cfg, ResponseHeader: event.Associate()})
 }
 
 func handleProtocolList(event *ProtocolList) {
 	r := &ProtocolListResult{ResponseHeader: event.Associate()}
 	for k, v := range defs.Protocols {
-		r.Protocols = append(r.Protocols, &ProtocolListEntry{ID: uint8(k), Name: v.Name})
+		r.Protocols = append(r.Protocols, &api.ProtocolListEntry{ID: k, Name: v.Name})
 	}
 	Dispatcher.Send(r)
 }
@@ -26,7 +26,7 @@ func handleProtocolList(event *ProtocolList) {
 func handleTransportList(event *TransportList) {
 	r := &TransportListResult{ResponseHeader: event.Associate()}
 	for k, v := range defs.Transports {
-		r.Transports = append(r.Transports, &TransportListEntry{ID: uint8(k), Name: v.Name})
+		r.Transports = append(r.Transports, &api.TransportListEntry{ID: k, Name: v.Name})
 	}
 	Dispatcher.Send(r)
 }
