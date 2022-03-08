@@ -90,6 +90,10 @@ type Query struct {
 	Payload interface{}
 }
 
+func QueryTypeName(t QueryType) string {
+	return queryNameMap[t]
+}
+
 // UnmarshalJSON func
 func (c *Query) UnmarshalJSON(data []byte) error {
 	var env struct {

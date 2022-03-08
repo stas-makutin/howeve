@@ -1,33 +1,36 @@
 package handlers
 
-import "github.com/stas-makutin/howeve/defs"
+import (
+	"github.com/stas-makutin/howeve/api"
+	"github.com/stas-makutin/howeve/defs"
+)
 
 // SendNewMessage sends NewMessage event
-func SendNewMessage(service *defs.ServiceKey, message *defs.Message) {
+func SendNewMessage(service *api.ServiceKey, message *api.Message) {
 	Dispatcher.SendAsync(&NewMessage{
 		Header: *NewHeader(""),
-		MessageEntry: &MessageEntry{
+		MessageEntry: &api.MessageEntry{
 			ServiceKey: service, Message: message,
 		},
 	})
 }
 
 // SendDropMessage sends DropMessage event
-func SendDropMessage(service *defs.ServiceKey, message *defs.Message) {
+func SendDropMessage(service *api.ServiceKey, message *api.Message) {
 	Dispatcher.SendAsync(&DropMessage{
 		Header: *NewHeader(""),
-		MessageEntry: &MessageEntry{
+		MessageEntry: &api.MessageEntry{
 			ServiceKey: service, Message: message,
 		},
 	})
 }
 
 // SendUpdateMessageState sends UpdateMessageState event
-func SendUpdateMessageState(service *defs.ServiceKey, message *defs.Message, prevState defs.MessageState) {
+func SendUpdateMessageState(service *api.ServiceKey, message *api.Message, prevState api.MessageState) {
 	Dispatcher.SendAsync(&UpdateMessageState{
 		Header: *NewHeader(""),
-		UpdateMessageStateData: &UpdateMessageStateData{
-			MessageEntry: &MessageEntry{
+		UpdateMessageState: &api.UpdateMessageState{
+			MessageEntry: &api.MessageEntry{
 				ServiceKey: service, Message: message,
 			},
 			PrevState: prevState,
@@ -39,7 +42,7 @@ func handleGetMessage(event *GetMessage) {
 	r := &GetMessageResult{ResponseHeader: event.Associate()}
 	key, message := defs.Messages.Get(event.ID)
 	if key != nil && message != nil {
-		r.MessageEntry = &MessageEntry{
+		r.MessageEntry = &api.MessageEntry{
 			ServiceKey: key,
 			Message:    message,
 		}
@@ -63,15 +66,15 @@ func handleListMessages(event *ListMessages) {
 		fromFn = defs.Messages.FromIndex(0, false)
 	}
 
-	serviceIndices := make(map[defs.ServiceKey]int)
-	itFn = func(index int, key *defs.ServiceKey, message *defs.Message) bool {
+	serviceIndices := make(map[api.ServiceKey]int)
+	itFn = func(index int, key *api.ServiceKey, message *api.Message) bool {
 		serviceIndex, ok := serviceIndices[*key]
 		if !ok {
 			serviceIndex = len(r.Services)
-			r.Services = append(r.Services, &ServiceID{ServiceKey: key})
+			r.Services = append(r.Services, &api.ServiceID{ServiceKey: key})
 			serviceIndices[*key] = serviceIndex
 		}
-		r.Messages = append(r.Messages, &ListMessage{Message: message, ServiceIndex: serviceIndex})
+		r.Messages = append(r.Messages, &api.ListMessage{Message: message, ServiceIndex: serviceIndex})
 		return false
 	}
 
@@ -84,15 +87,15 @@ func handleListMessages(event *ListMessages) {
 		itFn = defs.UntilCounter(count, itFn)
 	}
 	if len(event.Services) > 0 {
-		var serviceKeys []*defs.ServiceKey
+		var serviceKeys []*api.ServiceKey
 		i := 0
 		defs.Services.ResolveIDs(
-			func(key *defs.ServiceKey, alias string) {
+			func(key *api.ServiceKey, alias string) {
 				if key != nil {
 					serviceKeys = append(serviceKeys, key)
 				}
 			},
-			func() (*defs.ServiceKey, string, bool) {
+			func() (*api.ServiceKey, string, bool) {
 				si := event.Services[i]
 				i += 1
 				return si.ServiceKey, si.Alias, i >= len(event.Services)
@@ -122,10 +125,10 @@ func handleListMessages(event *ListMessages) {
 	if len(r.Services) > 0 {
 		i := -1
 		defs.Services.ResolveIDs(
-			func(key *defs.ServiceKey, alias string) {
+			func(key *api.ServiceKey, alias string) {
 				r.Services[i].Alias = alias
 			},
-			func() (*defs.ServiceKey, string, bool) {
+			func() (*api.ServiceKey, string, bool) {
 				i += 1
 				return r.Services[i].ServiceKey, "", i+1 >= len(r.Services)
 			},

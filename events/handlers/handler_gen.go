@@ -16,7 +16,7 @@ func handleConfigGet(event *ConfigGet, cfg *api.Config) {
 }
 
 func handleProtocolList(event *ProtocolList) {
-	r := &ProtocolListResult{ResponseHeader: event.Associate()}
+	r := &ProtocolListResult{ResponseHeader: event.Associate(), ProtocolListResult: &api.ProtocolListResult{}}
 	for k, v := range defs.Protocols {
 		r.Protocols = append(r.Protocols, &api.ProtocolListEntry{ID: k, Name: v.Name})
 	}
@@ -24,7 +24,7 @@ func handleProtocolList(event *ProtocolList) {
 }
 
 func handleTransportList(event *TransportList) {
-	r := &TransportListResult{ResponseHeader: event.Associate()}
+	r := &TransportListResult{ResponseHeader: event.Associate(), TransportListResult: &api.TransportListResult{}}
 	for k, v := range defs.Transports {
 		r.Transports = append(r.Transports, &api.TransportListEntry{ID: k, Name: v.Name})
 	}
@@ -34,8 +34,8 @@ func handleTransportList(event *TransportList) {
 func handleProtocolInfo(event *ProtocolInfo) {
 	r := &ProtocolInfoResult{ResponseHeader: event.Associate()}
 
-	tf := func(tid defs.TransportIdentifier, pi *defs.ProtocolInfo, pie *ProtocolInfoEntry) {
-		ptie := &ProtocolTransportInfoEntry{ID: tid, Valid: false}
+	tf := func(tid api.TransportIdentifier, pi *defs.ProtocolInfo, pie *api.ProtocolInfoEntry) {
+		ptie := &api.ProtocolTransportInfoEntry{ID: tid, Valid: false}
 		if ti, ok := defs.Transports[tid]; ok {
 			ptie.Name = ti.Name
 			if pto, ok := pi.Transports[tid]; ok {
@@ -47,27 +47,29 @@ func handleProtocolInfo(event *ProtocolInfo) {
 		}
 		pie.Transports = append(pie.Transports, ptie)
 	}
-	pf := func(pid defs.ProtocolIdentifier, pi *defs.ProtocolInfo) {
-		pie := &ProtocolInfoEntry{ID: pid, Valid: true, Name: pi.Name}
-		if event.Filter != nil && len(event.Filter.Transports) > 0 {
-			for _, t := range event.Filter.Transports {
-				tf(defs.TransportIdentifier(t), pi, pie)
+	pf := func(pid api.ProtocolIdentifier, pi *defs.ProtocolInfo) {
+		pie := &api.ProtocolInfoEntry{ID: pid, Valid: true, Name: pi.Name}
+		if event.ProtocolInfo != nil && len(event.Transports) > 0 {
+			for _, t := range event.Transports {
+				tf(t, pi, pie)
 			}
 		} else {
 			for tid := range pi.Transports {
 				tf(tid, pi, pie)
 			}
 		}
+		if r.ProtocolInfoResult == nil {
+			r.ProtocolInfoResult = &api.ProtocolInfoResult{}
+		}
 		r.Protocols = append(r.Protocols, pie)
 	}
 
-	if event.Filter != nil && len(event.Filter.Protocols) > 0 {
-		for _, p := range event.Filter.Protocols {
-			pid := defs.ProtocolIdentifier(p)
+	if event.ProtocolInfo != nil && len(event.Protocols) > 0 {
+		for _, pid := range event.Protocols {
 			if pi, ok := defs.Protocols[pid]; ok {
 				pf(pid, pi)
 			} else {
-				r.Protocols = append(r.Protocols, &ProtocolInfoEntry{ID: p, Valid: false})
+				r.Protocols = append(r.Protocols, &api.ProtocolInfoEntry{ID: pid, Valid: false})
 			}
 		}
 	} else {

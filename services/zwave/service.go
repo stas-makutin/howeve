@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/log"
 	"github.com/stas-makutin/howeve/services/serial"
@@ -38,10 +39,10 @@ const (
 // Service ZWave service implementation
 type Service struct {
 	transport defs.Transport
-	key       *defs.ServiceKey
-	params    defs.ParamValues
+	key       *api.ServiceKey
+	params    api.ParamValues
 
-	sendQueue chan *defs.Message
+	sendQueue chan *api.Message
 
 	status atomic.Value
 
@@ -51,7 +52,7 @@ type Service struct {
 }
 
 // NewServiceSerial creates new zwave service implementation using serial transport
-func NewService(transport defs.Transport, entry string, params defs.ParamValues) (defs.Service, error) {
+func NewService(transport defs.Transport, entry string, params api.ParamValues) (defs.Service, error) {
 	// explicitly override timeouts, they must be 0 for non-blocking read/write operations
 	pv := params.Copy()
 	pv[serial.ParamNameReadTimeout] = 0
@@ -59,9 +60,9 @@ func NewService(transport defs.Transport, entry string, params defs.ParamValues)
 
 	return &Service{
 		transport: transport,
-		key:       &defs.ServiceKey{Protocol: defs.ProtocolZWave, Transport: transport.ID(), Entry: entry},
+		key:       &api.ServiceKey{Protocol: api.ProtocolZWave, Transport: transport.ID(), Entry: entry},
 		params:    pv,
-		sendQueue: make(chan *defs.Message, 10),
+		sendQueue: make(chan *api.Message, 10),
 	}, nil
 }
 
@@ -88,7 +89,7 @@ PurgeLoop:
 		default:
 			break PurgeLoop
 		case message := <-svc.sendQueue:
-			defs.Messages.UpdateState(message.ID, defs.OutgoingRejected)
+			defs.Messages.UpdateState(message.ID, api.OutgoingRejected)
 		}
 	}
 
@@ -101,24 +102,24 @@ func (svc *Service) Status() defs.ServiceStatus {
 	return svc.status.Load().(defs.ServiceStatus)
 }
 
-func (svc *Service) Send(payload []byte) (*defs.Message, error) {
+func (svc *Service) Send(payload []byte) (*api.Message, error) {
 	if len(payload) <= 0 || len(payload) > 255 {
 		return nil, defs.ErrBadPayload
 	}
 
-	message := defs.Messages.Register(svc.key, payload, defs.OutgoingPending)
+	message := defs.Messages.Register(svc.key, payload, api.OutgoingPending)
 
 QueueLoop:
 	for {
 		select {
 		default:
 			if svc.Status() == defs.ErrStatusGood {
-				defs.Messages.UpdateState(message.ID, defs.OutgoingRejected)
+				defs.Messages.UpdateState(message.ID, api.OutgoingRejected)
 				return message, defs.ErrSendBusy
 			}
 			// purge message queue if service is unhealthy
 			msg := <-svc.sendQueue
-			defs.Messages.UpdateState(msg.ID, defs.OutgoingRejected)
+			defs.Messages.UpdateState(msg.ID, api.OutgoingRejected)
 		case svc.sendQueue <- message:
 			break QueueLoop
 		}
@@ -211,14 +212,14 @@ ServiceLoop:
 				break ServiceLoop
 			case message := <-svc.sendQueue:
 				if outgoingMaxTTL > 0 && time.Now().UTC().Sub(message.Time) > outgoingMaxTTL {
-					defs.Messages.UpdateState(message.ID, defs.OutgoingTimedOut)
+					defs.Messages.UpdateState(message.ID, api.OutgoingTimedOut)
 				} else if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
 					svc.status.Store(err)
 					svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteQueue, err.Error())
-					defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
+					defs.Messages.UpdateState(message.ID, api.OutgoingFailed)
 					open = true
 				} else {
-					defs.Messages.UpdateState(message.ID, defs.Outgoing)
+					defs.Messages.UpdateState(message.ID, api.Outgoing)
 					if vr, _ := zw.ValidateDataFrame(message.Payload); vr == zw.FrameOK || vr == zw.FrameWrongChecksum {
 						expectReply = true
 					}
@@ -247,7 +248,7 @@ ServiceLoop:
 			for rb < re {
 				switch buffer[rb] {
 				case zw.FrameASK, zw.FrameNAK, zw.FrameCAN:
-					defs.Messages.Register(svc.key, buffer[rb:rb+1], defs.Incoming)
+					defs.Messages.Register(svc.key, buffer[rb:rb+1], api.Incoming)
 					rb++
 
 				case zw.FrameSOF:
@@ -256,7 +257,7 @@ ServiceLoop:
 					switch vr, pos := zw.ValidateDataFrame(buffer[rb:re]); vr {
 					case zw.FrameOK:
 						reply = []byte{zw.FrameASK}
-						defs.Messages.Register(svc.key, buffer[rb:rb+pos], defs.Incoming)
+						defs.Messages.Register(svc.key, buffer[rb:rb+pos], api.Incoming)
 						rb += pos
 
 					case zw.FrameIncomplete:
@@ -275,15 +276,15 @@ ServiceLoop:
 					}
 
 					if len(reply) > 0 {
-						message := defs.Messages.Register(svc.key, reply, defs.OutgoingPending)
+						message := defs.Messages.Register(svc.key, reply, api.OutgoingPending)
 						if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
 							svc.status.Store(err)
 							svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteReply, err.Error())
-							defs.Messages.UpdateState(message.ID, defs.OutgoingFailed)
+							defs.Messages.UpdateState(message.ID, api.OutgoingFailed)
 							open = true
 							break ReadLoop
 						} else {
-							defs.Messages.UpdateState(message.ID, defs.Outgoing)
+							defs.Messages.UpdateState(message.ID, api.Outgoing)
 						}
 					}
 				default:

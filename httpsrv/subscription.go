@@ -4,42 +4,16 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
-// SubscriptionEvent defines types of events to subscribe (web sockets only)
-type SubscriptionEvent byte
-
-// SubscriptionEvent types
-const (
-	EventDiscoveryStarted = SubscriptionEvent(iota)
-	EventDiscoveryFinished
-	EventNewMessage
-	EventDropMessage
-	EventUpdateMessageState
-)
-
-var subscriptionEventNameMap = map[string]SubscriptionEvent{
-	"discoveryStarted":   EventDiscoveryStarted,
-	"discoveryFinished":  EventDiscoveryFinished,
-	"newMessage":         EventNewMessage,
-	"dropMessage":        EventDropMessage,
-	"updateMessageState": EventUpdateMessageState,
-}
-
-var subscriptionEventTypeMap = map[SubscriptionEvent]reflect.Type{
-	EventDiscoveryStarted:   reflect.TypeOf(&handlers.DiscoveryStarted{}),
-	EventDiscoveryFinished:  reflect.TypeOf(&handlers.DiscoveryFinished{}),
-	EventNewMessage:         reflect.TypeOf(&handlers.NewMessage{}),
-	EventDropMessage:        reflect.TypeOf(&handlers.DropMessage{}),
-	EventUpdateMessageState: reflect.TypeOf(&handlers.UpdateMessageState{}),
-}
-
-// Subscription query structure
-type Subscription struct {
-	Subscribe bool                `json:"subscribe"`
-	AllEvents bool                `json:"all,omitempty"`
-	Events    []SubscriptionEvent `json:"events,omitempty"`
+var subscriptionEventTypeMap = map[api.SubscriptionEvent]reflect.Type{
+	api.EventDiscoveryStarted:   reflect.TypeOf(&handlers.ProtocolDiscoveryStarted{}),
+	api.EventDiscoveryFinished:  reflect.TypeOf(&handlers.ProtocolDiscoveryFinished{}),
+	api.EventNewMessage:         reflect.TypeOf(&handlers.NewMessage{}),
+	api.EventDropMessage:        reflect.TypeOf(&handlers.DropMessage{}),
+	api.EventUpdateMessageState: reflect.TypeOf(&handlers.UpdateMessageState{}),
 }
 
 type socketSubscription struct {
@@ -53,7 +27,7 @@ func newSocketSubscription() *socketSubscription {
 	}
 }
 
-func (s *socketSubscription) subscribe(query *Subscription) {
+func (s *socketSubscription) subscribe(query *api.Subscription) {
 	s.Lock()
 	defer s.Unlock()
 

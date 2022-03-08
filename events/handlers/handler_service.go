@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 )
 
 func handleAddService(event *AddService) {
-	r := &AddServiceResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	r := &AddServiceResult{ResponseHeader: event.Associate(), StatusReply: &api.StatusReply{Success: false}}
 	errorInfo := validateServiceKey(event.ServiceKey)
 	if errorInfo == nil {
 		if err := defs.Services.Add(event.ServiceKey, event.Params, event.Alias); err == nil {
@@ -14,16 +15,16 @@ func handleAddService(event *AddService) {
 		} else {
 			switch err {
 			case defs.ErrServiceExists:
-				errorInfo = newErrorInfo(ErrorServiceExists, err, event.Protocol, event.Transport, event.Entry)
+				errorInfo = newErrorInfo(api.ErrorServiceExists, err, event.Protocol, event.Transport, event.Entry)
 			case defs.ErrAliasExists:
-				errorInfo = newErrorInfo(ErrorServiceAliasExists, err, event.Alias)
+				errorInfo = newErrorInfo(api.ErrorServiceAliasExists, err, event.Alias)
 			default:
 				errorInfo = handleProtocolErrors(err, event.Protocol, event.Transport)
 				if errorInfo == nil {
 					errorInfo = handleParamsErrors(err)
 				}
 				if errorInfo == nil {
-					errorInfo = newErrorInfo(ErrorServiceInitialize, err, event.Protocol, event.Transport, event.Entry)
+					errorInfo = newErrorInfo(api.ErrorServiceInitialize, err, event.Protocol, event.Transport, event.Entry)
 				}
 			}
 		}
@@ -33,7 +34,7 @@ func handleAddService(event *AddService) {
 }
 
 func handleRemoveService(event *RemoveService) {
-	r := &RemoveServiceResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	r := &RemoveServiceResult{ResponseHeader: event.Associate(), StatusReply: &api.StatusReply{Success: false}}
 	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
 	if errorInfo == nil {
 		if err := defs.Services.Remove(event.ServiceKey, event.Alias); err == nil {
@@ -47,7 +48,7 @@ func handleRemoveService(event *RemoveService) {
 }
 
 func handleChangeServiceAlias(event *ChangeServiceAlias) {
-	r := &ChangeServiceAliasResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	r := &ChangeServiceAliasResult{ResponseHeader: event.Associate(), StatusReply: &api.StatusReply{Success: false}}
 	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
 	if errorInfo == nil {
 		if err := defs.Services.Alias(event.ServiceKey, event.Alias, event.NewAlias); err == nil {
@@ -61,14 +62,14 @@ func handleChangeServiceAlias(event *ChangeServiceAlias) {
 }
 
 func handleServiceStatus(event *ServiceStatus) {
-	r := &ServiceStatusResult{ResponseHeader: event.Associate(), StatusReply: &StatusReply{Success: false}}
+	r := &ServiceStatusResult{ResponseHeader: event.Associate(), StatusReply: &api.StatusReply{Success: false}}
 	errorInfo := validateServiceID(event.ServiceKey, event.Alias)
 	if errorInfo == nil {
 		if status, exists := defs.Services.Status(event.ServiceKey, event.Alias); exists {
 			if status == nil || status == defs.ErrStatusGood {
 				r.Success = true
 			} else {
-				errorInfo = newErrorInfo(ErrorServiceStatusBad, status)
+				errorInfo = newErrorInfo(api.ErrorServiceStatusBad, status)
 			}
 		} else {
 			errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
@@ -80,7 +81,7 @@ func handleServiceStatus(event *ServiceStatus) {
 
 func handleListServices(event *ListServices) {
 	r := &ListServicesResult{ResponseHeader: event.Associate()}
-	defs.Services.List(func(key *defs.ServiceKey, alias string, status defs.ServiceStatus) bool {
+	defs.Services.List(func(key *api.ServiceKey, alias string, status defs.ServiceStatus) bool {
 		found := 0b1111
 		if len(event.Protocols) > 0 {
 			mask := 0b0001
@@ -123,14 +124,14 @@ func handleListServices(event *ListServices) {
 			}
 		}
 		if found == 0b1111 {
-			statusReply := &StatusReply{Success: false}
+			statusReply := &api.StatusReply{Success: false}
 			if status == nil || status == defs.ErrStatusGood {
 				statusReply.Success = true
 			} else {
-				statusReply.Error = newErrorInfo(ErrorServiceStatusBad, status)
+				statusReply.Error = newErrorInfo(api.ErrorServiceStatusBad, status)
 			}
-			r.Services = append(r.Services, ListServicesEntry{
-				&ServiceID{ServiceKey: key, Alias: alias}, statusReply,
+			r.Services = append(r.Services, api.ListServicesEntry{
+				ServiceID: &api.ServiceID{ServiceKey: key, Alias: alias}, StatusReply: statusReply,
 			})
 		}
 		return false
@@ -150,11 +151,11 @@ func handleSendToService(event *SendToService) {
 			case defs.ErrServiceNotExists:
 				errorInfo = handleServiceNotExistsError(event.ServiceKey, event.Alias)
 			case defs.ErrBadPayload:
-				errorInfo = newErrorInfo(ErrorServiceBadPayload, err)
+				errorInfo = newErrorInfo(api.ErrorServiceBadPayload, err)
 			case defs.ErrSendBusy:
-				errorInfo = newErrorInfo(ErrorServiceSendBusy, err)
+				errorInfo = newErrorInfo(api.ErrorServiceSendBusy, err)
 			default:
-				errorInfo = newErrorInfo(ErrorOtherError, err)
+				errorInfo = newErrorInfo(api.ErrorOtherError, err)
 			}
 		}
 	}
@@ -162,42 +163,44 @@ func handleSendToService(event *SendToService) {
 	Dispatcher.Send(r)
 }
 
-func SendDiscoveryStarted(id uuid.UUID, protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, params defs.RawParamValues) {
-	Dispatcher.SendAsync(&DiscoveryStarted{
+func SendDiscoveryStarted(id uuid.UUID, protocol api.ProtocolIdentifier, transport api.TransportIdentifier, params api.RawParamValues) {
+	Dispatcher.SendAsync(&ProtocolDiscoveryStarted{
 		Header: *NewHeader(""),
-		DiscoveryRequest: &DiscoveryRequest{
-			ID:        id,
-			Protocol:  protocol,
-			Transport: transport,
-			Params:    params,
+		ProtocolDiscoveryStarted: &api.ProtocolDiscoveryStarted{
+			ID: id,
+			ProtocolDiscover: api.ProtocolDiscover{
+				Protocol:  protocol,
+				Transport: transport,
+				Params:    params,
+			},
 		},
 	})
 }
 
-func SendDiscoveryFinished(id uuid.UUID, entries []*defs.DiscoveryEntry, err error) {
-	Dispatcher.SendAsync(&DiscoveryFinished{
+func SendDiscoveryFinished(id uuid.UUID, entries []*api.DiscoveryEntry, err error) {
+	Dispatcher.SendAsync(&ProtocolDiscoveryFinished{
 		Header: *NewHeader(""),
-		DiscoveryResult: &DiscoveryResult{
+		ProtocolDiscoveryResult: &api.ProtocolDiscoveryResult{
 			ID:      id,
 			Entries: entries,
-			Error:   newErrorInfo(ErrorDiscoveryFailed, err),
+			Error:   newErrorInfo(api.ErrorDiscoveryFailed, err),
 		},
 	})
 }
 
 func handleProtocolDiscover(event *ProtocolDiscover) {
-	r := &ProtocolDiscoverResult{ResponseHeader: event.Associate(), ProtocolDiscoverOutput: &ProtocolDiscoverOutput{}}
+	r := &ProtocolDiscoverResult{ResponseHeader: event.Associate(), ProtocolDiscoverResult: &api.ProtocolDiscoverResult{}}
 	id, err := defs.Services.Discover(event.Protocol, event.Transport, event.Params)
 	if id != uuid.Nil {
 		r.ID = &id
 	}
 	if err != nil {
-		var errorInfo *ErrorInfo
+		var errorInfo *api.ErrorInfo
 		switch err {
 		case defs.ErrNoDiscovery:
-			errorInfo = newErrorInfo(ErrorNoDiscovery, err, event.Protocol, event.Transport)
+			errorInfo = newErrorInfo(api.ErrorNoDiscovery, err, event.Protocol, event.Transport)
 		case defs.ErrDiscoveryBusy:
-			errorInfo = newErrorInfo(ErrorDiscoveryBusy, err)
+			errorInfo = newErrorInfo(api.ErrorDiscoveryBusy, err)
 		default:
 			errorInfo = handleProtocolErrors(err, event.Protocol, event.Transport)
 			if errorInfo != nil {
@@ -214,12 +217,12 @@ func handleProtocolDiscovery(event *ProtocolDiscovery) {
 	entries, err := defs.Services.Discovery(event.ID, event.Stop)
 	r.Entries = entries
 	if err != nil {
-		var errorInfo *ErrorInfo
+		var errorInfo *api.ErrorInfo
 		switch err {
 		case defs.ErrNoDiscoveryID:
-			errorInfo = newErrorInfo(ErrorNoDiscoveryID, err, event.ID)
+			errorInfo = newErrorInfo(api.ErrorNoDiscoveryID, err, event.ID)
 		case defs.ErrDiscoveryPending:
-			errorInfo = newErrorInfo(ErrorDiscoveryPending, err, event.ID)
+			errorInfo = newErrorInfo(api.ErrorDiscoveryPending, err, event.ID)
 		}
 		r.Error = errorInfo
 	}

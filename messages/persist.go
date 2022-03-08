@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/api"
 )
 
 /*
@@ -93,7 +93,7 @@ func readMessages(r io.Reader, lengthLimit int) (*messages, int, error) {
 		return nil, 0, err
 	}
 	length := minimalLength
-	serviceIndices := make(map[uint16]*defs.ServiceKey)
+	serviceIndices := make(map[uint16]*api.ServiceKey)
 	var serviceIndex uint16 = 0
 	for ; serviceIndex < serviceCount; serviceIndex++ {
 		if service, err := readServicesEntry(r, serviceIndex); err != nil {
@@ -137,7 +137,7 @@ func writeMessages(w io.Writer, messages *messages) error {
 		return err
 	}
 
-	serviceIndices := make(map[defs.ServiceKey]uint16)
+	serviceIndices := make(map[api.ServiceKey]uint16)
 	var serviceIndex uint16 = 0
 
 	if err := writeServicesCount(w, uint16(len(messages.services))); err != nil {
@@ -209,15 +209,15 @@ func writeServicesCount(w io.Writer, servicesCount uint16) error {
 	return nil
 }
 
-func readServicesEntry(r io.Reader, serviceIndex uint16) (*defs.ServiceKey, error) {
-	var protocol defs.ProtocolIdentifier
+func readServicesEntry(r io.Reader, serviceIndex uint16) (*api.ServiceKey, error) {
+	var protocol api.ProtocolIdentifier
 	if err := binary.Read(r, binary.LittleEndian, &protocol); err != nil {
 		return nil, readError(fmt.Sprintf("service %d protocol identifier", serviceIndex), err)
 	}
 	if !protocol.IsValid() {
 		return nil, fmt.Errorf("service %d protocol identifier %d is not valid", serviceIndex, protocol)
 	}
-	var transport defs.TransportIdentifier
+	var transport api.TransportIdentifier
 	if err := binary.Read(r, binary.LittleEndian, &transport); err != nil {
 		return nil, readError(fmt.Sprintf("service %d transport identifier", serviceIndex), err)
 	}
@@ -234,10 +234,10 @@ func readServicesEntry(r io.Reader, serviceIndex uint16) (*defs.ServiceKey, erro
 			return nil, readError(fmt.Sprintf("service %d entry", serviceIndex), err)
 		}
 	}
-	return &defs.ServiceKey{Transport: transport, Protocol: protocol, Entry: string(entry)}, nil
+	return &api.ServiceKey{Transport: transport, Protocol: protocol, Entry: string(entry)}, nil
 }
 
-func writeServicesEntry(w io.Writer, service defs.ServiceKey, serviceIndex uint16) error {
+func writeServicesEntry(w io.Writer, service api.ServiceKey, serviceIndex uint16) error {
 	if err := binary.Write(w, binary.LittleEndian, service.Protocol); err != nil {
 		return writeError(fmt.Sprintf("service %d protocol identifier", serviceIndex), err)
 	}
@@ -253,7 +253,7 @@ func writeServicesEntry(w io.Writer, service defs.ServiceKey, serviceIndex uint1
 	return nil
 }
 
-func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (*message, error) {
+func readMessageEntry(r io.Reader, serviceIndices map[uint16]*api.ServiceKey) (*message, error) {
 	readMessageError := func(name string, err error) (*message, error) {
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return nil, nil // ignore if no more messages or message is not complete
@@ -277,7 +277,7 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 	if err := binary.Read(r, binary.LittleEndian, &id); err != nil {
 		return readMessageError("message ID", err)
 	}
-	var state defs.MessageState
+	var state api.MessageState
 	if err := binary.Read(r, binary.LittleEndian, &state); err != nil {
 		return readMessageError("message state", err)
 	}
@@ -293,7 +293,7 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 	}
 	return &message{
 		ServiceKey: service,
-		Message: &defs.Message{
+		Message: &api.Message{
 			Time:    time.Unix(0, timeNano).UTC(),
 			ID:      id,
 			State:   state,
@@ -302,7 +302,7 @@ func readMessageEntry(r io.Reader, serviceIndices map[uint16]*defs.ServiceKey) (
 	}, nil
 }
 
-func writeMessageEntry(w io.Writer, m *message, serviceIndices map[defs.ServiceKey]uint16) error {
+func writeMessageEntry(w io.Writer, m *message, serviceIndices map[api.ServiceKey]uint16) error {
 	serviceIndex, ok := serviceIndices[*m.ServiceKey]
 	if !ok || len(m.Payload) > int(^uint16(0)) {
 		return nil // ignore invalid services and large payoads

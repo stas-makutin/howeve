@@ -5,6 +5,7 @@ import (
 	"time"
 
 	serial "github.com/albenik/go-serial/v2"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 )
 
@@ -18,12 +19,12 @@ type Transport struct {
 	stopCh chan struct{}
 }
 
-func (t *Transport) ID() defs.TransportIdentifier {
-	return defs.TransportSerial
+func (t *Transport) ID() api.TransportIdentifier {
+	return api.TransportSerial
 }
 
 // Open func
-func (t *Transport) Open(entry string, params defs.ParamValues) (err error) {
+func (t *Transport) Open(entry string, params api.ParamValues) (err error) {
 	options := []serial.Option{}
 	if v, ok := params[ParamNameBaudRate]; ok {
 		options = append(options, serial.WithBaudrate(int(v.(int32))))

@@ -258,7 +258,7 @@ func TestSerialization(t *testing.T) {
 
 	t.Run("JSON serialization", func(t *testing.T) {
 		for i, query := range quieries {
-			queryType := queryNameMap[query.Type]
+			queryType := QueryTypeName(query.Type)
 
 			// serialize
 			var writter1 strings.Builder

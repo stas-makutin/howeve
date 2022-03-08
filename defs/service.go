@@ -63,7 +63,7 @@ type ResolveIDsOutput func(key *api.ServiceKey, alias string)
 // ServiceRegistry defines possible operations with services
 type ServiceRegistry interface {
 	Discover(protocol api.ProtocolIdentifier, transport api.TransportIdentifier, params api.RawParamValues) (uuid.UUID, error)
-	Discovery(id uuid.UUID, stop bool) ([]*DiscoveryEntry, error)
+	Discovery(id uuid.UUID, stop bool) ([]*api.DiscoveryEntry, error)
 
 	Add(key *api.ServiceKey, params api.RawParamValues, alias string) error
 	Alias(key *api.ServiceKey, oldAlias string, newAlias string) error

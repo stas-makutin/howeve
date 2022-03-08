@@ -11,15 +11,8 @@ import (
 // ServiceFunc is a method which creates service or returns error
 type ServiceFunc func(entry string, params api.ParamValues) (Service, error)
 
-// DiscoveryEntry - discovery entry - information about service instance detected during discovery
-type DiscoveryEntry struct {
-	api.ServiceKey
-	api.ParamValues `json:"params,omitempty"`
-	Description     string `json:"description,omitempty"`
-}
-
 // DiscoveryFunc is a method which returns discovered service entries or error
-type DiscoveryFunc func(ctx context.Context, params api.ParamValues) ([]*DiscoveryEntry, error)
+type DiscoveryFunc func(ctx context.Context, params api.ParamValues) ([]*api.DiscoveryEntry, error)
 
 // ProtocolTransportOptions defines transport options specific for the protocol
 type ProtocolTransportOptions struct {

@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
@@ -14,7 +15,7 @@ import (
 type discoveryEntry struct {
 	id uuid.UUID
 
-	results []*defs.DiscoveryEntry
+	results []*api.DiscoveryEntry
 	err     error
 
 	completed uint32
@@ -69,7 +70,7 @@ func (d *discoveryRegistry) stop() {
 
 // Discover is the part of defs.ServiceRegistry implementation, this function accept, if possible, new discovery query and returns its id (UUID)
 // This id then could be used to get discovery query results using Discovery method
-func (d *discoveryRegistry) Discover(protocol defs.ProtocolIdentifier, transport defs.TransportIdentifier, params defs.RawParamValues) (uuid.UUID, error) {
+func (d *discoveryRegistry) Discover(protocol api.ProtocolIdentifier, transport api.TransportIdentifier, params api.RawParamValues) (uuid.UUID, error) {
 	to, _, err := defs.ResolveProtocolAndTransport(protocol, transport)
 	if err != nil {
 		return uuid.Nil, err
@@ -110,7 +111,7 @@ func (d *discoveryRegistry) Discover(protocol defs.ProtocolIdentifier, transport
 }
 
 // Discovery method returns the state or results of discovery query, identifying by its id
-func (d *discoveryRegistry) Discovery(id uuid.UUID, stop bool) ([]*defs.DiscoveryEntry, error) {
+func (d *discoveryRegistry) Discovery(id uuid.UUID, stop bool) ([]*api.DiscoveryEntry, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -128,7 +129,7 @@ func (d *discoveryRegistry) Discovery(id uuid.UUID, stop bool) ([]*defs.Discover
 }
 
 // discoveryRunner is the goroutine which executes discovery query
-func (d *discoveryRegistry) discoveryRunner(de *discoveryEntry, df defs.DiscoveryFunc, params defs.ParamValues) {
+func (d *discoveryRegistry) discoveryRunner(de *discoveryEntry, df defs.DiscoveryFunc, params api.ParamValues) {
 	defer atomic.StoreUint32(&de.completed, 1)
 	defer d.stopWg.Done()
 

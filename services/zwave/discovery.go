@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/albenik/go-serial/v2/enumerator"
-	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/services/serial"
 	zw "github.com/stas-makutin/howeve/zwave"
 )
 
 // serial parameters, must match with default service parameters
-var discoverSerialParams defs.ParamValues = defs.ParamValues{
+var discoverSerialParams api.ParamValues = api.ParamValues{
 	serial.ParamNameBaudRate:     int32(115200),
 	serial.ParamNameDataBits:     "8",
 	serial.ParamNameParity:       "none",
@@ -25,7 +25,7 @@ var discoverSerialParams defs.ParamValues = defs.ParamValues{
 var zwVersionFrame = zw.DataRequest([]byte{zw.ZW_VERSION})
 
 // DiscoverSerial - discover COM ports with ZWave controllers
-func DiscoverSerial(ctx context.Context, params defs.ParamValues) ([]*defs.DiscoveryEntry, error) {
+func DiscoverSerial(ctx context.Context, params api.ParamValues) ([]*api.DiscoveryEntry, error) {
 	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func DiscoverSerial(ctx context.Context, params defs.ParamValues) ([]*defs.Disco
 		return nil, nil
 	}
 
-	var rv []*defs.DiscoveryEntry
+	var rv []*api.DiscoveryEntry
 	for _, port := range ports {
 		select {
 		case <-ctx.Done():
@@ -45,10 +45,10 @@ func DiscoverSerial(ctx context.Context, params defs.ParamValues) ([]*defs.Disco
 			if info != "" {
 				info = " [" + info + "]"
 			}
-			rv = append(rv, &defs.DiscoveryEntry{
-				ServiceKey: defs.ServiceKey{
-					Protocol:  defs.ProtocolZWave,
-					Transport: defs.TransportSerial,
+			rv = append(rv, &api.DiscoveryEntry{
+				ServiceKey: api.ServiceKey{
+					Protocol:  api.ProtocolZWave,
+					Transport: api.TransportSerial,
 					Entry:     port.Name,
 				},
 				Description: port.Product + info,
@@ -58,7 +58,7 @@ func DiscoverSerial(ctx context.Context, params defs.ParamValues) ([]*defs.Disco
 	return rv, nil
 }
 
-func discoverSerialPort(ctx context.Context, port string, params defs.ParamValues) (bool, string) {
+func discoverSerialPort(ctx context.Context, port string, params api.ParamValues) (bool, string) {
 	t := &serial.Transport{}
 
 	if err := t.Open(port, params); err != nil {

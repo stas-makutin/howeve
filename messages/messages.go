@@ -5,18 +5,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/api"
 )
 
 // message struct defines entry in the message log
 type message struct {
-	*defs.ServiceKey
-	*defs.Message
+	*api.ServiceKey
+	*api.Message
 }
 
 // messages log container
 type messages struct {
-	services    map[defs.ServiceKey]int
+	services    map[api.ServiceKey]int
 	entries     []*message
 	entriesById map[uuid.UUID]*message
 }
@@ -28,13 +28,13 @@ func newMessages() *messages {
 }
 
 func (m *messages) clear() {
-	m.services = make(map[defs.ServiceKey]int)
+	m.services = make(map[api.ServiceKey]int)
 	m.entries = nil
 	m.entriesById = make(map[uuid.UUID]*message)
 }
 
 // pushes new message, returns true if this is first message for provided service or false otherwise
-func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) bool {
+func (m *messages) push(key *api.ServiceKey, msg *api.Message) bool {
 	messagesCount := m.services[*key]
 	m.services[*key] = messagesCount + 1
 
@@ -50,7 +50,7 @@ func (m *messages) push(key *defs.ServiceKey, msg *defs.Message) bool {
 }
 
 // pops oldest message, returns its service key, content, and true if there's no more messages from its service (or false otherwise)
-func (m *messages) pop() (*defs.ServiceKey, *defs.Message, bool) {
+func (m *messages) pop() (*api.ServiceKey, *api.Message, bool) {
 	if len(m.entries) <= 0 {
 		return nil, nil, false
 	}

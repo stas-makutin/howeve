@@ -117,7 +117,7 @@ type ListServices struct {
 // ListServicesResult - get list of services result envelope
 type ListServicesResult struct {
 	ResponseHeader
-	*ListServicesResult
+	*api.ListServicesResult
 }
 
 // SendToService - send message to service

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 	"github.com/stas-makutin/howeve/log"
@@ -97,7 +98,7 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 				break
 			}
 
-			var q Query
+			var q api.Query
 			err = json.Unmarshal(msg, &q)
 			if err != nil {
 				sg := msg
@@ -106,23 +107,23 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 				}
 				eo := handlers.EventOrdinal.Next()
 				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocUnexpectedRequest, string(sg), err.Error())
-				if writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID}) {
+				if writeQuery(conn, co, eo, &api.Query{Type: api.QueryUnexpected, ID: q.ID}) {
 					break
 				}
 				continue
 			}
 
 			// process message
-			n := queryNameMap[q.Type]
-			if q.Type == queryEventSubscribe {
+			n := api.QueryTypeName(q.Type)
+			if q.Type == api.QueryEventSubscribe {
 				eo := handlers.EventOrdinal.Next()
 				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocSuccess, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
-				subscriptions.subscribe(q.Payload.(*Subscription))
+				subscriptions.subscribe(q.Payload.(*api.Subscription))
 				eo = handlers.EventOrdinal.Next()
-				if writeQuery(conn, co, eo, &Query{Type: queryEventSubscribeResult, ID: q.ID}) {
+				if writeQuery(conn, co, eo, &api.Query{Type: api.QueryEventSubscribeResult, ID: q.ID}) {
 					break
 				}
-			} else if event := q.toTargetedRequest(ctx, id); event != nil {
+			} else if event := queryToTargetedRequest(&q, ctx, id); event != nil {
 				var eo handlers.Ordinal
 				if ti, ok := event.(handlers.TraceInfo); ok {
 					eo = ti.Ordinal()
@@ -132,7 +133,7 @@ func messageLoop(conn net.Conn, stopCh chan struct{}) {
 			} else {
 				eo := handlers.EventOrdinal.Next()
 				log.Report(log.SrcWS, wsopInbound, co.String(), eo.String(), wsocNoRequestMapping, q.ID, n, strconv.FormatInt(int64(len(msg)), 10))
-				if writeQuery(conn, co, eo, &Query{Type: queryUnexpected, ID: q.ID}) {
+				if writeQuery(conn, co, eo, &api.Query{Type: api.QueryUnexpected, ID: q.ID}) {
 					break
 				}
 			}
@@ -165,9 +166,9 @@ Exit:
 	cancel()
 }
 
-func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *Query) bool {
+func writeQuery(conn net.Conn, co handlers.Ordinal, eo handlers.Ordinal, q *api.Query) bool {
 	w := newWebSocketTextWriter(conn)
-	n := queryNameMap[q.Type]
+	n := api.QueryTypeName(q.Type)
 	if err := json.NewEncoder(w).Encode(q); err != nil {
 		if isConnClosed(err) {
 			return true

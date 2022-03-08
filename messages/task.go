@@ -154,7 +154,7 @@ func (ml *messageLog) Persist() {
 }
 
 // Register registers new message and add it to the message log
-func (ml *messageLog) Register(key *defs.ServiceKey, payload []byte, state defs.MessageState) *defs.Message {
+func (ml *messageLog) Register(key *api.ServiceKey, payload []byte, state api.MessageState) *api.Message {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
 
@@ -175,7 +175,7 @@ func (ml *messageLog) Register(key *defs.ServiceKey, payload []byte, state defs.
 	}
 	ml.size = newSize
 
-	message := &defs.Message{
+	message := &api.Message{
 		Time:    time.Now().UTC(),
 		ID:      uuid.New(),
 		State:   state,
@@ -188,7 +188,7 @@ func (ml *messageLog) Register(key *defs.ServiceKey, payload []byte, state defs.
 
 // UpdateState updates message's state to provided and time to current, by provided message id.
 // Returns updated message's service key and content or nil if provided id not found
-func (ml *messageLog) UpdateState(id uuid.UUID, state defs.MessageState) (*defs.ServiceKey, *defs.Message) {
+func (ml *messageLog) UpdateState(id uuid.UUID, state api.MessageState) (*api.ServiceKey, *api.Message) {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
 	if index, entry := ml.log.findIndexByID(id); entry != nil {
@@ -204,7 +204,7 @@ func (ml *messageLog) UpdateState(id uuid.UUID, state defs.MessageState) (*defs.
 }
 
 // Get returns single message and associated service key for provided message id
-func (ml *messageLog) Get(id uuid.UUID) (*defs.ServiceKey, *defs.Message) {
+func (ml *messageLog) Get(id uuid.UUID) (*api.ServiceKey, *api.Message) {
 	ml.lock.Lock()
 	defer ml.lock.Unlock()
 	entry := ml.log.findByID(id)

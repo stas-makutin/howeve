@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stas-makutin/howeve/defs"
+	"github.com/stas-makutin/howeve/api"
 )
 
 func TestMessagesPersistence(t *testing.T) {
@@ -42,21 +42,21 @@ func TestMessagesPersistence(t *testing.T) {
 	})
 
 	length := minimalLength
-	services := []*defs.ServiceKey{
-		{Protocol: defs.ProtocolZWave, Transport: defs.TransportSerial, Entry: "COM1"},
-		{Protocol: defs.ProtocolZWave, Transport: defs.TransportSerial, Entry: "COM3"},
+	services := []*api.ServiceKey{
+		{Protocol: api.ProtocolZWave, Transport: api.TransportSerial, Entry: "COM1"},
+		{Protocol: api.ProtocolZWave, Transport: api.TransportSerial, Entry: "COM3"},
 	}
 	msgCount := 50 + rand.Intn(100)
 
 	for msgCount > 0 {
 		service := services[rand.Intn(100)%2]
-		state := []defs.MessageState{defs.Incoming, defs.Outgoing, defs.OutgoingPending, defs.OutgoingFailed, defs.OutgoingRejected, defs.OutgoingTimedOut}[rand.Intn(100)%6]
+		state := []api.MessageState{api.Incoming, api.Outgoing, api.OutgoingPending, api.OutgoingFailed, api.OutgoingRejected, api.OutgoingTimedOut}[rand.Intn(100)%6]
 		payloadLen := 12 + rand.Intn(200)
 		payload := make([]byte, payloadLen)
 		rand.Read(payload)
 
 		length += messageEntryLength(payloadLen)
-		if m.push(service, &defs.Message{Time: time.Now().UTC(), ID: uuid.New(), State: state, Payload: payload}) {
+		if m.push(service, &api.Message{Time: time.Now().UTC(), ID: uuid.New(), State: state, Payload: payload}) {
 			length += serviceEntryLength(len(service.Entry))
 		}
 

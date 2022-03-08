@@ -36,15 +36,15 @@ const (
 
 type serviceInfo struct {
 	service defs.Service
-	key     *defs.ServiceKey
+	key     *api.ServiceKey
 	alias   string
-	params  defs.ParamValues
+	params  api.ParamValues
 }
 
 // servicesRegistry - registry of available services - services Task implementation
 type servicesRegistry struct {
 	lock     sync.Mutex
-	services map[defs.ServiceKey]*serviceInfo
+	services map[api.ServiceKey]*serviceInfo
 	aliases  map[string]*serviceInfo
 
 	cfg []api.ServiceConfig
@@ -72,7 +72,7 @@ func (sr *servicesRegistry) writeConfig(cfg *api.Config) {
 
 func (sr *servicesRegistry) Open(ctx *tasks.ServiceTaskContext) error {
 	defs.Services = sr
-	sr.services = make(map[defs.ServiceKey]*serviceInfo)
+	sr.services = make(map[api.ServiceKey]*serviceInfo)
 	sr.aliases = make(map[string]*serviceInfo)
 
 	sr.discoveryRegistry = newDiscoveryRegistry(discoveryMaxCount, discoveryMaxActive)
@@ -100,7 +100,7 @@ func (sr *servicesRegistry) Stop(ctx *tasks.ServiceTaskContext) {
 	}
 }
 
-func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues, alias string) error {
+func (sr *servicesRegistry) Add(key *api.ServiceKey, params api.RawParamValues, alias string) error {
 	updateConfig := false
 	defer func() {
 		if updateConfig {
@@ -127,7 +127,7 @@ func (sr *servicesRegistry) Add(key *defs.ServiceKey, params defs.RawParamValues
 }
 
 // Alias changes service's alias
-func (sr *servicesRegistry) Alias(key *defs.ServiceKey, oldAlias string, newAlias string) error {
+func (sr *servicesRegistry) Alias(key *api.ServiceKey, oldAlias string, newAlias string) error {
 	updateConfig := false
 	defer func() {
 		if updateConfig {
@@ -161,7 +161,7 @@ func (sr *servicesRegistry) Alias(key *defs.ServiceKey, oldAlias string, newAlia
 }
 
 // Remove removes the service identified by (in order of priority): 1) service key; 2) alias
-func (sr *servicesRegistry) Remove(key *defs.ServiceKey, alias string) error {
+func (sr *servicesRegistry) Remove(key *api.ServiceKey, alias string) error {
 	updateConfig := false
 	defer func() {
 		if updateConfig {
@@ -192,7 +192,7 @@ func (sr *servicesRegistry) Remove(key *defs.ServiceKey, alias string) error {
 }
 
 // Status return the status of the service identified by (in order of priority): 1) service key; 2) alias
-func (sr *servicesRegistry) Status(key *defs.ServiceKey, alias string) (defs.ServiceStatus, bool) {
+func (sr *servicesRegistry) Status(key *api.ServiceKey, alias string) (defs.ServiceStatus, bool) {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
@@ -240,7 +240,7 @@ func (sr *servicesRegistry) ResolveIDs(out defs.ResolveIDsOutput, in defs.Resolv
 }
 
 // Send sends payload to the service identified by (in order of priority): 1) service key; 2) alias
-func (sr *servicesRegistry) Send(key *defs.ServiceKey, alias string, payload []byte) (*defs.Message, error) {
+func (sr *servicesRegistry) Send(key *api.ServiceKey, alias string, payload []byte) (*api.Message, error) {
 	sr.lock.Lock()
 	defer sr.lock.Unlock()
 
@@ -252,7 +252,7 @@ func (sr *servicesRegistry) Send(key *defs.ServiceKey, alias string, payload []b
 	return si.service.Send(payload)
 }
 
-func (sr *servicesRegistry) add(key *defs.ServiceKey, params defs.RawParamValues, alias string) error {
+func (sr *servicesRegistry) add(key *api.ServiceKey, params api.RawParamValues, alias string) error {
 	if _, ok := sr.services[*key]; ok {
 		return defs.ErrServiceExists
 	}
@@ -304,7 +304,7 @@ func (sr *servicesRegistry) addFromConfig() {
 		}
 
 		err := sr.add(
-			&defs.ServiceKey{
+			&api.ServiceKey{
 				Protocol:  protocol,
 				Transport: transport,
 				Entry:     cfg.Entry,
@@ -340,7 +340,7 @@ func (sr *servicesRegistry) addFromConfig() {
 	}
 }
 
-func (sr *servicesRegistry) findService(key *defs.ServiceKey, alias string) *serviceInfo {
+func (sr *servicesRegistry) findService(key *api.ServiceKey, alias string) *serviceInfo {
 	if key != nil {
 		return sr.services[*key]
 	} else if alias != "" {
@@ -349,7 +349,7 @@ func (sr *servicesRegistry) findService(key *defs.ServiceKey, alias string) *ser
 	return nil
 }
 
-func (sr *servicesRegistry) findServiceCfg(key *defs.ServiceKey) (int, bool) {
+func (sr *servicesRegistry) findServiceCfg(key *api.ServiceKey) (int, bool) {
 	protocolName := defs.ProtocolName(key.Protocol)
 	transportName := defs.TransportName(key.Transport)
 

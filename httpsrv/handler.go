@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
@@ -59,7 +60,7 @@ func parseJSONRequest(v interface{}, w http.ResponseWriter, r *http.Request, max
 }
 
 func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ProtocolInfoFilter
+	var q *api.ProtocolInfo
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -68,14 +69,14 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ProtocolInfoFilter{}
+		q = &api.ProtocolInfo{}
 		for _, v := range r.Form["protocols"] {
 			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
 				n, err := strconv.ParseUint(vp, 10, 8)
 				if err != nil {
 					return nil, true, err
 				}
-				q.Protocols = append(q.Protocols, defs.ProtocolIdentifier(n))
+				q.Protocols = append(q.Protocols, api.ProtocolIdentifier(n))
 			}
 		}
 		for _, v := range r.Form["transports"] {
@@ -84,15 +85,15 @@ func parseProtocolInfo(w http.ResponseWriter, r *http.Request) (events.TargetedR
 				if err != nil {
 					return nil, true, err
 				}
-				q.Transports = append(q.Transports, defs.TransportIdentifier(n))
+				q.Transports = append(q.Transports, api.TransportIdentifier(n))
 			}
 		}
 	}
-	return &handlers.ProtocolInfo{Filter: q}, true, nil
+	return &handlers.ProtocolInfo{ProtocolInfo: q}, true, nil
 }
 
 func parseProtocolDiscover(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ProtocolDiscoverInput
+	var q *api.ProtocolDiscover
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -101,19 +102,19 @@ func parseProtocolDiscover(w http.ResponseWriter, r *http.Request) (events.Targe
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ProtocolDiscoverInput{}
+		q = &api.ProtocolDiscover{}
 
 		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
 		if err != nil {
 			return nil, true, err
 		}
-		q.Protocol = defs.ProtocolIdentifier(n)
+		q.Protocol = api.ProtocolIdentifier(n)
 
 		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
 		if err != nil {
 			return nil, true, err
 		}
-		q.Transport = defs.TransportIdentifier(n)
+		q.Transport = api.TransportIdentifier(n)
 
 		if pi, ok := defs.Protocols[q.Protocol]; ok {
 			if pti, ok := pi.Transports[q.Transport]; ok {
@@ -122,7 +123,7 @@ func parseProtocolDiscover(w http.ResponseWriter, r *http.Request) (events.Targe
 						v := r.Form.Get(name)
 						if v != "" {
 							if q.Params == nil {
-								q.Params = make(defs.RawParamValues)
+								q.Params = make(api.RawParamValues)
 							}
 							q.Params[name] = v
 						}
@@ -132,11 +133,11 @@ func parseProtocolDiscover(w http.ResponseWriter, r *http.Request) (events.Targe
 		}
 	}
 
-	return &handlers.ProtocolDiscover{ProtocolDiscoverInput: q}, true, nil
+	return &handlers.ProtocolDiscover{ProtocolDiscover: q}, true, nil
 }
 
 func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ProtocolDiscoveryInput
+	var q *api.ProtocolDiscovery
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -145,7 +146,7 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ProtocolDiscoveryInput{}
+		q = &api.ProtocolDiscovery{}
 
 		id, err := uuid.Parse(r.Form.Get("id"))
 		if err != nil {
@@ -157,11 +158,11 @@ func parseProtocolDiscovery(w http.ResponseWriter, r *http.Request) (events.Targ
 		q.Stop = stop == "true" || stop == "1" || stop == "yes"
 	}
 
-	return &handlers.ProtocolDiscovery{ProtocolDiscoveryInput: q}, true, nil
+	return &handlers.ProtocolDiscovery{ProtocolDiscovery: q}, true, nil
 }
 
 func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ServiceEntry
+	var q *api.ServiceEntry
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -170,19 +171,19 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ServiceEntry{}
+		q = &api.ServiceEntry{}
 
 		n, err := strconv.ParseUint(r.Form.Get("protocol"), 10, 8)
 		if err != nil {
 			return nil, true, err
 		}
-		q.Protocol = defs.ProtocolIdentifier(n)
+		q.Protocol = api.ProtocolIdentifier(n)
 
 		n, err = strconv.ParseUint(r.Form.Get("transport"), 10, 8)
 		if err != nil {
 			return nil, true, err
 		}
-		q.Transport = defs.TransportIdentifier(n)
+		q.Transport = api.TransportIdentifier(n)
 
 		q.Entry = r.Form.Get("entry")
 		q.Alias = r.Form.Get("alias")
@@ -194,7 +195,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 							v := r.Form.Get(name)
 							if v != "" {
 								if q.Params == nil {
-									q.Params = make(defs.RawParamValues)
+									q.Params = make(api.RawParamValues)
 								}
 								q.Params[name] = v
 							}
@@ -208,7 +209,7 @@ func parseAddService(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 }
 
 func parseRemoveService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ServiceID
+	var q *api.ServiceID
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -217,7 +218,7 @@ func parseRemoveService(w http.ResponseWriter, r *http.Request) (events.Targeted
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ServiceID{}
+		q = &api.ServiceID{}
 
 		if protocol := r.Form.Get("protocol"); protocol != "" {
 			if transport := r.Form.Get("transport"); transport != "" {
@@ -229,9 +230,9 @@ func parseRemoveService(w http.ResponseWriter, r *http.Request) (events.Targeted
 				if err != nil {
 					return nil, true, err
 				}
-				q.ServiceKey = &defs.ServiceKey{
-					Protocol:  defs.ProtocolIdentifier(pid),
-					Transport: defs.TransportIdentifier(tid),
+				q.ServiceKey = &api.ServiceKey{
+					Protocol:  api.ProtocolIdentifier(pid),
+					Transport: api.TransportIdentifier(tid),
 					Entry:     r.Form.Get("entry"),
 				}
 			}
@@ -242,7 +243,7 @@ func parseRemoveService(w http.ResponseWriter, r *http.Request) (events.Targeted
 }
 
 func parseChangeServiceAlias(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ChangeServiceAliasQuery
+	var q *api.ChangeServiceAlias
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -251,7 +252,7 @@ func parseChangeServiceAlias(w http.ResponseWriter, r *http.Request) (events.Tar
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ChangeServiceAliasQuery{}
+		q = &api.ChangeServiceAlias{}
 
 		if protocol := r.Form.Get("protocol"); protocol != "" {
 			if transport := r.Form.Get("transport"); transport != "" {
@@ -263,9 +264,9 @@ func parseChangeServiceAlias(w http.ResponseWriter, r *http.Request) (events.Tar
 				if err != nil {
 					return nil, true, err
 				}
-				q.ServiceKey = &defs.ServiceKey{
-					Protocol:  defs.ProtocolIdentifier(pid),
-					Transport: defs.TransportIdentifier(tid),
+				q.ServiceKey = &api.ServiceKey{
+					Protocol:  api.ProtocolIdentifier(pid),
+					Transport: api.TransportIdentifier(tid),
 					Entry:     r.Form.Get("entry"),
 				}
 			}
@@ -273,11 +274,11 @@ func parseChangeServiceAlias(w http.ResponseWriter, r *http.Request) (events.Tar
 		q.Alias = r.Form.Get("alias")
 		q.NewAlias = r.Form.Get("newAlias")
 	}
-	return &handlers.ChangeServiceAlias{ChangeServiceAliasQuery: q}, true, nil
+	return &handlers.ChangeServiceAlias{ChangeServiceAlias: q}, true, nil
 }
 
 func parseServiceStatus(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ServiceID
+	var q *api.ServiceID
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -286,7 +287,7 @@ func parseServiceStatus(w http.ResponseWriter, r *http.Request) (events.Targeted
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ServiceID{}
+		q = &api.ServiceID{}
 
 		if protocol := r.Form.Get("protocol"); protocol != "" {
 			if transport := r.Form.Get("transport"); transport != "" {
@@ -298,9 +299,9 @@ func parseServiceStatus(w http.ResponseWriter, r *http.Request) (events.Targeted
 				if err != nil {
 					return nil, true, err
 				}
-				q.ServiceKey = &defs.ServiceKey{
-					Protocol:  defs.ProtocolIdentifier(pid),
-					Transport: defs.TransportIdentifier(tid),
+				q.ServiceKey = &api.ServiceKey{
+					Protocol:  api.ProtocolIdentifier(pid),
+					Transport: api.TransportIdentifier(tid),
 					Entry:     r.Form.Get("entry"),
 				}
 			}
@@ -311,7 +312,7 @@ func parseServiceStatus(w http.ResponseWriter, r *http.Request) (events.Targeted
 }
 
 func parseListServices(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ListServicesInput
+	var q *api.ListServices
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -320,14 +321,14 @@ func parseListServices(w http.ResponseWriter, r *http.Request) (events.TargetedR
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ListServicesInput{}
+		q = &api.ListServices{}
 		for _, v := range r.Form["protocols"] {
 			for _, vp := range strings.FieldsFunc(v, func(c rune) bool { return c == ',' || c == ';' || c == ':' || c == '|' }) {
 				n, err := strconv.ParseUint(vp, 10, 8)
 				if err != nil {
 					return nil, true, err
 				}
-				q.Protocols = append(q.Protocols, defs.ProtocolIdentifier(n))
+				q.Protocols = append(q.Protocols, api.ProtocolIdentifier(n))
 			}
 		}
 		for _, v := range r.Form["transports"] {
@@ -336,7 +337,7 @@ func parseListServices(w http.ResponseWriter, r *http.Request) (events.TargetedR
 				if err != nil {
 					return nil, true, err
 				}
-				q.Transports = append(q.Transports, defs.TransportIdentifier(n))
+				q.Transports = append(q.Transports, api.TransportIdentifier(n))
 			}
 		}
 		for _, v := range r.Form["entries"] {
@@ -354,11 +355,11 @@ func parseListServices(w http.ResponseWriter, r *http.Request) (events.TargetedR
 			}
 		}
 	}
-	return &handlers.ListServices{ListServicesInput: q}, true, nil
+	return &handlers.ListServices{ListServices: q}, true, nil
 }
 
 func parseSendToService(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.SendToServiceInput
+	var q *api.SendToService
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -367,7 +368,7 @@ func parseSendToService(w http.ResponseWriter, r *http.Request) (events.Targeted
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.SendToServiceInput{}
+		q = &api.SendToService{}
 
 		if protocol := r.Form.Get("protocol"); protocol != "" {
 			if transport := r.Form.Get("transport"); transport != "" {
@@ -379,9 +380,9 @@ func parseSendToService(w http.ResponseWriter, r *http.Request) (events.Targeted
 				if err != nil {
 					return nil, true, err
 				}
-				q.ServiceKey = &defs.ServiceKey{
-					Protocol:  defs.ProtocolIdentifier(pid),
-					Transport: defs.TransportIdentifier(tid),
+				q.ServiceKey = &api.ServiceKey{
+					Protocol:  api.ProtocolIdentifier(pid),
+					Transport: api.TransportIdentifier(tid),
 					Entry:     r.Form.Get("entry"),
 				}
 			}
@@ -391,7 +392,7 @@ func parseSendToService(w http.ResponseWriter, r *http.Request) (events.Targeted
 			return nil, true, err
 		}
 	}
-	return &handlers.SendToService{SendToServiceInput: q}, true, nil
+	return &handlers.SendToService{SendToService: q}, true, nil
 }
 
 func parseGetMessage(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
@@ -413,7 +414,7 @@ func parseGetMessage(w http.ResponseWriter, r *http.Request) (events.TargetedReq
 }
 
 func parseListMessages(w http.ResponseWriter, r *http.Request) (events.TargetedRequest, bool, error) {
-	var q *handlers.ListMessagesInput
+	var q *api.ListMessages
 	if ok, err := parseJSONRequest(&q, w, r, 4096); ok {
 		if err != nil {
 			return nil, true, err
@@ -422,7 +423,7 @@ func parseListMessages(w http.ResponseWriter, r *http.Request) (events.TargetedR
 		if err := r.ParseForm(); err != nil {
 			return nil, true, err
 		}
-		q = &handlers.ListMessagesInput{}
+		q = &api.ListMessages{}
 		n, err := strconv.ParseInt(r.Form.Get("index"), 10, 8)
 		if err != nil {
 			return nil, true, err
@@ -436,5 +437,5 @@ func parseListMessages(w http.ResponseWriter, r *http.Request) (events.TargetedR
 		}
 		q.Count = int(n)
 	}
-	return &handlers.ListMessages{ListMessagesInput: q}, true, nil
+	return &handlers.ListMessages{ListMessages: q}, true, nil
 }

@@ -1,21 +1,22 @@
 package services
 
 import (
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/services/serial"
 	"github.com/stas-makutin/howeve/services/zwave"
 )
 
-var transports = map[defs.TransportIdentifier]*defs.TransportInfo{
-	defs.TransportSerial: serial.TransportInfo,
+var transports = map[api.TransportIdentifier]*defs.TransportInfo{
+	api.TransportSerial: serial.TransportInfo,
 }
 
-var protocols = map[defs.ProtocolIdentifier]*defs.ProtocolInfo{
-	defs.ProtocolZWave: {
+var protocols = map[api.ProtocolIdentifier]*defs.ProtocolInfo{
+	api.ProtocolZWave: {
 		Name: "Z-Wave",
-		Transports: map[defs.TransportIdentifier]*defs.ProtocolTransportOptions{
-			defs.TransportSerial: {
-				ServiceFunc: func(entry string, params defs.ParamValues) (defs.Service, error) {
+		Transports: map[api.TransportIdentifier]*defs.ProtocolTransportOptions{
+			api.TransportSerial: {
+				ServiceFunc: func(entry string, params api.ParamValues) (defs.Service, error) {
 					return zwave.NewService(&serial.Transport{}, entry, params)
 				},
 				DiscoveryFunc: zwave.DiscoverSerial,

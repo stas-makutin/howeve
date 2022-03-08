@@ -2,264 +2,55 @@ package httpsrv
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/events"
 	"github.com/stas-makutin/howeve/events/handlers"
 )
 
-type queryType uint16
-
-const (
-	queryUnexpected = queryType(iota)
-	queryRestart
-	queryRestartResult
-	queryGetConfig
-	queryGetConfigResult
-	queryProtocolList
-	queryProtocolListResult
-	queryTransportList
-	queryTransportListResult
-	queryProtocolInfo
-	queryProtocolInfoResult
-	queryProtocolDiscover
-	queryProtocolDiscoverResult
-	queryProtocolDiscovery
-	queryProtocolDiscoveryResult
-	queryProtocolDiscoveryStarted
-	queryProtocolDiscoveryFinished
-	queryAddService
-	queryAddServiceResult
-	queryRemoveService
-	queryRemoveServiceResult
-	queryChangeServiceAlias
-	queryChangeServiceAliasResult
-	queryServiceStatus
-	queryServiceStatusResult
-	queryListServices
-	queryListServicesResult
-	querySendToService
-	querySendToServiceResult
-	queryGetMessage
-	queryGetMessageResult
-	queryListMessages
-	queryListMessagesResult
-	queryNewMessage
-	queryDropMessage
-	queryUpdateMessageState
-	queryEventSubscribe
-	queryEventSubscribeResult
-)
-
-var queryTypeMap = map[string]queryType{
-	"restart": queryRestart, "restartResult": queryRestartResult,
-	"getCfg": queryGetConfig, "getConfig": queryGetConfig, "getConfigResult": queryGetConfigResult,
-	"protocols": queryProtocolList, "protocolsResult": queryProtocolListResult,
-	"transports": queryTransportList, "transportsResult": queryTransportListResult,
-	"protocolInfo": queryProtocolInfo, "protocolInfoResult": queryProtocolInfoResult,
-	"discover": queryProtocolDiscover, "discoverResult": queryProtocolDiscoverResult,
-	"discovery": queryProtocolDiscovery, "discoveryResult": queryProtocolDiscoveryResult,
-	"addService": queryAddService, "addServiceResult": queryAddServiceResult,
-	"removeService": queryRemoveService, "removeServiceResult": queryRemoveServiceResult,
-	"changeServiceAlias": queryChangeServiceAlias, "changeServiceAliasResult": queryChangeServiceAliasResult,
-	"serviceStatus": queryServiceStatus, "serviceStatusResult": queryServiceStatusResult,
-	"listServices": queryListServices, "listServicesResult": queryListServicesResult,
-	"sendTo": querySendToService, "sendToResult": querySendToServiceResult,
-	"getMessage": queryGetMessage, "getMessageResult": queryGetMessageResult,
-	"messagesList": queryListMessages, "messagesListResult": queryListMessagesResult,
-	"eventSubscribe": queryEventSubscribe, "eventSubscribeResult": queryEventSubscribeResult,
-}
-var queryNameMap map[queryType]string
-
-// Query struct
-type Query struct {
-	Type    queryType
-	ID      string
-	Payload interface{}
-}
-
-func init() {
-	queryNameMap = make(map[queryType]string)
-	for k, v := range queryTypeMap {
-		queryNameMap[v] = k
-	}
-}
-
-// UnmarshalJSON func for SubscriptionEvent value
-func (event *SubscriptionEvent) UnmarshalJSON(data []byte) error {
-	var name string
-	err := json.Unmarshal(data, &name)
-	if err != nil {
-		return err
-	}
-	if ev, ok := subscriptionEventNameMap[name]; ok {
-		*event = ev
-		return nil
-	}
-	return fmt.Errorf("unknown subsctiption event name '%v'", name)
-}
-
-// UnmarshalJSON func
-func (c *Query) UnmarshalJSON(data []byte) error {
-	var env struct {
-		Type    string          `json:"q"`
-		ID      string          `json:"i,omitempty"`
-		Payload json.RawMessage `json:"p,omitempty"`
-	}
-	err := json.Unmarshal(data, &env)
-	if err != nil {
-		return err
-	}
-	t, ok := queryTypeMap[env.Type]
-	if !ok {
-		return fmt.Errorf("unexpected query %v", env.Type)
-	}
-	c.Type = t
-	c.ID = env.ID
-	return c.unmarshalPayload(env.Payload)
-}
-
-// MarshalJSON func
-func (c *Query) MarshalJSON() ([]byte, error) {
-	var env struct {
-		Type    string      `json:"q"`
-		ID      string      `json:"i,omitempty"`
-		Payload interface{} `json:"p,omitempty"`
-	}
-	n, ok := queryNameMap[c.Type]
-	if !ok {
-		return nil, fmt.Errorf("unknown query %v", c.Type)
-	}
-	env.Type = n
-	env.ID = c.ID
-	env.Payload = c.Payload
-	return json.Marshal(env)
-}
-
-func (c *Query) unmarshalPayload(data []byte) error {
+func queryToEvent(c *api.Query) interface{} {
 	switch c.Type {
-	case queryProtocolInfo:
-		if len(data) > 0 {
-			var p handlers.ProtocolInfoFilter
-			if err := json.Unmarshal(data, &p); err != nil {
-				return err
-			}
-			c.Payload = &p
-		}
-	case queryProtocolDiscover:
-		var p handlers.ProtocolDiscoverInput
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryProtocolDiscovery:
-		var p handlers.ProtocolDiscoveryInput
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryAddService:
-		var p handlers.ServiceEntry
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryRemoveService:
-		var p handlers.ServiceID
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryChangeServiceAlias:
-		var p handlers.ChangeServiceAliasQuery
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryServiceStatus:
-		var p handlers.ServiceID
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryListServices:
-		var p handlers.ListServicesInput
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case querySendToService:
-		var p handlers.SendToServiceInput
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryGetMessage:
-		var p uuid.UUID
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryListMessages:
-		var p handlers.ListMessagesInput
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	case queryEventSubscribe:
-		var p Subscription
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
-		}
-		c.Payload = &p
-	}
-	return nil
-}
-
-func (c *Query) toEvent() interface{} {
-	switch c.Type {
-	case queryRestart:
+	case api.QueryRestart:
 		return &handlers.Restart{RequestHeader: *handlers.NewRequestHeader(c.ID)}
-	case queryGetConfig:
+	case api.QueryGetConfig:
 		return &handlers.ConfigGet{RequestHeader: *handlers.NewRequestHeader(c.ID)}
-	case queryProtocolList:
+	case api.QueryProtocolList:
 		return &handlers.ProtocolList{RequestHeader: *handlers.NewRequestHeader(c.ID)}
-	case queryTransportList:
+	case api.QueryTransportList:
 		return &handlers.TransportList{RequestHeader: *handlers.NewRequestHeader(c.ID)}
-	case queryProtocolInfo:
-		var filter *handlers.ProtocolInfoFilter
+	case api.QueryProtocolInfo:
+		var payload *api.ProtocolInfo
 		if c.Payload != nil {
-			filter = c.Payload.(*handlers.ProtocolInfoFilter)
+			payload = c.Payload.(*api.ProtocolInfo)
 		}
-		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), Filter: filter}
-	case queryProtocolDiscover:
-		return &handlers.ProtocolDiscover{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoverInput: c.Payload.(*handlers.ProtocolDiscoverInput)}
-	case queryProtocolDiscovery:
-		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscoveryInput: c.Payload.(*handlers.ProtocolDiscoveryInput)}
-	case queryAddService:
-		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntry: c.Payload.(*handlers.ServiceEntry)}
-	case queryRemoveService:
-		return &handlers.RemoveService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceID: c.Payload.(*handlers.ServiceID)}
-	case queryChangeServiceAlias:
-		return &handlers.ChangeServiceAlias{RequestHeader: *handlers.NewRequestHeader(c.ID), ChangeServiceAliasQuery: c.Payload.(*handlers.ChangeServiceAliasQuery)}
-	case queryServiceStatus:
-		return &handlers.ServiceStatus{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceID: c.Payload.(*handlers.ServiceID)}
-	case queryListServices:
-		return &handlers.ListServices{RequestHeader: *handlers.NewRequestHeader(c.ID), ListServicesInput: c.Payload.(*handlers.ListServicesInput)}
-	case querySendToService:
-		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID), SendToServiceInput: c.Payload.(*handlers.SendToServiceInput)}
-	case queryGetMessage:
+		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolInfo: payload}
+	case api.QueryProtocolDiscover:
+		return &handlers.ProtocolDiscover{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscover: c.Payload.(*api.ProtocolDiscover)}
+	case api.QueryProtocolDiscovery:
+		return &handlers.ProtocolDiscovery{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolDiscovery: c.Payload.(*api.ProtocolDiscovery)}
+	case api.QueryAddService:
+		return &handlers.AddService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceEntry: c.Payload.(*api.ServiceEntry)}
+	case api.QueryRemoveService:
+		return &handlers.RemoveService{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceID: c.Payload.(*api.ServiceID)}
+	case api.QueryChangeServiceAlias:
+		return &handlers.ChangeServiceAlias{RequestHeader: *handlers.NewRequestHeader(c.ID), ChangeServiceAlias: c.Payload.(*api.ChangeServiceAlias)}
+	case api.QueryServiceStatus:
+		return &handlers.ServiceStatus{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceID: c.Payload.(*api.ServiceID)}
+	case api.QueryListServices:
+		return &handlers.ListServices{RequestHeader: *handlers.NewRequestHeader(c.ID), ListServices: c.Payload.(*api.ListServices)}
+	case api.QuerySendToService:
+		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID), SendToService: c.Payload.(*api.SendToService)}
+	case api.QueryGetMessage:
 		return &handlers.GetMessage{RequestHeader: *handlers.NewRequestHeader(c.ID), ID: c.Payload.(uuid.UUID)}
-	case queryListMessages:
-		return &handlers.ListMessages{RequestHeader: *handlers.NewRequestHeader(c.ID), ListMessagesInput: c.Payload.(*handlers.ListMessagesInput)}
+	case api.QueryListMessages:
+		return &handlers.ListMessages{RequestHeader: *handlers.NewRequestHeader(c.ID), ListMessages: c.Payload.(*api.ListMessages)}
 	}
 	return nil
 }
 
-func (c *Query) toTargetedRequest(ctx context.Context, receiverID events.SubscriberID) interface{} {
-	event := c.toEvent()
+func queryToTargetedRequest(c *api.Query, ctx context.Context, receiverID events.SubscriberID) interface{} {
+	event := queryToEvent(c)
 	if te, ok := event.(events.TargetedRequest); ok {
 		te.SetReceiver(ctx, receiverID)
 		return te
@@ -267,48 +58,48 @@ func (c *Query) toTargetedRequest(ctx context.Context, receiverID events.Subscri
 	return event
 }
 
-func queryFromEvent(event interface{}) *Query {
+func queryFromEvent(event interface{}) *api.Query {
 	switch e := event.(type) {
 	case *handlers.RestartResult:
-		return &Query{Type: queryRestartResult, ID: e.TraceID()}
+		return &api.Query{Type: api.QueryRestartResult, ID: e.TraceID()}
 	case *handlers.ConfigGetResult:
-		return &Query{Type: queryGetConfigResult, ID: e.TraceID(), Payload: e.Config}
+		return &api.Query{Type: api.QueryGetConfigResult, ID: e.TraceID(), Payload: e.Config}
 	case *handlers.ProtocolListResult:
-		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
+		return &api.Query{Type: api.QueryProtocolListResult, ID: e.TraceID(), Payload: e.ProtocolListResult}
 	case *handlers.TransportListResult:
-		return &Query{Type: queryTransportListResult, ID: e.TraceID(), Payload: e.Transports}
+		return &api.Query{Type: api.QueryTransportListResult, ID: e.TraceID(), Payload: e.TransportListResult}
 	case *handlers.ProtocolInfoResult:
-		return &Query{Type: queryProtocolListResult, ID: e.TraceID(), Payload: e.Protocols}
+		return &api.Query{Type: api.QueryProtocolListResult, ID: e.TraceID(), Payload: e.ProtocolInfoResult}
 	case *handlers.ProtocolDiscoverResult:
-		return &Query{Type: queryProtocolDiscoverResult, ID: e.TraceID(), Payload: e.ProtocolDiscoverOutput}
+		return &api.Query{Type: api.QueryProtocolDiscoverResult, ID: e.TraceID(), Payload: e.ProtocolDiscoverResult}
 	case *handlers.ProtocolDiscoveryResult:
-		return &Query{Type: queryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.DiscoveryResult}
-	case *handlers.DiscoveryStarted:
-		return &Query{Type: queryProtocolDiscoveryStarted, ID: e.TraceID(), Payload: e.DiscoveryRequest}
-	case *handlers.DiscoveryFinished:
-		return &Query{Type: queryProtocolDiscoveryFinished, ID: e.TraceID(), Payload: e.DiscoveryResult}
+		return &api.Query{Type: api.QueryProtocolDiscoveryResult, ID: e.TraceID(), Payload: e.ProtocolDiscoveryResult}
+	case *handlers.ProtocolDiscoveryStarted:
+		return &api.Query{Type: api.QueryProtocolDiscoveryStarted, ID: e.TraceID(), Payload: e.ProtocolDiscoveryStarted}
+	case *handlers.ProtocolDiscoveryFinished:
+		return &api.Query{Type: api.QueryProtocolDiscoveryFinished, ID: e.TraceID(), Payload: e.ProtocolDiscoveryResult}
 	case *handlers.AddServiceResult:
-		return &Query{Type: queryAddServiceResult, ID: e.TraceID(), Payload: e.StatusReply}
+		return &api.Query{Type: api.QueryAddServiceResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.RemoveServiceResult:
-		return &Query{Type: queryRemoveServiceResult, ID: e.TraceID(), Payload: e.StatusReply}
+		return &api.Query{Type: api.QueryRemoveServiceResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.ChangeServiceAliasResult:
-		return &Query{Type: queryChangeServiceAliasResult, ID: e.TraceID(), Payload: e.StatusReply}
+		return &api.Query{Type: api.QueryChangeServiceAliasResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.ServiceStatusResult:
-		return &Query{Type: queryServiceStatusResult, ID: e.TraceID(), Payload: e.StatusReply}
+		return &api.Query{Type: api.QueryServiceStatusResult, ID: e.TraceID(), Payload: e.StatusReply}
 	case *handlers.ListServicesResult:
-		return &Query{Type: queryListServicesResult, ID: e.TraceID(), Payload: e.ListServicesOutput}
+		return &api.Query{Type: api.QueryListServicesResult, ID: e.TraceID(), Payload: e.ListServicesResult}
 	case *handlers.SendToServiceResult:
-		return &Query{Type: querySendToServiceResult, ID: e.TraceID(), Payload: e.SendToServiceOutput}
+		return &api.Query{Type: api.QuerySendToServiceResult, ID: e.TraceID(), Payload: e.SendToServiceResult}
 	case *handlers.GetMessageResult:
-		return &Query{Type: queryGetMessageResult, ID: e.TraceID(), Payload: e.MessageEntry}
+		return &api.Query{Type: api.QueryGetMessageResult, ID: e.TraceID(), Payload: e.MessageEntry}
 	case *handlers.ListMessagesResult:
-		return &Query{Type: queryListMessagesResult, ID: e.TraceID(), Payload: e.ListMessagesOutput}
+		return &api.Query{Type: api.QueryListMessagesResult, ID: e.TraceID(), Payload: e.ListMessagesResult}
 	case *handlers.NewMessage:
-		return &Query{Type: queryNewMessage, ID: e.TraceID(), Payload: e.MessageEntry}
+		return &api.Query{Type: api.QueryNewMessage, ID: e.TraceID(), Payload: e.MessageEntry}
 	case *handlers.DropMessage:
-		return &Query{Type: queryDropMessage, ID: e.TraceID(), Payload: e.MessageEntry}
+		return &api.Query{Type: api.QueryDropMessage, ID: e.TraceID(), Payload: e.MessageEntry}
 	case *handlers.UpdateMessageState:
-		return &Query{Type: queryUpdateMessageState, ID: e.TraceID(), Payload: e.UpdateMessageStateData}
+		return &api.Query{Type: api.QueryUpdateMessageState, ID: e.TraceID(), Payload: e.UpdateMessageState}
 	}
 	return nil
 }

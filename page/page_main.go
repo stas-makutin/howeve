@@ -50,6 +50,7 @@ func (ch *pageMain) Render() vecty.ComponentOrHTML {
 		components.NewMdcTab("Protocols", ch.viewRoute == core.ProtocolViewRoute),
 		components.NewMdcTab("Services", ch.viewRoute == core.ServicesViewRoute),
 		components.NewMdcTab("Messages", ch.viewRoute == core.MessagesViewRoute),
+		components.NewMdcTab("Config", ch.viewRoute == core.ConfigViewRoute),
 		&components.Title{},
 	)
 	return elem.Body(ch.tabBar, newViewMain())
@@ -83,6 +84,7 @@ func (ch *viewMain) Render() vecty.ComponentOrHTML {
 		vecty.If(route == core.ProtocolViewRoute, views.NewViewProtocols()),
 		vecty.If(route == core.ServicesViewRoute, &views.ViewServices{}),
 		vecty.If(route == core.MessagesViewRoute, &views.ViewMessages{}),
+		vecty.If(route == core.ConfigViewRoute, &views.ViewConfig{}),
 		vecty.If(route == core.NotFoundRoute, &views.ViewNotFound{}),
 	)
 }
