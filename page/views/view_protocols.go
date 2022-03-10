@@ -3,6 +3,7 @@ package views
 import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/page/actions"
 	"github.com/stas-makutin/howeve/page/components"
 	"github.com/stas-makutin/howeve/page/core"
@@ -10,17 +11,21 @@ import (
 
 type ViewProtocols struct {
 	vecty.Core
-	rendered   bool
-	loading    bool
-	useSockets bool
+	rendered     bool
+	loading      bool
+	useSockets   bool
+	errorMessage string
+	protocols    *api.ProtocolInfoResult
 }
 
 func NewViewProtocols() (r *ViewProtocols) {
 	store := actions.GetProtocolViewStore()
 	r = &ViewProtocols{
-		rendered:   false,
-		loading:    store.Loading,
-		useSockets: store.UseSocket,
+		rendered:     false,
+		loading:      store.Loading,
+		useSockets:   store.UseSocket,
+		errorMessage: store.Error,
+		protocols:    store.Protocols,
 	}
 	actions.Subscribe(r)
 	return
@@ -30,6 +35,8 @@ func (ch *ViewProtocols) OnChange(event interface{}) {
 	if store, ok := event.(*actions.ProtocolViewStore); ok {
 		ch.loading = store.Loading
 		ch.useSockets = store.UseSocket
+		ch.errorMessage = store.Error
+		ch.protocols = store.Protocols
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
@@ -42,6 +49,9 @@ func (ch *ViewProtocols) Mount() {
 
 func (ch *ViewProtocols) changeUseSocket(checked, disabled bool) {
 	core.Dispatch(actions.ProtocolsUseSocket(checked))
+}
+
+func (ch *ViewProtocols) clickRetry() {
 }
 
 func (ch *ViewProtocols) refresh() {
@@ -63,7 +73,6 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 			vecty.Markup(
 				vecty.Class("mdc-layout-grid__inner"),
 			),
-
 			elem.Div(
 				vecty.Markup(
 					vecty.Class("mdc-layout-grid__cell"),
@@ -71,12 +80,27 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 				components.NewMdcButton("pt-refresh", "Refresh", false),
 				components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 			),
-
+		),
+		vecty.If(ch.errorMessage != "", elem.Div(
+			vecty.Markup(
+				vecty.Class("mdc-layout-grid__inner"),
+			),
+			elem.Div(
+				vecty.Markup(
+					vecty.Class("mdc-layout-grid__cell"),
+				),
+				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.clickRetry),
+			),
+		)),
+		elem.Div(
+			vecty.Markup(
+				vecty.Class("mdc-layout-grid__inner"),
+			),
 			elem.Div(
 				vecty.Markup(
 					vecty.Class("mdc-layout-grid__cell", "mdc-layout-grid__cell--span-12"),
 				),
-				&protocolsTable{},
+				&protocolsTable{Protocols: ch.protocols},
 			),
 		),
 		vecty.If(ch.loading, &components.ViewLoading{}),
@@ -85,6 +109,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 
 type protocolsTable struct {
 	vecty.Core
+	Protocols *api.ProtocolInfoResult
 }
 
 func (ch *protocolsTable) Copy() vecty.Component {

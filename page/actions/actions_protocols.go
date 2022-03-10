@@ -21,10 +21,10 @@ type ProtocolsLoad struct {
 }
 
 type ProtocolsLoaded struct {
+	Protocols *api.ProtocolInfoResult
 }
 
-type ProtocolsLoadFailed struct {
-}
+type ProtocolsLoadFailed string
 
 func protocolsLoadSockets() {
 	socket := core.NewWebSocket(core.WebSocketUrl())
@@ -40,16 +40,24 @@ func protocolsLoadSockets() {
 }
 
 func protocolsLoadFetch() {
+	core.Fetch(core.HTTPUrl("/protocolInfo"), nil,
+		func(response *core.FetchResponse) {
+			core.Console.Log("fetch data: " + response.Body)
+		},
+		func(err *core.FetchError) {
+			core.Console.Log("fetch error: " + err.Name + ": " + err.Message)
+		},
+	)
 }
 
 func protocolsLoad(action *ProtocolsLoad) bool {
-	if action.Force || pvStore.Data == false {
+	if action.Force || pvStore.Protocols == nil {
 		if action.UseSocket {
 			protocolsLoadSockets()
 		} else {
 			protocolsLoadFetch()
 		}
-		// return false TODO - return false on async op
+		// return false TODO
 	}
 	core.Dispatch(&ProtocolsLoaded{})
 	return true
@@ -60,13 +68,13 @@ func protocolsLoad(action *ProtocolsLoad) bool {
 type ProtocolViewStore struct {
 	Loading   bool
 	UseSocket bool
-	Data      bool
+	Error     string
+	Protocols *api.ProtocolInfoResult
 }
 
 var pvStore = &ProtocolViewStore{
 	Loading:   true,
 	UseSocket: true,
-	Data:      false,
 }
 var pvStoreChanging = false
 
@@ -82,15 +90,19 @@ func pvAction(event interface{}) {
 		pvStore.UseSocket = bool(e)
 	case *ProtocolsLoad:
 		pvStore.Loading = true
+		pvStore.Error = ""
 		if protocolsLoad(e) {
 			return
 		}
 	case *ProtocolsLoaded:
 		pvStore.Loading = false
-		pvStore.Data = true
-	case *ProtocolsLoadFailed:
+		pvStore.Protocols = e.Protocols
+	case ProtocolsLoadFailed:
 		pvStore.Loading = false
-		// TODO
+		pvStore.Error = string(e)
+		if pvStore.Error == "" {
+			pvStore.Error = "Unable to load protocol information"
+		}
 	default:
 		return
 	}
