@@ -69,7 +69,7 @@ func queryFromEvent(event interface{}) *api.Query {
 	case *handlers.TransportListResult:
 		return &api.Query{Type: api.QueryTransportListResult, ID: e.TraceID(), Payload: e.TransportListResult}
 	case *handlers.ProtocolInfoResult:
-		return &api.Query{Type: api.QueryProtocolListResult, ID: e.TraceID(), Payload: e.ProtocolInfoResult}
+		return &api.Query{Type: api.QueryProtocolInfoResult, ID: e.TraceID(), Payload: e.ProtocolInfoResult}
 	case *handlers.ProtocolDiscoverResult:
 		return &api.Query{Type: api.QueryProtocolDiscoverResult, ID: e.TraceID(), Payload: e.ProtocolDiscoverResult}
 	case *handlers.ProtocolDiscoveryResult:

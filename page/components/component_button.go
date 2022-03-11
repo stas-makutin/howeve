@@ -3,6 +3,7 @@ package components
 import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
 )
 
@@ -11,11 +12,16 @@ type MdcButton struct {
 	ID       string
 	Text     string
 	Disabled bool
+	clickFn  func()
 }
 
-func NewMdcButton(id string, text string, disabled bool) (r *MdcButton) {
-	r = &MdcButton{ID: id, Text: text, Disabled: disabled}
+func NewMdcButton(id string, text string, disabled bool, clickFn func()) (r *MdcButton) {
+	r = &MdcButton{ID: id, Text: text, Disabled: disabled, clickFn: clickFn}
 	return
+}
+
+func (ch *MdcButton) onClick(event *vecty.Event) {
+	ch.clickFn()
 }
 
 func (ch *MdcButton) Copy() vecty.Component {
@@ -32,6 +38,7 @@ func (ch *MdcButton) Render() vecty.ComponentOrHTML {
 				ch.Disabled,
 				prop.Disabled(true),
 			),
+			event.Click(ch.onClick),
 		),
 		elem.Span(
 			vecty.Markup(

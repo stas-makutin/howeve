@@ -51,9 +51,6 @@ func (ch *ViewProtocols) changeUseSocket(checked, disabled bool) {
 	core.Dispatch(actions.ProtocolsUseSocket(checked))
 }
 
-func (ch *ViewProtocols) clickRetry() {
-}
-
 func (ch *ViewProtocols) refresh() {
 	core.Dispatch(&actions.ProtocolsLoad{Force: true, UseSocket: ch.useSockets})
 }
@@ -77,7 +74,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 				vecty.Markup(
 					vecty.Class("mdc-layout-grid__cell"),
 				),
-				components.NewMdcButton("pt-refresh", "Refresh", false),
+				components.NewMdcButton("pt-refresh", "Refresh", false, ch.refresh),
 				components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 			),
 		),
@@ -89,7 +86,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 				vecty.Markup(
 					vecty.Class("mdc-layout-grid__cell"),
 				),
-				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.clickRetry),
+				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
 			),
 		)),
 		elem.Div(

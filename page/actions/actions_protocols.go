@@ -1,8 +1,6 @@
 package actions
 
 import (
-	"encoding/json"
-
 	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/page/core"
 )
@@ -26,38 +24,46 @@ type ProtocolsLoaded struct {
 
 type ProtocolsLoadFailed string
 
+func protocolsProcessResponse(r *api.Query) {
+	if p, ok := r.Payload.(*api.ProtocolInfoResult); ok {
+		core.Dispatch(&ProtocolsLoaded{p})
+	} else {
+		core.Dispatch(ProtocolsLoadFailed("Unexpected response type"))
+	}
+}
+
 func protocolsLoadSockets() {
-	socket := core.NewWebSocket(core.WebSocketUrl())
-	socket.OnOpen(func() {
-		q := &api.Query{Type: api.QueryProtocolInfo}
-		b, _ := json.Marshal(q)
-		socket.Send(string(b))
-	})
-	socket.OnMessage(func(data string) {
-		core.Console.Log(data)
-		socket.Close()
-	})
+	core.FetchQueryWithSocket(
+		&api.Query{Type: api.QueryProtocolInfo},
+		func(r *api.Query) {
+			protocolsProcessResponse(r)
+		},
+		func(err string) {
+			core.Dispatch(ProtocolsLoadFailed(err))
+		},
+	)
 }
 
 func protocolsLoadFetch() {
-	core.Fetch(core.HTTPUrl("/protocolInfo"), nil,
-		func(response *core.FetchResponse) {
-			core.Console.Log("fetch data: " + response.Body)
+	core.FetchQuery(
+		core.HTTPUrl("/protocolInfo"), nil,
+		func(r *api.Query) {
+			protocolsProcessResponse(r)
 		},
-		func(err *core.FetchError) {
-			core.Console.Log("fetch error: " + err.Name + ": " + err.Message)
+		func(err string) {
+			core.Dispatch(ProtocolsLoadFailed(err))
 		},
 	)
 }
 
 func protocolsLoad(action *ProtocolsLoad) bool {
-	if action.Force || pvStore.Protocols == nil {
+	if action.Force || (pvStore.Protocols == nil && pvStore.Error == "") {
 		if action.UseSocket {
 			protocolsLoadSockets()
 		} else {
 			protocolsLoadFetch()
 		}
-		// return false TODO
+		return false
 	}
 	core.Dispatch(&ProtocolsLoaded{})
 	return true
@@ -96,6 +102,7 @@ func pvAction(event interface{}) {
 		}
 	case *ProtocolsLoaded:
 		pvStore.Loading = false
+		pvStore.Error = ""
 		pvStore.Protocols = e.Protocols
 	case ProtocolsLoadFailed:
 		pvStore.Loading = false

@@ -13,7 +13,7 @@ body {
 #top-tab .app-title {
 	padding: 0 16px 0 16px
 }
-.mdc-layout-grid__cell {
+.mdc-layout-grid__inner {
 	margin-top: 5px;
 }
 .mdc-data-table__header-cell {

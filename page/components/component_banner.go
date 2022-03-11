@@ -5,7 +5,9 @@ import (
 
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcBanner struct {
@@ -43,6 +45,7 @@ func (ch *MdcBanner) Copy() vecty.Component {
 }
 
 func (ch *MdcBanner) Render() vecty.ComponentOrHTML {
+	core.Console.Log("here")
 	return elem.Div(
 		vecty.Markup(
 			prop.ID(ch.ID),
@@ -74,6 +77,7 @@ func (ch *MdcBanner) Render() vecty.ComponentOrHTML {
 					vecty.Markup(
 						prop.Type(prop.TypeButton),
 						vecty.Class("mdc-button", "mdc-banner__primary-action"),
+						event.Click(ch.onClick).StopPropagation(),
 					),
 					elem.Div(
 						vecty.Markup(

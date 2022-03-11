@@ -1,6 +1,8 @@
 package core
 
-import "syscall/js"
+import (
+	"syscall/js"
+)
 
 type WebSocket struct {
 	jsSocket js.Value
