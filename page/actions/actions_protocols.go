@@ -65,7 +65,12 @@ func protocolsLoad(action *ProtocolsLoad) bool {
 		}
 		return false
 	}
-	core.Dispatch(&ProtocolsLoaded{})
+	// restore saved state
+	if pvStore.Error != "" {
+		core.Dispatch(ProtocolsLoadFailed(pvStore.Error))
+	} else {
+		core.Dispatch(&ProtocolsLoaded{pvStore.Protocols})
+	}
 	return true
 }
 

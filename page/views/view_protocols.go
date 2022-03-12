@@ -1,6 +1,10 @@
 package views
 
 import (
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/stas-makutin/howeve/api"
@@ -106,7 +110,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 
 type protocolsTable struct {
 	vecty.Core
-	Protocols *api.ProtocolInfoResult
+	Protocols *api.ProtocolInfoResult `vecty:"prop"`
 }
 
 func (ch *protocolsTable) Copy() vecty.Component {
@@ -142,11 +146,7 @@ func (ch *protocolsTable) Render() vecty.ComponentOrHTML {
 						ch.headerColumn("Discovery Parameters"),
 					),
 				),
-				elem.TableBody(
-					vecty.Markup(
-						vecty.Class("mdc-data-table__content"),
-					),
-				),
+				ch.tableBody(),
 			),
 		),
 	)
@@ -160,5 +160,118 @@ func (ch *protocolsTable) headerColumn(name string, classes ...string) vecty.Com
 			vecty.Attribute("scope", "col"),
 		),
 		vecty.Text(name),
+	)
+}
+
+func (ch *protocolsTable) tableBody() vecty.ComponentOrHTML {
+	if ch.Protocols == nil || len(ch.Protocols.Protocols) <= 0 {
+		return nil
+	}
+
+	var content []vecty.MarkupOrChild
+
+	content = append(content,
+		vecty.Markup(
+			vecty.Class("mdc-data-table__content"),
+		),
+	)
+
+	for _, protocol := range ch.Protocols.Protocols {
+		for _, transport := range protocol.Transports {
+			content = append(content, ch.tableRow(protocol, transport))
+		}
+	}
+
+	return elem.TableBody(content...)
+}
+
+func (ch *protocolsTable) tableRow(protocol *api.ProtocolInfoEntry, transport *api.ProtocolTransportInfoEntry) vecty.ComponentOrHTML {
+	var dicoverable string
+	if transport.Discoverable {
+		dicoverable = "Yes"
+	} else {
+		dicoverable = "No"
+	}
+	return elem.TableRow(
+		vecty.Markup(
+			vecty.Class("mdc-data-table__row"),
+		),
+		ch.tableColumn(vecty.Text(protocol.Name)),
+		ch.tableColumn(vecty.Text(strconv.Itoa(int(protocol.ID))), "mdc-data-table__cell--numeric"),
+		ch.tableColumn(vecty.Text(transport.Name)),
+		ch.tableColumn(vecty.Text(strconv.Itoa(int(transport.ID))), "mdc-data-table__cell--numeric"),
+		ch.tableColumn(ch.parametersTable(transport.Params)),
+		ch.tableColumn(vecty.Text(dicoverable)),
+		ch.tableColumn(ch.parametersTable(transport.Params)),
+	)
+}
+
+func (ch *protocolsTable) tableColumn(content vecty.MarkupOrChild, classes ...string) vecty.ComponentOrHTML {
+	return elem.TableData(
+		vecty.Markup(
+			vecty.Class(append([]string{"mdc-data-table__cell"}, classes...)...),
+			vecty.Attribute("role", "columnheader"),
+			vecty.Attribute("scope", "col"),
+		),
+		content,
+	)
+}
+
+func (ch *protocolsTable) parametersTable(params map[string]*api.ParamInfoEntry) vecty.ComponentOrHTML {
+	if len(params) <= 0 {
+		return vecty.Text("None")
+	}
+
+	names := make([]string, 0, len(params))
+	for name := range params {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var rows []vecty.MarkupOrChild
+	makeRow := func(name, value string) {
+		rows = append(rows,
+			elem.TableRow(
+				elem.TableData(
+					vecty.Text(name),
+				),
+				elem.TableData(
+					vecty.Markup(
+						vecty.Style("white-space", "break-spaces"),
+					),
+					elem.Italic(
+						vecty.Text(value),
+					),
+				),
+			),
+		)
+	}
+	for _, name := range names {
+		info := params[name]
+		if len(rows) > 0 {
+			rows = append(rows, elem.TableData(
+				vecty.Markup(
+					vecty.Attribute("colspan", "2"),
+					vecty.Style("border-top", "1px solid gainsboro"),
+				),
+			))
+		}
+		makeRow("Name", name)
+		if info.Description != "" {
+			makeRow("Description", info.Description)
+		}
+		makeRow("Type", info.Type)
+		if info.DefaultValue != "" {
+			makeRow("Default Value", info.DefaultValue)
+		}
+		if info.Type == "enum" {
+			makeRow("Allowed Values", strings.Join(info.EnumValues, ", "))
+		}
+	}
+
+	return elem.Table(
+		elem.TableBody(
+			rows...,
+		),
 	)
 }

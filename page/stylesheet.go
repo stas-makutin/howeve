@@ -4,6 +4,9 @@ var stylesheet = `
 body { 
 	margin: 0; 
 }
+td {
+	vertical-align: top;
+}
 #top-bar .tab-bar-divider {
 	border-bottom: 1px solid gainsboro;
 	position: relative;
