@@ -84,7 +84,7 @@ func (ch *viewMain) Render() vecty.ComponentOrHTML {
 		vecty.If(route == core.ProtocolViewRoute, views.NewViewProtocols()),
 		vecty.If(route == core.ServicesViewRoute, &views.ViewServices{}),
 		vecty.If(route == core.MessagesViewRoute, &views.ViewMessages{}),
-		vecty.If(route == core.ConfigViewRoute, &views.ViewConfig{}),
+		vecty.If(route == core.ConfigViewRoute, views.NewViewConfig()),
 		vecty.If(route == core.NotFoundRoute, &views.ViewNotFound{}),
 	)
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
-	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcBanner struct {
@@ -45,7 +44,6 @@ func (ch *MdcBanner) Copy() vecty.Component {
 }
 
 func (ch *MdcBanner) Render() vecty.ComponentOrHTML {
-	core.Console.Log("here")
 	return elem.Div(
 		vecty.Markup(
 			prop.ID(ch.ID),
