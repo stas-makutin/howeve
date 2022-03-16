@@ -23,6 +23,28 @@ func TestSerialization(t *testing.T) {
 			Type: QueryGetConfigResult, ID: "qrgc",
 			Payload: &Config{
 				WorkingDirectory: "test",
+				Log: &LogConfig{
+					DirMode:  0600,
+					FileMode: 0755,
+					MaxSize:  12345,
+					MaxAge:   12345,
+				},
+				HTTPServer: &HTTPServerConfig{
+					ReadTimeout:       12345,
+					ReadHeaderTimeout: 12345,
+					WriteTimeout:      12345,
+					IdleTimeout:       12345,
+					MaxHeaderBytes:    12345,
+					Assets: []HTTPAsset{
+						{Flags: HAFShowHidden | HAFGZipContent},
+					},
+				},
+				MessageLog: &MessageLogConfig{
+					DirMode:    0600,
+					FileMode:   0755,
+					Flags:      MLFlagIgnoreReadError,
+					AutoPesist: 12345,
+				},
 			},
 		},
 
@@ -170,8 +192,8 @@ func TestSerialization(t *testing.T) {
 		{
 			Type: QueryListServicesResult, ID: "qrls", Payload: &ListServicesResult{
 				Services: []ListServicesEntry{
-					{&ServiceID{&ServiceKey{ProtocolZWave, TransportSerial, "COM5"}, ""}, &StatusReply{nil, true}},
-					{&ServiceID{&ServiceKey{ProtocolZWave, TransportSerial, "COM1"}, "Alias"}, &StatusReply{nil, false}},
+					{&ServiceEntry{&ServiceKey{ProtocolZWave, TransportSerial, "COM3"}, RawParamValues{"p1": "v1", "p2": "v2"}, "Some alias"}, &StatusReply{nil, true}},
+					{&ServiceEntry{&ServiceKey{ProtocolZWave, TransportSerial, "COM1"}, nil, ""}, &StatusReply{nil, false}},
 				},
 			},
 		},

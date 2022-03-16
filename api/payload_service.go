@@ -40,7 +40,7 @@ type ListServices struct {
 
 // ListServicesEntry - service information for services list result
 type ListServicesEntry struct {
-	*ServiceID
+	*ServiceEntry
 	*StatusReply
 }
 

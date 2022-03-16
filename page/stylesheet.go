@@ -7,7 +7,7 @@ body {
 td {
 	vertical-align: top;
 }
-#top-bar .tab-bar-divider {
+#top-tab .tab-bar-divider {
 	border-bottom: 1px solid gainsboro;
 	position: relative;
 	top: -3px;

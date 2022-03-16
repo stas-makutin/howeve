@@ -29,7 +29,20 @@ func (flags *MessageLogFlag) UnmarshalYAML(node *yaml.Node) (err error) {
 		err = fmt.Errorf("line %d, column %d: unknown flag '%v'", node.Line, node.Column, flag)
 		return false
 	})
-	return err
+	return
+}
+
+func (flags *MessageLogFlag) UnmarshalJSON(data []byte) (err error) {
+	*flags = 0
+	strutil.ParseOptions(strings.Trim(string(data), "\""), func(flag string) bool {
+		if fl, ok := messageLogFlagMap[flag]; ok {
+			*flags |= fl
+			return true
+		}
+		err = fmt.Errorf("MessageLogFlag: unknown flag '%v'", flag)
+		return false
+	})
+	return
 }
 
 func (flags MessageLogFlag) String() string {

@@ -12,17 +12,21 @@ const (
 	ProtocolViewRoute = PageRoute(iota)
 	ServicesViewRoute
 	MessagesViewRoute
+	DiscoveryViewRoute
 	ConfigViewRoute
+	LogViewRoute
 	NotFoundRoute
 )
 
 var basePath = ""
 
 var routes = map[string]PageRoute{
-	"/":         ProtocolViewRoute,
-	"/services": ServicesViewRoute,
-	"/messages": MessagesViewRoute,
-	"/config":   ConfigViewRoute,
+	"/":          ProtocolViewRoute,
+	"/services":  ServicesViewRoute,
+	"/messages":  MessagesViewRoute,
+	"/discovery": DiscoveryViewRoute,
+	"/config":    ConfigViewRoute,
+	"/log":       LogViewRoute,
 }
 
 var routesPaths map[PageRoute]string

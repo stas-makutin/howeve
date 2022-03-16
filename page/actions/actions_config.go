@@ -29,7 +29,7 @@ type ConfigLoadFailed string
 
 func configProcessResponse(r *api.Query) {
 	if p, ok := r.Payload.(*api.Config); ok {
-		b, err := json.MarshalIndent(p, "", "\t")
+		b, err := json.MarshalIndent(p, "", "  ")
 		if err == nil {
 			core.Dispatch(&ConfigLoaded{string(b)})
 			return

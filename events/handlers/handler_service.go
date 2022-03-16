@@ -81,7 +81,7 @@ func handleServiceStatus(event *ServiceStatus) {
 
 func handleListServices(event *ListServices) {
 	r := &ListServicesResult{ResponseHeader: event.Associate()}
-	defs.Services.List(func(key *api.ServiceKey, alias string, status defs.ServiceStatus) bool {
+	defs.Services.List(func(key *api.ServiceKey, alias string, status defs.ServiceStatus, params api.ParamValues) bool {
 		found := 0b1111
 		if len(event.Protocols) > 0 {
 			mask := 0b0001
@@ -131,7 +131,8 @@ func handleListServices(event *ListServices) {
 				statusReply.Error = newErrorInfo(api.ErrorServiceStatusBad, status)
 			}
 			r.Services = append(r.Services, api.ListServicesEntry{
-				ServiceID: &api.ServiceID{ServiceKey: key, Alias: alias}, StatusReply: statusReply,
+				ServiceEntry: &api.ServiceEntry{ServiceKey: key, Alias: alias, Params: params.Raw()},
+				StatusReply:  statusReply,
 			})
 		}
 		return false

@@ -35,7 +35,20 @@ func (flags *HttpAssetFlag) UnmarshalYAML(node *yaml.Node) (err error) {
 		err = fmt.Errorf("line %d, column %d: unknown flag '%v'", node.Line, node.Column, flag)
 		return false
 	})
-	return err
+	return
+}
+
+func (flags *HttpAssetFlag) UnmarshalJSON(data []byte) (err error) {
+	*flags = 0
+	strutil.ParseOptions(strings.Trim(string(data), "\""), func(flag string) bool {
+		if fl, ok := httpAssetFlagMap[flag]; ok {
+			*flags |= fl
+			return true
+		}
+		err = fmt.Errorf("HttpAssetFlag: unknown flag '%v'", flag)
+		return false
+	})
+	return
 }
 
 func (flags HttpAssetFlag) String() string {

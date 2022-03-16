@@ -52,7 +52,7 @@ const ParamNameOpenAttemptsInterval = "openAttemptsInterval"
 const ParamNameOutgoingMaxTTL = "outgoingMaxTTL"
 
 // ListFunc is a the callback function used in ServiceRegistry List method. Returnning true will stop services iteration
-type ListFunc func(key *api.ServiceKey, alias string, status ServiceStatus) bool
+type ListFunc func(key *api.ServiceKey, alias string, status ServiceStatus, params api.ParamValues) bool
 
 // ResolveIDsInput is the input iteration method for ServiceREgistry ResoveIDs
 type ResolveIDsInput func() (key *api.ServiceKey, alias string, stop bool)

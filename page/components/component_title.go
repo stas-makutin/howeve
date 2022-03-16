@@ -17,7 +17,7 @@ func (ch *Title) Copy() vecty.Component {
 func (ch *Title) Render() vecty.ComponentOrHTML {
 	return elem.Section(
 		vecty.Markup(
-			vecty.Class("app-Title"),
+			vecty.Class("app-title"),
 		),
 		elem.Div(
 			vecty.Markup(

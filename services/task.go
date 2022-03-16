@@ -211,7 +211,7 @@ func (sr *servicesRegistry) List(listFn defs.ListFunc) {
 		defer sr.lock.Unlock()
 
 		for _, si := range sr.services {
-			listFn(si.key, si.alias, si.service.Status())
+			listFn(si.key, si.alias, si.service.Status(), si.params)
 		}
 	}
 }
