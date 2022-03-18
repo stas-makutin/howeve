@@ -11,12 +11,12 @@ import (
 
 type MdcCheckbox struct {
 	vecty.Core
-	ID         string
-	Label      string
-	Checked    bool
-	Disabled   bool
-	changeFn   func(checked, disabled bool)
-	jsCheckbox js.Value
+	ID       string
+	Label    string
+	Checked  bool
+	Disabled bool
+	changeFn func(checked, disabled bool)
+	jsObject js.Value
 }
 
 func NewMdcCheckbox(id string, label string, checked, disabled bool, changeFn func(checked, disabled bool)) (r *MdcCheckbox) {
@@ -25,17 +25,17 @@ func NewMdcCheckbox(id string, label string, checked, disabled bool, changeFn fu
 }
 
 func (ch *MdcCheckbox) Mount() {
-	ch.jsCheckbox = js.Global().Get("mdc").Get("checkbox").Get("MDCCheckbox").Call(
+	ch.jsObject = js.Global().Get("mdc").Get("checkbox").Get("MDCCheckbox").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
 }
 
 func (ch *MdcCheckbox) Unmount() {
-	ch.jsCheckbox.Call("destroy")
+	ch.jsObject.Call("destroy")
 }
 
 func (ch *MdcCheckbox) onClick(event *vecty.Event) {
-	ch.Checked = ch.jsCheckbox.Get("checked").Bool()
+	ch.Checked = ch.jsObject.Get("checked").Bool()
 	ch.changeFn(ch.Checked, ch.Disabled)
 }
 

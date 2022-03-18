@@ -93,6 +93,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
 			),
 		)),
+		&components.SectionTitle{Text: "Protocols"},
 		elem.Div(
 			vecty.Markup(
 				vecty.Class("mdc-layout-grid__inner"),

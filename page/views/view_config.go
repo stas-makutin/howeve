@@ -92,6 +92,7 @@ func (ch *ViewConfig) Render() vecty.ComponentOrHTML {
 				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
 			),
 		)),
+		&components.SectionTitle{Text: "Configuration"},
 		elem.Div(
 			vecty.Markup(
 				vecty.Class("mdc-layout-grid__inner"),
