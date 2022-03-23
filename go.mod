@@ -1,6 +1,6 @@
 module github.com/stas-makutin/howeve
 
-go 1.17
+go 1.18
 
 require (
 	github.com/albenik/go-serial/v2 v2.3.0

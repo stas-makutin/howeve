@@ -169,21 +169,19 @@ func (ch *protocolsTable) tableBody() vecty.ComponentOrHTML {
 		return nil
 	}
 
-	var content []vecty.MarkupOrChild
-
-	content = append(content,
-		vecty.Markup(
-			vecty.Class("mdc-data-table__content"),
-		),
-	)
-
+	var content vecty.List
 	for _, protocol := range ch.Protocols.Protocols {
 		for _, transport := range protocol.Transports {
 			content = append(content, ch.tableRow(protocol, transport))
 		}
 	}
 
-	return elem.TableBody(content...)
+	return elem.TableBody(
+		vecty.Markup(
+			vecty.Class("mdc-data-table__content"),
+		),
+		content,
+	)
 }
 
 func (ch *protocolsTable) tableRow(protocol *api.ProtocolInfoEntry, transport *api.ProtocolTransportInfoEntry) vecty.ComponentOrHTML {
@@ -229,7 +227,7 @@ func (ch *protocolsTable) parametersTable(params map[string]*api.ParamInfoEntry)
 	}
 	sort.Strings(names)
 
-	var rows []vecty.MarkupOrChild
+	var rows vecty.List
 	makeRow := func(name, value string) {
 		rows = append(rows,
 			elem.TableRow(
@@ -272,7 +270,7 @@ func (ch *protocolsTable) parametersTable(params map[string]*api.ParamInfoEntry)
 
 	return elem.Table(
 		elem.TableBody(
-			rows...,
+			rows,
 		),
 	)
 }
