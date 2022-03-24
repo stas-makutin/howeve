@@ -6,10 +6,12 @@ import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcTextField struct {
 	vecty.Core
+	core.ClassAdder
 	ID       string
 	Label    string
 	Value    string
@@ -35,6 +37,11 @@ func (ch *MdcTextField) Unmount() {
 func (ch *MdcTextField) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
+}
+
+func (ch *MdcTextField) AddClasses(classes ...string) vecty.Component {
+	ch.ClassAdder.AddClasses(classes...)
+	return ch
 }
 
 func (ch *MdcTextField) Render() vecty.ComponentOrHTML {

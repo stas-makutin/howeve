@@ -65,54 +65,27 @@ func (ch *ViewConfig) Render() vecty.ComponentOrHTML {
 	if configText == "" {
 		configText = " "
 	}
-	return elem.Div(
-		vecty.Markup(
-			vecty.Class("mdc-layout-grid"),
+	return components.NewMdcGrid(
+		components.NewMdcGridSingleCellRow(
+			components.NewMdcButton("cf-refresh", "Refresh", false, ch.refresh),
+			components.NewMdcCheckbox("cf-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
-		elem.Div(
-			vecty.Markup(
-				vecty.Class("mdc-layout-grid__inner"),
-			),
-			elem.Div(
-				vecty.Markup(
-					vecty.Class("mdc-layout-grid__cell"),
-				),
-				components.NewMdcButton("pt-refresh", "Refresh", false, ch.refresh),
-				components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
-			),
-		),
-		vecty.If(ch.errorMessage != "", elem.Div(
-			vecty.Markup(
-				vecty.Class("mdc-layout-grid__inner"),
-			),
-			elem.Div(
-				vecty.Markup(
-					vecty.Class("mdc-layout-grid__cell"),
-				),
-				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
-			),
+		core.If(ch.errorMessage != "", components.NewMdcGridSingleCellRow(
+			components.NewMdcBanner("cf-error-banner", ch.errorMessage, "Retry", ch.refresh),
 		)),
 		&components.SectionTitle{Text: "Configuration"},
-		elem.Div(
-			vecty.Markup(
-				vecty.Class("mdc-layout-grid__inner"),
-			),
-			elem.Div(
+		components.NewMdcGridSingleCellRow(
+			elem.Preformatted(
 				vecty.Markup(
-					vecty.Class("mdc-layout-grid__cell", "mdc-layout-grid__cell--span-12"),
+					vecty.Class("mdc-elevation--z1"),
+					vecty.Style("margin", "0"),
+					vecty.Style("padding", "3px"),
+					vecty.Style("max-height", "calc(100vh - 150px)"),
+					vecty.Style("overflow", "auto"),
 				),
-				elem.Preformatted(
-					vecty.Markup(
-						vecty.Class("mdc-elevation--z1"),
-						vecty.Style("margin", "0"),
-						vecty.Style("padding", "3px"),
-						vecty.Style("max-height", "calc(100vh - 150px)"),
-						vecty.Style("overflow", "auto"),
-					),
-					vecty.Text(configText),
-				),
+				vecty.Text(configText),
 			),
 		),
-		vecty.If(ch.loading, &components.ViewLoading{}),
+		core.If(ch.loading, &components.ViewLoading{}),
 	)
 }

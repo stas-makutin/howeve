@@ -228,17 +228,21 @@ func (c *Query) unmarshalPayload(data []byte) error {
 		}
 		c.Payload = &p
 	case QueryListServices:
-		var p ListServices
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
+		if len(data) > 0 {
+			var p ListServices
+			if err := json.Unmarshal(data, &p); err != nil {
+				return err
+			}
+			c.Payload = &p
 		}
-		c.Payload = &p
 	case QueryListServicesResult:
-		var p ListServicesResult
-		if err := json.Unmarshal(data, &p); err != nil {
-			return err
+		if len(data) > 0 {
+			var p ListServicesResult
+			if err := json.Unmarshal(data, &p); err != nil {
+				return err
+			}
+			c.Payload = &p
 		}
-		c.Payload = &p
 	case QuerySendToService:
 		var p SendToService
 		if err := json.Unmarshal(data, &p); err != nil {

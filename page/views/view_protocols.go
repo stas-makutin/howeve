@@ -66,46 +66,19 @@ func (ch *ViewProtocols) Copy() vecty.Component {
 
 func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 	ch.rendered = true
-	return elem.Div(
-		vecty.Markup(
-			vecty.Class("mdc-layout-grid"),
+	return components.NewMdcGrid(
+		components.NewMdcGridSingleCellRow(
+			components.NewMdcButton("pt-refresh", "Refresh", false, ch.refresh),
+			components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
-		elem.Div(
-			vecty.Markup(
-				vecty.Class("mdc-layout-grid__inner"),
-			),
-			elem.Div(
-				vecty.Markup(
-					vecty.Class("mdc-layout-grid__cell"),
-				),
-				components.NewMdcButton("pt-refresh", "Refresh", false, ch.refresh),
-				components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
-			),
-		),
-		vecty.If(ch.errorMessage != "", elem.Div(
-			vecty.Markup(
-				vecty.Class("mdc-layout-grid__inner"),
-			),
-			elem.Div(
-				vecty.Markup(
-					vecty.Class("mdc-layout-grid__cell"),
-				),
-				components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
-			),
+		core.If(ch.errorMessage != "", components.NewMdcGridSingleCellRow(
+			components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
 		)),
 		&components.SectionTitle{Text: "Protocols"},
-		elem.Div(
-			vecty.Markup(
-				vecty.Class("mdc-layout-grid__inner"),
-			),
-			elem.Div(
-				vecty.Markup(
-					vecty.Class("mdc-layout-grid__cell", "mdc-layout-grid__cell--span-12"),
-				),
-				&protocolsTable{Protocols: ch.protocols},
-			),
+		components.NewMdcGridSingleCellRow(
+			&protocolsTable{Protocols: ch.protocols},
 		),
-		vecty.If(ch.loading, &components.ViewLoading{}),
+		core.If(ch.loading, &components.ViewLoading{}),
 	)
 }
 
@@ -208,7 +181,7 @@ func (ch *protocolsTable) tableRow(protocol *api.ProtocolInfoEntry, transport *a
 func (ch *protocolsTable) tableColumn(content vecty.MarkupOrChild, classes ...string) vecty.ComponentOrHTML {
 	return elem.TableData(
 		vecty.Markup(
-			vecty.Class(append([]string{"mdc-data-table__cell"}, classes...)...),
+			vecty.Class(append([]string{"mdc-data-table__cell", "data-table-cell--top"}, classes...)...),
 			vecty.Attribute("role", "columnheader"),
 			vecty.Attribute("scope", "col"),
 		),

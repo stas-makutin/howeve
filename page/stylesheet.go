@@ -4,9 +4,6 @@ var stylesheet = `
 body { 
 	margin: 0; 
 }
-td {
-	vertical-align: top;
-}
 #top-tab .tab-bar-divider {
 	border-bottom: 1px solid gainsboro;
 	position: relative;
@@ -16,11 +13,14 @@ td {
 #top-tab .app-title {
 	padding: 0 16px 0 16px
 }
-.mdc-layout-grid__inner {
-	margin-top: 5px;
+.data-table-cell--top {
+	vertical-align: top;
 }
 .mdc-data-table__header-cell {
 	font-weight: bold;
+}
+.adjacent-margins {
+	margin: 3px 3px 3px 0;
 }
 .view {
 	position: relative;

@@ -189,6 +189,7 @@ func TestSerialization(t *testing.T) {
 			Entries:    []string{"COM1", "COM2"},
 			Aliases:    []string{"Alias 1", "Alias 2"},
 		}},
+		{Type: QueryListServices, ID: "qls2"},
 		{
 			Type: QueryListServicesResult, ID: "qrls", Payload: &ListServicesResult{
 				Services: []ListServicesEntry{
@@ -197,6 +198,7 @@ func TestSerialization(t *testing.T) {
 				},
 			},
 		},
+		{Type: QueryListServicesResult, ID: "qrls2"},
 
 		{Type: QuerySendToService, ID: "qsts", Payload: &SendToService{&ServiceID{nil, "Alias"}, []byte{0xab, 0xf5, 0xc6, 0xe4, 0xb8}}},
 		{

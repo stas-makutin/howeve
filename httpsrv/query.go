@@ -23,6 +23,8 @@ func queryToEvent(c *api.Query) interface{} {
 		var payload *api.ProtocolInfo
 		if c.Payload != nil {
 			payload = c.Payload.(*api.ProtocolInfo)
+		} else {
+			payload = &api.ProtocolInfo{}
 		}
 		return &handlers.ProtocolInfo{RequestHeader: *handlers.NewRequestHeader(c.ID), ProtocolInfo: payload}
 	case api.QueryProtocolDiscover:
@@ -38,7 +40,13 @@ func queryToEvent(c *api.Query) interface{} {
 	case api.QueryServiceStatus:
 		return &handlers.ServiceStatus{RequestHeader: *handlers.NewRequestHeader(c.ID), ServiceID: c.Payload.(*api.ServiceID)}
 	case api.QueryListServices:
-		return &handlers.ListServices{RequestHeader: *handlers.NewRequestHeader(c.ID), ListServices: c.Payload.(*api.ListServices)}
+		var payload *api.ListServices
+		if c.Payload != nil {
+			payload = c.Payload.(*api.ListServices)
+		} else {
+			payload = &api.ListServices{}
+		}
+		return &handlers.ListServices{RequestHeader: *handlers.NewRequestHeader(c.ID), ListServices: payload}
 	case api.QuerySendToService:
 		return &handlers.SendToService{RequestHeader: *handlers.NewRequestHeader(c.ID), SendToService: c.Payload.(*api.SendToService)}
 	case api.QueryGetMessage:

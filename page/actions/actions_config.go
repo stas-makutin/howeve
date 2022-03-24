@@ -2,7 +2,6 @@ package actions
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/page/core"
@@ -102,7 +101,6 @@ func GetConfigViewStore() *ConfigViewStore {
 // reducer
 
 func cvAction(event interface{}) {
-	core.Console.Log(fmt.Sprintf("%T", event))
 	switch e := event.(type) {
 	case ConfigUseSocket:
 		cvStore.UseSocket = bool(e)

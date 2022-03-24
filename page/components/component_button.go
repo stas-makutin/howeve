@@ -5,10 +5,12 @@ import (
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcButton struct {
 	vecty.Core
+	core.ClassAdder
 	ID       string
 	Text     string
 	Disabled bool
@@ -29,11 +31,17 @@ func (ch *MdcButton) Copy() vecty.Component {
 	return &cpy
 }
 
+func (ch *MdcButton) AddClasses(classes ...string) vecty.Component {
+	ch.ClassAdder.AddClasses(classes...)
+	return ch
+}
+
 func (ch *MdcButton) Render() vecty.ComponentOrHTML {
 	return elem.Button(
 		vecty.Markup(
 			prop.ID(ch.ID),
 			vecty.Class("mdc-button", "mdc-button--outlined"),
+			ch.ApplyClasses(),
 			vecty.MarkupIf(
 				ch.Disabled,
 				prop.Disabled(true),

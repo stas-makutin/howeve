@@ -61,7 +61,6 @@ func FetchQueryWithSocket(r *api.Query, then func(r *api.Query), catch func(err 
 	})
 	socket.OnMessage(func(data string) {
 		socket.Close()
-		Console.Log(data)
 		if q, err := StringToQuery(data); err == nil {
 			then(q)
 		} else {

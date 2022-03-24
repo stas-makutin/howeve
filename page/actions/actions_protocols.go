@@ -25,7 +25,9 @@ type ProtocolsLoaded struct {
 type ProtocolsLoadFailed string
 
 func protocolsProcessResponse(r *api.Query) {
-	if p, ok := r.Payload.(*api.ProtocolInfoResult); ok {
+	if r.Payload == nil {
+		core.Dispatch(&ProtocolsLoaded{&api.ProtocolInfoResult{}})
+	} else if p, ok := r.Payload.(*api.ProtocolInfoResult); ok {
 		core.Dispatch(&ProtocolsLoaded{p})
 	} else {
 		core.Dispatch(ProtocolsLoadFailed("Unexpected response type"))

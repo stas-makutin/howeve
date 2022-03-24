@@ -32,7 +32,7 @@ type MdcDialog struct {
 	FullScreen  bool
 	CloseButton bool
 	Buttons     []MdcDialogButton
-	Content     vecty.List
+	Content     vecty.List `vecty:"prop"`
 	jsObject    js.Value
 }
 
@@ -98,14 +98,16 @@ func (ch *MdcDialog) Render() vecty.ComponentOrHTML {
 }
 
 func (ch *MdcDialog) RenderHeader(labelID string) vecty.ComponentOrHTML {
-	title := vecty.If(ch.Title != "",
-		elem.Heading2(
+	var title *vecty.HTML
+	if ch.Title != "" {
+		title = elem.Heading2(
 			vecty.Markup(
 				prop.ID(labelID),
 				vecty.Class("mdc-dialog__title"),
 			),
 			vecty.Text(ch.Title),
-		))
+		)
+	}
 
 	if ch.CloseButton {
 		return elem.Div(
