@@ -38,6 +38,7 @@ func (ch *MdcGridCell) Render() vecty.ComponentOrHTML {
 
 type MdcGridRow struct {
 	vecty.Core
+	core.ClassAdder
 	Cells vecty.List `vecty:"prop"`
 }
 
@@ -55,10 +56,16 @@ func (ch *MdcGridRow) Copy() vecty.Component {
 	return &cpy
 }
 
+func (ch *MdcGridRow) AddClasses(classes ...string) vecty.Component {
+	ch.ClassAdder.AddClasses(classes...)
+	return ch
+}
+
 func (ch *MdcGridRow) Render() vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(
 			vecty.Class("mdc-layout-grid__inner"),
+			ch.ApplyClasses(),
 		),
 		ch.Cells,
 	)
@@ -66,6 +73,7 @@ func (ch *MdcGridRow) Render() vecty.ComponentOrHTML {
 
 type MdcGrid struct {
 	vecty.Core
+	core.ClassAdder
 	Rows vecty.List `vecty:"prop"`
 }
 
@@ -78,10 +86,16 @@ func (ch *MdcGrid) Copy() vecty.Component {
 	return &cpy
 }
 
+func (ch *MdcGrid) AddClasses(classes ...string) vecty.Component {
+	ch.ClassAdder.AddClasses(classes...)
+	return ch
+}
+
 func (ch *MdcGrid) Render() vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(
 			vecty.Class("mdc-layout-grid"),
+			ch.ApplyClasses(),
 		),
 		ch.Rows,
 	)

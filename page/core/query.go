@@ -68,6 +68,7 @@ func FetchQueryWithSocket(r *api.Query, then func(r *api.Query), catch func(err 
 		}
 	})
 	socket.OnError(func() {
+		socket.Close()
 		catch("Unable to collect the requested data")
 	})
 }

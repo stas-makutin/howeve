@@ -7,14 +7,15 @@ import (
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcCheckbox struct {
 	vecty.Core
-	ID       string
-	Label    string
-	Checked  bool
-	Disabled bool
+	ID       string `vecty:"prop"`
+	Label    string `vecty:"prop"`
+	Checked  bool   `vecty:"prop"`
+	Disabled bool   `vecty:"prop"`
 	changeFn func(checked, disabled bool)
 	jsObject js.Value
 }
@@ -25,13 +26,14 @@ func NewMdcCheckbox(id string, label string, checked, disabled bool, changeFn fu
 }
 
 func (ch *MdcCheckbox) Mount() {
+	ch.Unmount()
 	ch.jsObject = js.Global().Get("mdc").Get("checkbox").Get("MDCCheckbox").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
 }
 
 func (ch *MdcCheckbox) Unmount() {
-	ch.jsObject.Call("destroy")
+	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
 }
 
 func (ch *MdcCheckbox) onClick(event *vecty.Event) {
@@ -65,14 +67,8 @@ func (ch *MdcCheckbox) Render() vecty.ComponentOrHTML {
 					prop.ID(idInput),
 					prop.Type(prop.TypeCheckbox),
 					vecty.Class("mdc-checkbox__native-control"),
-					vecty.MarkupIf(
-						ch.Checked,
-						prop.Checked(true),
-					),
-					vecty.MarkupIf(
-						ch.Disabled,
-						prop.Disabled(true),
-					),
+					prop.Checked(ch.Checked),
+					prop.Disabled(ch.Disabled),
 				),
 			),
 			elem.Div(

@@ -16,11 +16,14 @@ body {
 .data-table-cell--top {
 	vertical-align: top;
 }
+.align-center {
+	text-align: center;
+}
 .mdc-data-table__header-cell {
 	font-weight: bold;
 }
 .adjacent-margins {
-	margin: 3px 3px 3px 0;
+	margin: 0.5em 0.5em 0.5em 0;
 }
 .view {
 	position: relative;
@@ -38,5 +41,8 @@ body {
 .view-loading__progress {
 	margin: 10% 50%;
 	opacity: 100%;
+}
+#sv-add-service-dialog---content {
+	min-height: 15em;
 }
 `

@@ -12,10 +12,10 @@ import (
 type MdcTextField struct {
 	vecty.Core
 	core.ClassAdder
-	ID       string
-	Label    string
-	Value    string
-	Disabled bool
+	ID       string `vecty:"prop"`
+	Label    string `vecty:"prop"`
+	Value    string `vecty:"prop"`
+	Disabled bool   `vecty:"prop"`
 	jsObject js.Value
 }
 
@@ -25,13 +25,18 @@ func NewMdcTextField(id, label, value string, disabled bool) (r *MdcTextField) {
 }
 
 func (ch *MdcTextField) Mount() {
+	ch.Unmount()
 	ch.jsObject = js.Global().Get("mdc").Get("textField").Get("MDCTextField").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
 }
 
 func (ch *MdcTextField) Unmount() {
-	ch.jsObject.Call("destroy")
+	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
+}
+
+func (ch *MdcTextField) Key() interface{} {
+	return ch
 }
 
 func (ch *MdcTextField) Copy() vecty.Component {
@@ -50,10 +55,7 @@ func (ch *MdcTextField) Render() vecty.ComponentOrHTML {
 		vecty.Markup(
 			prop.ID(ch.ID),
 			vecty.Class("mdc-text-field", "mdc-text-field--outlined", "mdc-text-field--no-label"),
-			vecty.MarkupIf(
-				ch.Disabled,
-				prop.Disabled(true),
-			),
+			prop.Disabled(ch.Disabled),
 		),
 		elem.Span(
 			vecty.Markup(
@@ -74,6 +76,7 @@ func (ch *MdcTextField) Render() vecty.ComponentOrHTML {
 							prop.ID(labelID),
 							vecty.Class("mdc-floating-label"),
 						),
+						vecty.Text(ch.Label),
 					),
 				),
 			),

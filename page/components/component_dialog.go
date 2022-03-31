@@ -6,6 +6,7 @@ import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 // some common actions
@@ -19,36 +20,49 @@ const (
 )
 
 type MdcDialogButton struct {
-	Label   string
-	Action  string
-	Default bool
+	Label    string `vecty:"prop"`
+	Action   string `vecty:"prop"`
+	Disabled bool   `vecty:"prop"`
+	Default  bool   `vecty:"prop"`
 }
 
 type MdcDialog struct {
 	vecty.Core
 	ID          string
 	Title       string
-	Open        bool
 	FullScreen  bool
 	CloseButton bool
-	Buttons     []MdcDialogButton
-	Content     vecty.List `vecty:"prop"`
+	Buttons     []MdcDialogButton `vecty:"prop"`
+	Content     vecty.List        `vecty:"prop"`
+	closeFn     func(action string)
 	jsObject    js.Value
+	jsClosedFn  js.Func
 }
 
-func NewMdcDialog(id, title string, open, fullScreen, closeButton bool, buttons []MdcDialogButton, content ...vecty.ComponentOrHTML) (r *MdcDialog) {
-	r = &MdcDialog{ID: id, Title: title, Open: open, FullScreen: fullScreen, CloseButton: closeButton, Buttons: buttons, Content: content}
+func NewMdcDialog(id, title string, fullScreen, closeButton bool, closeFn func(action string), buttons []MdcDialogButton, content ...vecty.ComponentOrHTML) (r *MdcDialog) {
+	r = &MdcDialog{ID: id, Title: title, FullScreen: fullScreen, CloseButton: closeButton, Buttons: buttons, Content: content, closeFn: closeFn}
 	return
 }
 
 func (ch *MdcDialog) Mount() {
+	ch.Unmount()
 	ch.jsObject = js.Global().Get("mdc").Get("dialog").Get("MDCDialog").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
+	core.ReleaseJSFunc(&ch.jsClosedFn)
+	ch.jsClosedFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			ch.closeFn(args[0].Get("detail").Get("action").String())
+		}
+		return nil
+	})
+	ch.jsObject.Call("listen", "MDCDialog:closed", ch.jsClosedFn)
+	ch.jsObject.Call("open")
 }
 
 func (ch *MdcDialog) Unmount() {
-	ch.jsObject.Call("destroy")
+	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
+	core.ReleaseJSFunc(&ch.jsClosedFn)
 }
 
 func (ch *MdcDialog) Copy() vecty.Component {
@@ -63,7 +77,6 @@ func (ch *MdcDialog) Render() vecty.ComponentOrHTML {
 		vecty.Markup(
 			prop.ID(ch.ID),
 			vecty.Class("mdc-dialog"),
-			vecty.MarkupIf(ch.Open, vecty.Class("mdc-dialog--open")),
 			vecty.MarkupIf(ch.FullScreen, vecty.Class("mdc-dialog--fullscreen")),
 		),
 		elem.Div(
@@ -86,7 +99,7 @@ func (ch *MdcDialog) Render() vecty.ComponentOrHTML {
 					),
 					ch.Content,
 				),
-				vecty.If(len(ch.Buttons) > 0, ch.RenderButtons()),
+				ch.RenderButtons(),
 			),
 		),
 		elem.Div(
@@ -129,14 +142,18 @@ func (ch *MdcDialog) RenderHeader(labelID string) vecty.ComponentOrHTML {
 }
 
 func (ch *MdcDialog) RenderButtons() vecty.ComponentOrHTML {
-	var buttons vecty.List
+	if len(ch.Buttons) <= 0 {
+		return nil
+	}
 
+	var buttons vecty.List
 	for _, btn := range ch.Buttons {
 		buttons = append(buttons, elem.Button(
 			vecty.Markup(
 				vecty.Class("mdc-button", "mdc-dialog__button"),
 				vecty.Attribute("data-mdc-dialog-action", btn.Action),
 				vecty.MarkupIf(btn.Default, vecty.Attribute("data-mdc-dialog-button-default", "true")),
+				prop.Disabled(btn.Disabled),
 			),
 			elem.Div(
 				vecty.Markup(

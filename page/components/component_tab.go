@@ -6,12 +6,13 @@ import (
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcTab struct {
 	vecty.Core
-	Text   string
-	Active bool
+	Text   string `vecty:"prop"`
+	Active bool   `vecty:"prop"`
 }
 
 func NewMdcTab(text string, active bool) (r *MdcTab) {
@@ -71,10 +72,11 @@ func (ch *MdcTab) Render() vecty.ComponentOrHTML {
 
 type MdcTabBar struct {
 	vecty.Core
-	ID          string
-	ActivatedFn func(tabIndex int)
-	Tabs        vecty.List
-	JsTabBar    js.Value
+	ID            string     `vecty:"prop"`
+	Tabs          vecty.List `vecty:"prop"`
+	ActivatedFn   func(tabIndex int)
+	jsObject      js.Value
+	jsActivatedFn js.Func
 }
 
 func NewMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.ComponentOrHTML) (r *MdcTabBar) {
@@ -83,19 +85,29 @@ func NewMdcTabBar(id string, activatedFn func(tabIndex int), tabs ...vecty.Compo
 }
 
 func (ch *MdcTabBar) Mount() {
-	ch.JsTabBar = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
+	ch.Unmount()
+	ch.jsObject = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
-	ch.JsTabBar.Call("listen", "MDCTabBar:activated", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	core.ReleaseJSFunc(&ch.jsActivatedFn)
+	ch.jsActivatedFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			ch.ActivatedFn(args[0].Get("detail").Get("index").Int())
 		}
 		return nil
-	}))
+	})
+	ch.jsObject.Call("listen", "MDCTabBar:activated", ch.jsActivatedFn)
+}
+
+func (ch *MdcTabBar) ActivateTab(tabIndex int) {
+	core.SafeJSOperation(&ch.jsObject, func(v *js.Value) {
+		v.Call("activateTab", tabIndex)
+	})
 }
 
 func (ch *MdcTabBar) Unmount() {
-	ch.JsTabBar.Call("destroy")
+	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
+	core.ReleaseJSFunc(&ch.jsActivatedFn)
 }
 
 func (ch *MdcTabBar) Copy() vecty.Component {

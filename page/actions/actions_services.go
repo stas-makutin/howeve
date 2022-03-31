@@ -82,6 +82,7 @@ type ServicesViewStore struct {
 	Loading   bool
 	UseSocket bool
 	Error     string
+	Protocols *api.ProtocolInfoResult
 	Services  *api.ListServicesResult
 }
 

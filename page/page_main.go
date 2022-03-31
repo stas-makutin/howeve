@@ -24,8 +24,8 @@ func newPageMain() (r *pageMain) {
 func (ch *pageMain) OnRouteChange(route core.PageRoute) {
 	if ch.viewRoute != route {
 		ch.viewRoute = route
-		if ch.tabBar != nil && !(ch.tabBar.JsTabBar.IsUndefined() || ch.tabBar.JsTabBar.IsNull()) {
-			ch.tabBar.JsTabBar.Call("activateTab", int(route))
+		if ch.tabBar != nil {
+			ch.tabBar.ActivateTab(int(route))
 		}
 	}
 }

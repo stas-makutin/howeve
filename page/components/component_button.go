@@ -11,9 +11,9 @@ import (
 type MdcButton struct {
 	vecty.Core
 	core.ClassAdder
-	ID       string
-	Text     string
-	Disabled bool
+	ID       string `vecty:"prop"`
+	Text     string `vecty:"prop"`
+	Disabled bool   `vecty:"prop"`
 	clickFn  func()
 }
 
@@ -42,10 +42,7 @@ func (ch *MdcButton) Render() vecty.ComponentOrHTML {
 			prop.ID(ch.ID),
 			vecty.Class("mdc-button", "mdc-button--outlined"),
 			ch.ApplyClasses(),
-			vecty.MarkupIf(
-				ch.Disabled,
-				prop.Disabled(true),
-			),
+			prop.Disabled(ch.Disabled),
 			event.Click(ch.onClick),
 		),
 		elem.Span(

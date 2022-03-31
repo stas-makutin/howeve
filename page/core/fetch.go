@@ -1,6 +1,8 @@
 package core
 
-import "syscall/js"
+import (
+	"syscall/js"
+)
 
 type FetchInit struct {
 	Method string
@@ -32,27 +34,37 @@ func Fetch(url string, init *FetchInit, then func(response *FetchResponse), catc
 			opts["body"] = init.Body
 		}
 	}
-	js.Global().Call("fetch", url, opts).
-		Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			r := args[0]
-			response := &FetchResponse{
-				OK:     r.Get("ok").Bool(),
-				Status: r.Get("status").Int(),
-			}
-			r.Call("text").Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-				response.Body = args[0].String()
-				then(response)
-				return nil
-			}))
-			return nil
-		})).
-		Call("catch", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			e := args[0]
-			err := &FetchError{
-				Name:    e.Get("name").String(),
-				Message: e.Get("message").String(),
-			}
-			catch(err)
+
+	var thenFn, catchFn js.Func
+	releaseFn := func() {
+		thenFn.Release()
+		catchFn.Release()
+	}
+
+	thenFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		releaseFn()
+		r := args[0]
+		response := &FetchResponse{
+			OK:     r.Get("ok").Bool(),
+			Status: r.Get("status").Int(),
+		}
+		r.Call("text").Call("then", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			response.Body = args[0].String()
+			then(response)
 			return nil
 		}))
+		return nil
+	})
+	catchFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		releaseFn()
+		e := args[0]
+		err := &FetchError{
+			Name:    e.Get("name").String(),
+			Message: e.Get("message").String(),
+		}
+		catch(err)
+		return nil
+	})
+
+	js.Global().Call("fetch", url, opts).Call("then", thenFn).Call("catch", catchFn)
 }

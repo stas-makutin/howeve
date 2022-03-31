@@ -1,6 +1,7 @@
 package components
 
 import (
+	"fmt"
 	"syscall/js"
 
 	"github.com/hexops/vecty"
@@ -11,10 +12,14 @@ import (
 
 type MdcSelectOption struct {
 	vecty.Core
-	Name     string
-	Value    string
-	Selected bool
-	Disabled bool
+	Name     string `vecty:"prop"`
+	Value    string `vecty:"prop"`
+	Selected bool   `vecty:"prop"`
+	Disabled bool   `vecty:"prop"`
+}
+
+func (ch *MdcSelectOption) Key() interface{} {
+	return ch
 }
 
 func (ch *MdcSelectOption) Copy() vecty.Component {
@@ -23,6 +28,14 @@ func (ch *MdcSelectOption) Copy() vecty.Component {
 }
 
 func (ch *MdcSelectOption) Render() vecty.ComponentOrHTML {
+	selectedFlag := "false"
+	if ch.Selected {
+		selectedFlag = "true"
+	}
+	value := ch.Value
+	if value == "" {
+		value = ch.Name
+	}
 	return elem.ListItem(
 		vecty.Markup(
 			vecty.Class("mdc-deprecated-list-item"),
@@ -35,10 +48,8 @@ func (ch *MdcSelectOption) Render() vecty.ComponentOrHTML {
 				vecty.Class("mdc-deprecated-list-item--disabled"),
 			),
 			vecty.Attribute("role", "option"),
-			vecty.MarkupIf(
-				ch.Value != "",
-				vecty.Attribute("data-value", ch.Value),
-			),
+			vecty.Attribute("aria-selected", selectedFlag),
+			vecty.Attribute("data-value", value),
 		),
 		elem.Span(
 			vecty.Markup(
@@ -57,26 +68,44 @@ func (ch *MdcSelectOption) Render() vecty.ComponentOrHTML {
 type MdcSelect struct {
 	vecty.Core
 	core.ClassAdder
-	ID       string
-	Label    string
-	Disabled bool
-	Options  vecty.List
-	jsObject js.Value
+	ID         string     `vecty:"prop"`
+	Label      string     `vecty:"prop"`
+	Disabled   bool       `vecty:"prop"`
+	Options    vecty.List `vecty:"prop"`
+	changeFn   func(value string, index int)
+	jsObject   js.Value
+	jsChangeFn js.Func
 }
 
-func NewMdcSelect(id, label string, disabled bool, options ...vecty.ComponentOrHTML) (r *MdcSelect) {
-	r = &MdcSelect{ID: id, Label: label, Disabled: disabled, Options: options}
+func NewMdcSelect(id, label string, disabled bool, changeFn func(value string, index int), options ...vecty.ComponentOrHTML) (r *MdcSelect) {
+	r = &MdcSelect{ID: id, Label: label, Disabled: disabled, changeFn: changeFn, Options: options}
 	return
 }
 
 func (ch *MdcSelect) Mount() {
+	ch.Unmount()
 	ch.jsObject = js.Global().Get("mdc").Get("select").Get("MDCSelect").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
+	core.ReleaseJSFunc(&ch.jsChangeFn)
+	ch.jsChangeFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			value := args[0].Get("detail").Get("value").String()
+			index := args[0].Get("detail").Get("index").Int()
+			ch.changeFn(value, index)
+		}
+		return nil
+	})
+	ch.jsObject.Call("listen", "MDCSelect:change", ch.jsChangeFn)
 }
 
 func (ch *MdcSelect) Unmount() {
-	ch.jsObject.Call("destroy")
+	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
+	core.ReleaseJSFunc(&ch.jsChangeFn)
+}
+
+func (ch *MdcSelect) Key() interface{} {
+	return ch
 }
 
 func (ch *MdcSelect) Copy() vecty.Component {
@@ -90,10 +119,13 @@ func (ch *MdcSelect) AddClasses(classes ...string) vecty.Component {
 }
 
 func (ch *MdcSelect) Render() vecty.ComponentOrHTML {
+	core.Console.Log(fmt.Sprint("render", ch.ID))
+
 	hasLabel := ch.Label != ""
 	labelID := ch.ID + "---label"
 	return elem.Div(
 		vecty.Markup(
+			prop.ID(ch.ID),
 			vecty.Class("mdc-select", "mdc-select--outlined"),
 			ch.ApplyClasses(),
 			vecty.MarkupIf(ch.Disabled, vecty.Class("mdc-select--disabled")),
@@ -123,6 +155,7 @@ func (ch *MdcSelect) Render() vecty.ComponentOrHTML {
 								prop.ID(labelID),
 								vecty.Class("mdc-floating-label"),
 							),
+							vecty.Text(ch.Label),
 						),
 					),
 				),
@@ -177,18 +210,18 @@ func (ch *MdcSelect) Render() vecty.ComponentOrHTML {
 					),
 				),
 			),
-			elem.Div(
+		),
+		elem.Div(
+			vecty.Markup(
+				vecty.Class("mdc-select__menu", "mdc-menu", "mdc-menu-surface", "mdc-menu-surface--fullwidth"),
+			),
+			elem.UnorderedList(
 				vecty.Markup(
-					vecty.Class("mdc-select__menu", "mdc-menu", "mdc-menu-surface", "mdc-menu-surface--fullwidth"),
+					vecty.Class("mdc-deprecated-list"),
+					vecty.Attribute("role", "listbox"),
+					vecty.MarkupIf(hasLabel, vecty.Attribute("aria-label", ch.Label)),
 				),
-				elem.UnorderedList(
-					vecty.Markup(
-						vecty.Class("mdc-deprecated-list"),
-						vecty.Attribute("role", "listbox"),
-						vecty.MarkupIf(hasLabel, vecty.Attribute("aria-label", ch.Label)),
-					),
-					ch.Options,
-				),
+				ch.Options,
 			),
 		),
 	)

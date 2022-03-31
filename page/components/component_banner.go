@@ -7,15 +7,16 @@ import (
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcBanner struct {
 	vecty.Core
-	ID         string
-	Message    string
-	ButtonText string
+	ID         string `vecty:"prop"`
+	Message    string `vecty:"prop"`
+	ButtonText string `vecty:"prop"`
 	clickFn    func()
-	jsBanner   js.Value
+	jsObject   js.Value
 }
 
 func NewMdcBanner(id, message, buttonText string, clickFn func()) (r *MdcBanner) {
@@ -24,14 +25,15 @@ func NewMdcBanner(id, message, buttonText string, clickFn func()) (r *MdcBanner)
 }
 
 func (ch *MdcBanner) Mount() {
-	ch.jsBanner = js.Global().Get("mdc").Get("banner").Get("MDCBanner").Call(
+	ch.Unmount()
+	ch.jsObject = js.Global().Get("mdc").Get("banner").Get("MDCBanner").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
-	ch.jsBanner.Call("open")
+	ch.jsObject.Call("open")
 }
 
 func (ch *MdcBanner) Unmount() {
-	ch.jsBanner.Call("destroy")
+	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
 }
 
 func (ch *MdcBanner) onClick(event *vecty.Event) {

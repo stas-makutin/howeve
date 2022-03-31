@@ -7,7 +7,7 @@ import (
 
 type SectionTitle struct {
 	vecty.Core
-	Text string
+	Text string `vecty:"prop"`
 }
 
 func (ch *SectionTitle) Copy() vecty.Component {
