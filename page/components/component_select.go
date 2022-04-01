@@ -1,7 +1,6 @@
 package components
 
 import (
-	"fmt"
 	"syscall/js"
 
 	"github.com/hexops/vecty"
@@ -12,14 +11,10 @@ import (
 
 type MdcSelectOption struct {
 	vecty.Core
-	Name     string `vecty:"prop"`
-	Value    string `vecty:"prop"`
-	Selected bool   `vecty:"prop"`
-	Disabled bool   `vecty:"prop"`
-}
-
-func (ch *MdcSelectOption) Key() interface{} {
-	return ch
+	Name     string
+	Value    string
+	Selected bool
+	Disabled bool
 }
 
 func (ch *MdcSelectOption) Copy() vecty.Component {
@@ -67,11 +62,12 @@ func (ch *MdcSelectOption) Render() vecty.ComponentOrHTML {
 
 type MdcSelect struct {
 	vecty.Core
-	core.ClassAdder
-	ID         string     `vecty:"prop"`
-	Label      string     `vecty:"prop"`
-	Disabled   bool       `vecty:"prop"`
-	Options    vecty.List `vecty:"prop"`
+	core.Classes
+	core.Keyable
+	ID         string
+	Label      string
+	Disabled   bool
+	Options    vecty.List
 	changeFn   func(value string, index int)
 	jsObject   js.Value
 	jsChangeFn js.Func
@@ -87,7 +83,6 @@ func (ch *MdcSelect) Mount() {
 	ch.jsObject = js.Global().Get("mdc").Get("select").Get("MDCSelect").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
-	core.ReleaseJSFunc(&ch.jsChangeFn)
 	ch.jsChangeFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			value := args[0].Get("detail").Get("value").String()
@@ -104,7 +99,8 @@ func (ch *MdcSelect) Unmount() {
 	core.ReleaseJSFunc(&ch.jsChangeFn)
 }
 
-func (ch *MdcSelect) Key() interface{} {
+func (ch *MdcSelect) WithKey(key interface{}) *MdcSelect {
+	ch.Keyable.WithKey(key)
 	return ch
 }
 
@@ -113,14 +109,12 @@ func (ch *MdcSelect) Copy() vecty.Component {
 	return &cpy
 }
 
-func (ch *MdcSelect) AddClasses(classes ...string) vecty.Component {
-	ch.ClassAdder.AddClasses(classes...)
+func (ch *MdcSelect) WithClasses(classes ...string) *MdcSelect {
+	ch.Classes.WithClasses(classes...)
 	return ch
 }
 
 func (ch *MdcSelect) Render() vecty.ComponentOrHTML {
-	core.Console.Log(fmt.Sprint("render", ch.ID))
-
 	hasLabel := ch.Label != ""
 	labelID := ch.ID + "---label"
 	return elem.Div(

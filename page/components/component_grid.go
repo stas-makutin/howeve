@@ -8,7 +8,7 @@ import (
 
 type MdcGridCell struct {
 	vecty.Core
-	core.ClassAdder
+	core.Classes
 	Content vecty.List `vecty:"prop"`
 }
 
@@ -21,8 +21,8 @@ func (ch *MdcGridCell) Copy() vecty.Component {
 	return &cpy
 }
 
-func (ch *MdcGridCell) AddClasses(classes ...string) vecty.Component {
-	ch.ClassAdder.AddClasses(classes...)
+func (ch *MdcGridCell) WithClasses(classes ...string) vecty.Component {
+	ch.Classes.WithClasses(classes...)
 	return ch
 }
 
@@ -38,7 +38,7 @@ func (ch *MdcGridCell) Render() vecty.ComponentOrHTML {
 
 type MdcGridRow struct {
 	vecty.Core
-	core.ClassAdder
+	core.Classes
 	Cells vecty.List `vecty:"prop"`
 }
 
@@ -47,7 +47,7 @@ func NewMdcGridRow(cells ...vecty.ComponentOrHTML) *MdcGridRow {
 }
 
 func NewMdcGridSingleCellRow(context ...vecty.ComponentOrHTML) *MdcGridRow {
-	cell := NewMdcGridCell(context...).AddClasses("mdc-layout-grid__cell--span-12")
+	cell := NewMdcGridCell(context...).WithClasses("mdc-layout-grid__cell--span-12")
 	return &MdcGridRow{Cells: []vecty.ComponentOrHTML{cell}}
 }
 
@@ -56,8 +56,8 @@ func (ch *MdcGridRow) Copy() vecty.Component {
 	return &cpy
 }
 
-func (ch *MdcGridRow) AddClasses(classes ...string) vecty.Component {
-	ch.ClassAdder.AddClasses(classes...)
+func (ch *MdcGridRow) WithClasses(classes ...string) vecty.Component {
+	ch.Classes.WithClasses(classes...)
 	return ch
 }
 
@@ -73,7 +73,7 @@ func (ch *MdcGridRow) Render() vecty.ComponentOrHTML {
 
 type MdcGrid struct {
 	vecty.Core
-	core.ClassAdder
+	core.Classes
 	Rows vecty.List `vecty:"prop"`
 }
 
@@ -86,8 +86,8 @@ func (ch *MdcGrid) Copy() vecty.Component {
 	return &cpy
 }
 
-func (ch *MdcGrid) AddClasses(classes ...string) vecty.Component {
-	ch.ClassAdder.AddClasses(classes...)
+func (ch *MdcGrid) WithClasses(classes ...string) *MdcGrid {
+	ch.Classes.WithClasses(classes...)
 	return ch
 }
 

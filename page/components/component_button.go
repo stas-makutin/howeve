@@ -10,7 +10,8 @@ import (
 
 type MdcButton struct {
 	vecty.Core
-	core.ClassAdder
+	core.Classes
+	core.Keyable
 	ID       string `vecty:"prop"`
 	Text     string `vecty:"prop"`
 	Disabled bool   `vecty:"prop"`
@@ -26,14 +27,19 @@ func (ch *MdcButton) onClick(event *vecty.Event) {
 	ch.clickFn()
 }
 
+func (ch *MdcButton) WithKey(key interface{}) *MdcButton {
+	ch.Keyable.WithKey(key)
+	return ch
+}
+
+func (ch *MdcButton) WithClasses(classes ...string) *MdcButton {
+	ch.Classes.WithClasses(classes...)
+	return ch
+}
+
 func (ch *MdcButton) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
-}
-
-func (ch *MdcButton) AddClasses(classes ...string) vecty.Component {
-	ch.ClassAdder.AddClasses(classes...)
-	return ch
 }
 
 func (ch *MdcButton) Render() vecty.ComponentOrHTML {

@@ -45,4 +45,23 @@ body {
 #sv-add-service-dialog---content {
 	min-height: 15em;
 }
+#sv-add-service-protocols {
+	min-width: 18em;
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+#sv-add-service-transports {
+	min-width: 18em;
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+#sv-add-service-alias {
+	min-width: 18em;
+	margin-top: 0.5em;
+}
+#sv-add-service-entry {
+	min-width: 16em;
+	width: 100%;
+	margin-top: 0.5em;
+}
 `

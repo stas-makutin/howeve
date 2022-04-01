@@ -89,7 +89,6 @@ func (ch *MdcTabBar) Mount() {
 	ch.jsObject = js.Global().Get("mdc").Get("tabBar").Get("MDCTabBar").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
-	core.ReleaseJSFunc(&ch.jsActivatedFn)
 	ch.jsActivatedFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			ch.ActivatedFn(args[0].Get("detail").Get("index").Int())

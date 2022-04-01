@@ -28,6 +28,8 @@ type MdcDialogButton struct {
 
 type MdcDialog struct {
 	vecty.Core
+	core.Classes
+	core.Keyable
 	ID          string
 	Title       string
 	FullScreen  bool
@@ -49,7 +51,6 @@ func (ch *MdcDialog) Mount() {
 	ch.jsObject = js.Global().Get("mdc").Get("dialog").Get("MDCDialog").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
-	core.ReleaseJSFunc(&ch.jsClosedFn)
 	ch.jsClosedFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			ch.closeFn(args[0].Get("detail").Get("action").String())
@@ -63,6 +64,16 @@ func (ch *MdcDialog) Mount() {
 func (ch *MdcDialog) Unmount() {
 	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
 	core.ReleaseJSFunc(&ch.jsClosedFn)
+}
+
+func (ch *MdcDialog) WithKey(key interface{}) *MdcDialog {
+	ch.Keyable.WithKey(key)
+	return ch
+}
+
+func (ch *MdcDialog) WithClasses(classes ...string) *MdcDialog {
+	ch.Classes.WithClasses(classes...)
+	return ch
 }
 
 func (ch *MdcDialog) Copy() vecty.Component {

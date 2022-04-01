@@ -12,6 +12,8 @@ import (
 
 type MdcBanner struct {
 	vecty.Core
+	core.Classes
+	core.Keyable
 	ID         string `vecty:"prop"`
 	Message    string `vecty:"prop"`
 	ButtonText string `vecty:"prop"`
@@ -34,6 +36,16 @@ func (ch *MdcBanner) Mount() {
 
 func (ch *MdcBanner) Unmount() {
 	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
+}
+
+func (ch *MdcBanner) WithKey(key interface{}) *MdcBanner {
+	ch.Keyable.WithKey(key)
+	return ch
+}
+
+func (ch *MdcBanner) WithClasses(classes ...string) *MdcBanner {
+	ch.Classes.WithClasses(classes...)
+	return ch
 }
 
 func (ch *MdcBanner) onClick(event *vecty.Event) {

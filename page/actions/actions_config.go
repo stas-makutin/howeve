@@ -34,7 +34,7 @@ func configProcessResponse(r *api.Query) {
 			return
 		}
 	}
-	core.Dispatch(ConfigLoadFailed("Unexpected response type"))
+	core.Dispatch(ConfigLoadFailed("Config: Unexpected response type"))
 }
 
 func configLoadSockets() {
@@ -56,14 +56,14 @@ func configLoadFetch() {
 			configProcessResponse(r)
 		},
 		func(err string) {
-			core.Dispatch(ConfigLoadFailed(err))
+			core.Dispatch(ConfigLoadFailed("Config: " + err))
 		},
 	)
 }
 
-func configLoad(action *ConfigLoad) bool {
-	if action.Force || (cvStore.Config == "" && cvStore.Error == "") {
-		if action.UseSocket {
+func configLoad(force, useSocket bool) bool {
+	if force || (cvStore.Config == "" && cvStore.Error == "") {
+		if useSocket {
 			configLoadSockets()
 		} else {
 			configLoadFetch()
@@ -107,7 +107,7 @@ func cvAction(event interface{}) {
 	case *ConfigLoad:
 		cvStore.Loading = true
 		cvStore.Error = ""
-		if configLoad(e) {
+		if configLoad(e.Force, e.UseSocket) {
 			return
 		}
 	case *ConfigLoaded:

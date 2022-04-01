@@ -30,7 +30,7 @@ func servicesListProcessResponse(r *api.Query) {
 	} else if p, ok := r.Payload.(*api.ListServicesResult); ok {
 		core.Dispatch(&ServicesLoaded{p})
 	} else {
-		core.Dispatch(ServicesLoadFailed("Unexpected response type"))
+		core.Dispatch(ServicesLoadFailed("Services: unexpected response type"))
 	}
 }
 
@@ -41,7 +41,7 @@ func servicesLoadSockets() {
 			servicesListProcessResponse(r)
 		},
 		func(err string) {
-			core.Dispatch(ServicesLoadFailed(err))
+			core.Dispatch(ServicesLoadFailed("Services: " + err))
 		},
 	)
 }
@@ -58,9 +58,9 @@ func servicesLoadFetch() {
 	)
 }
 
-func servicesLoad(action *ServicesLoad) bool {
-	if action.Force || (svStore.Services == nil && svStore.Error == "") {
-		if action.UseSocket {
+func servicesLoad(force, useSocket bool) bool {
+	if force || (svStore.Services == nil && svStore.Error == "") {
+		if useSocket {
 			servicesLoadSockets()
 		} else {
 			servicesLoadFetch()
@@ -79,7 +79,7 @@ func servicesLoad(action *ServicesLoad) bool {
 // store
 
 type ServicesViewStore struct {
-	Loading   bool
+	Loading   int
 	UseSocket bool
 	Error     string
 	Protocols *api.ProtocolInfoResult
@@ -87,7 +87,7 @@ type ServicesViewStore struct {
 }
 
 var svStore = &ServicesViewStore{
-	Loading:   true,
+	Loading:   1,
 	UseSocket: true,
 }
 var svStoreChanging = false
@@ -99,25 +99,46 @@ func GetServicesViewStore() *ServicesViewStore {
 // reducer
 
 func svAction(event interface{}) {
+	decreaseLoadingCount := func() {
+		if svStore.Loading > 0 {
+			svStore.Loading -= 1
+		}
+	}
+	appendErrorMessage := func(msg, msgDef string) {
+		if msg == "" {
+			msg = msgDef
+		}
+		if msg != "" {
+			if svStore.Error != "" {
+				svStore.Error += "; "
+			}
+			svStore.Error += msg
+		}
+	}
+
 	switch e := event.(type) {
 	case ServicesUseSocket:
 		svStore.UseSocket = bool(e)
 	case *ServicesLoad:
-		svStore.Loading = true
+		svStore.Loading = 2
 		svStore.Error = ""
-		if servicesLoad(e) {
+		sf := servicesLoad(e.Force, e.UseSocket)
+		pf := protocolsLoad(e.Force, e.UseSocket)
+		if sf && pf {
 			return
 		}
 	case *ServicesLoaded:
-		svStore.Loading = false
-		svStore.Error = ""
+		decreaseLoadingCount()
 		svStore.Services = e.Services
+	case *ProtocolsLoaded:
+		decreaseLoadingCount()
+		svStore.Protocols = e.Protocols
 	case ServicesLoadFailed:
-		svStore.Loading = false
-		svStore.Error = string(e)
-		if svStore.Error == "" {
-			svStore.Error = "Unable to load Services"
-		}
+		decreaseLoadingCount()
+		appendErrorMessage(string(e), "Services: unable to load")
+	case ProtocolsLoadFailed:
+		decreaseLoadingCount()
+		appendErrorMessage(string(e), "Protocols: unable to load")
 	default:
 		return
 	}

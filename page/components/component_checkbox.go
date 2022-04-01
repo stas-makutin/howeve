@@ -12,6 +12,8 @@ import (
 
 type MdcCheckbox struct {
 	vecty.Core
+	core.Classes
+	core.Keyable
 	ID       string `vecty:"prop"`
 	Label    string `vecty:"prop"`
 	Checked  bool   `vecty:"prop"`
@@ -34,6 +36,16 @@ func (ch *MdcCheckbox) Mount() {
 
 func (ch *MdcCheckbox) Unmount() {
 	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
+}
+
+func (ch *MdcCheckbox) WithKey(key interface{}) *MdcCheckbox {
+	ch.Keyable.WithKey(key)
+	return ch
+}
+
+func (ch *MdcCheckbox) WithClasses(classes ...string) *MdcCheckbox {
+	ch.Classes.WithClasses(classes...)
+	return ch
 }
 
 func (ch *MdcCheckbox) onClick(event *vecty.Event) {

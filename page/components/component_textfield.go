@@ -11,11 +11,12 @@ import (
 
 type MdcTextField struct {
 	vecty.Core
-	core.ClassAdder
-	ID       string `vecty:"prop"`
-	Label    string `vecty:"prop"`
-	Value    string `vecty:"prop"`
-	Disabled bool   `vecty:"prop"`
+	core.Classes
+	core.Keyable
+	ID       string
+	Label    string
+	Value    string
+	Disabled bool
 	jsObject js.Value
 }
 
@@ -35,18 +36,19 @@ func (ch *MdcTextField) Unmount() {
 	core.SafeJSDestroy(&ch.jsObject, func(v *js.Value) { v.Call("destroy") })
 }
 
-func (ch *MdcTextField) Key() interface{} {
+func (ch *MdcTextField) WithKey(key interface{}) *MdcTextField {
+	ch.Keyable.WithKey(key)
+	return ch
+}
+
+func (ch *MdcTextField) WithClasses(classes ...string) *MdcTextField {
+	ch.Classes.WithClasses(classes...)
 	return ch
 }
 
 func (ch *MdcTextField) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
-}
-
-func (ch *MdcTextField) AddClasses(classes ...string) vecty.Component {
-	ch.ClassAdder.AddClasses(classes...)
-	return ch
 }
 
 func (ch *MdcTextField) Render() vecty.ComponentOrHTML {

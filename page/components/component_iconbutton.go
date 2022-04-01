@@ -5,10 +5,13 @@ import (
 	"github.com/hexops/vecty/elem"
 	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
+	"github.com/stas-makutin/howeve/page/core"
 )
 
 type MdcIconButton struct {
 	vecty.Core
+	core.Classes
+	core.Keyable
 	ID       string `vecty:"prop"`
 	Icon     string `vecty:"prop"`
 	Text     string `vecty:"prop"`
@@ -19,6 +22,16 @@ type MdcIconButton struct {
 func NewMdcIconButton(id, text, icon string, disabled bool, clickFn func()) (r *MdcIconButton) {
 	r = &MdcIconButton{ID: id, Icon: icon, Text: text, Disabled: disabled, clickFn: clickFn}
 	return
+}
+
+func (ch *MdcIconButton) WithKey(key interface{}) *MdcIconButton {
+	ch.Keyable.WithKey(key)
+	return ch
+}
+
+func (ch *MdcIconButton) WithClasses(classes ...string) *MdcIconButton {
+	ch.Classes.WithClasses(classes...)
+	return ch
 }
 
 func (ch *MdcIconButton) onClick(event *vecty.Event) {

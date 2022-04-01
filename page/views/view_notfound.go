@@ -39,5 +39,5 @@ func (ch *ViewNotFound) Render() vecty.ComponentOrHTML {
 				),
 			),
 		),
-	).AddClasses("align-center")
+	).WithClasses("align-center")
 }
