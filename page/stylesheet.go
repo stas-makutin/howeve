@@ -64,4 +64,23 @@ body {
 	width: 100%;
 	margin-top: 0.5em;
 }
+#sv-add-service-add-param {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+.sv-add-service-param-name {
+	min-width: 15%;
+	width: 25%;
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+.sv-add-service-param-value {
+	min-width: 15%;
+	width: 55%;
+	margin-top: 0.5em;
+}
+.sv-add-service-param-delete {
+	position: relative;
+	top: 0.2em;
+}
 `

@@ -63,6 +63,7 @@ func (ch *MdcCheckbox) Render() vecty.ComponentOrHTML {
 	return elem.Div(
 		vecty.Markup(
 			vecty.Class("mdc-form-field"),
+			ch.ApplyClasses(),
 		),
 		elem.Div(
 			vecty.Markup(

@@ -63,6 +63,7 @@ func (ch *MdcBanner) Render() vecty.ComponentOrHTML {
 			prop.ID(ch.ID),
 			vecty.Class("mdc-banner", "mdc-elevation--z2"),
 			vecty.Attribute("role", "banner"),
+			ch.ApplyClasses(),
 		),
 		elem.Div(
 			vecty.Markup(

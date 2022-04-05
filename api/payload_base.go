@@ -24,6 +24,40 @@ type TransportListResult struct {
 	Transports []*TransportListEntry
 }
 
+const (
+	ParamTypeInt8   = "int8"
+	ParamTypeInt16  = "int16"
+	ParamTypeInt32  = "int32"
+	ParamTypeInt64  = "int64"
+	ParamTypeUint8  = "uint8"
+	ParamTypeUint16 = "uint16"
+	ParamTypeUint32 = "uint32"
+	ParamTypeUint64 = "uint64"
+	ParamTypeBool   = "bool"
+	ParamTypeString = "string"
+	ParamTypeEnum   = "enum"
+
+	ParamTypeUInt8Max = ^uint8(0)
+	ParamTypeUInt8Min = 0
+	ParamTypeInt8Max  = int8(ParamTypeUInt8Max >> 1)
+	ParamTypeInt8Min  = -ParamTypeInt8Max - 1
+
+	ParamTypeUInt16Max = ^uint16(0)
+	ParamTypeUInt16Min = 0
+	ParamTypeInt16Max  = int16(ParamTypeUInt16Max >> 1)
+	ParamTypeInt16Min  = -ParamTypeInt16Max - 1
+
+	ParamTypeUInt32Max = ^uint32(0)
+	ParamTypeUInt32Min = 0
+	ParamTypeInt32Max  = int32(ParamTypeUInt32Max >> 1)
+	ParamTypeInt32Min  = -ParamTypeInt32Max - 1
+
+	ParamTypeUInt64Max = ^uint64(0)
+	ParamTypeUInt64Min = 0
+	ParamTypeInt64Max  = int64(ParamTypeUInt64Max >> 1)
+	ParamTypeInt64Min  = -ParamTypeInt64Max - 1
+)
+
 // ParamInfoEntry - information about named parameter
 type ParamInfoEntry struct {
 	Description  string   `json:"description"`

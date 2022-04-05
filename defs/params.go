@@ -37,27 +37,27 @@ const (
 func (pt ParamType) String() string {
 	switch pt {
 	case ParamTypeInt8:
-		return "int8"
+		return api.ParamTypeInt8
 	case ParamTypeInt16:
-		return "int16"
+		return api.ParamTypeInt16
 	case ParamTypeInt32:
-		return "int32"
+		return api.ParamTypeInt32
 	case ParamTypeInt64:
-		return "int64"
+		return api.ParamTypeInt64
 	case ParamTypeUint8:
-		return "uint8"
+		return api.ParamTypeUint8
 	case ParamTypeUint16:
-		return "uint16"
+		return api.ParamTypeUint16
 	case ParamTypeUint32:
-		return "uint32"
+		return api.ParamTypeUint32
 	case ParamTypeUint64:
-		return "uint64"
+		return api.ParamTypeUint64
 	case ParamTypeBool:
-		return "bool"
+		return api.ParamTypeBool
 	case ParamTypeEnum:
-		return "enum"
+		return api.ParamTypeEnum
 	}
-	return "string"
+	return api.ParamTypeString
 }
 
 // ParamInfo parameter description

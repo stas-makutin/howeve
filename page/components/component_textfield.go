@@ -5,6 +5,7 @@ import (
 
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
 	"github.com/stas-makutin/howeve/page/core"
 )
@@ -13,15 +14,17 @@ type MdcTextField struct {
 	vecty.Core
 	core.Classes
 	core.Keyable
-	ID       string
-	Label    string
-	Value    string
-	Disabled bool
-	jsObject js.Value
+	ID             string `vecty:"prop"`
+	Label          string `vecty:"prop"`
+	Value          string `vecty:"prop"`
+	Disabled       bool   `vecty:"prop"`
+	inputAtributes []vecty.Applyer
+	changeFn       func(value string)
+	jsObject       js.Value
 }
 
-func NewMdcTextField(id, label, value string, disabled bool) (r *MdcTextField) {
-	r = &MdcTextField{ID: id, Label: label, Value: value, Disabled: disabled}
+func NewMdcTextField(id, label, value string, disabled bool, changeFn func(value string), inputAtributes ...vecty.Applyer) (r *MdcTextField) {
+	r = &MdcTextField{ID: id, Label: label, Value: value, Disabled: disabled, inputAtributes: inputAtributes, changeFn: changeFn}
 	return
 }
 
@@ -46,6 +49,10 @@ func (ch *MdcTextField) WithClasses(classes ...string) *MdcTextField {
 	return ch
 }
 
+func (ch *MdcTextField) change(event *vecty.Event) {
+	ch.changeFn(event.Value.String())
+}
+
 func (ch *MdcTextField) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
@@ -58,6 +65,7 @@ func (ch *MdcTextField) Render() vecty.ComponentOrHTML {
 			prop.ID(ch.ID),
 			vecty.Class("mdc-text-field", "mdc-text-field--outlined", "mdc-text-field--no-label"),
 			prop.Disabled(ch.Disabled),
+			ch.ApplyClasses(),
 		),
 		elem.Span(
 			vecty.Markup(
@@ -93,8 +101,12 @@ func (ch *MdcTextField) Render() vecty.ComponentOrHTML {
 				vecty.Class("mdc-text-field__input"),
 				vecty.MarkupIf(ch.Label != "", vecty.Attribute("aria-labelledby", labelID)),
 				vecty.MarkupIf(ch.Label == "", vecty.Attribute("aria-label", "Label")),
-				prop.Type(prop.TypeText),
+				vecty.MarkupIf(len(ch.inputAtributes) <= 0, prop.Type(prop.TypeText)),
 				prop.Value(ch.Value),
+				event.Change(ch.change),
+			),
+			vecty.Markup(
+				ch.inputAtributes...,
 			),
 		),
 	)

@@ -36,13 +36,14 @@ type MdcDialog struct {
 	CloseButton bool
 	Buttons     []MdcDialogButton `vecty:"prop"`
 	Content     vecty.List        `vecty:"prop"`
-	closeFn     func(action string)
+	closeData   interface{}
+	closeFn     func(action string, data interface{})
 	jsObject    js.Value
 	jsClosedFn  js.Func
 }
 
-func NewMdcDialog(id, title string, fullScreen, closeButton bool, closeFn func(action string), buttons []MdcDialogButton, content ...vecty.ComponentOrHTML) (r *MdcDialog) {
-	r = &MdcDialog{ID: id, Title: title, FullScreen: fullScreen, CloseButton: closeButton, Buttons: buttons, Content: content, closeFn: closeFn}
+func NewMdcDialog(id, title string, fullScreen, closeButton bool, closeFn func(action string, data interface{}), closeData interface{}, buttons []MdcDialogButton, content ...vecty.ComponentOrHTML) (r *MdcDialog) {
+	r = &MdcDialog{ID: id, Title: title, FullScreen: fullScreen, CloseButton: closeButton, Buttons: buttons, Content: content, closeFn: closeFn, closeData: closeData}
 	return
 }
 
@@ -53,7 +54,7 @@ func (ch *MdcDialog) Mount() {
 	)
 	ch.jsClosedFn = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
-			ch.closeFn(args[0].Get("detail").Get("action").String())
+			ch.closeFn(args[0].Get("detail").Get("action").String(), ch.closeData)
 		}
 		return nil
 	})
@@ -89,6 +90,7 @@ func (ch *MdcDialog) Render() vecty.ComponentOrHTML {
 			prop.ID(ch.ID),
 			vecty.Class("mdc-dialog"),
 			vecty.MarkupIf(ch.FullScreen, vecty.Class("mdc-dialog--fullscreen")),
+			ch.ApplyClasses(),
 		),
 		elem.Div(
 			vecty.Markup(

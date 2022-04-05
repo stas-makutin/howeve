@@ -67,8 +67,11 @@ func (ch *ViewServices) addService() {
 	vecty.Rerender(ch)
 }
 
-func (ch *ViewServices) addServiceAction(action string) {
+func (ch *ViewServices) addServiceAction(ok bool, data *addServiceData) {
 	ch.addServiceDialog = false
+	if ok {
+		core.Console.Log(fmt.Sprintf("%d: %d: %s", data.Protocol, data.Transport, data.Entry))
+	}
 	vecty.Rerender(ch)
 }
 
@@ -92,7 +95,7 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 		components.NewMdcGridSingleCellRow(
 			&servicesTable{Services: ch.services},
 		),
-		core.If(ch.addServiceDialog, &addServicesDialog{Protocols: ch.protocols, CloseFn: ch.addServiceAction}),
+		core.If(ch.addServiceDialog, newAddServiceDialog(ch.protocols, ch.addServiceAction)),
 		core.If(ch.loading, &components.ViewLoading{}),
 	)
 }
@@ -111,46 +114,135 @@ func (ch *servicesTable) Render() vecty.ComponentOrHTML {
 	return nil
 }
 
-type addServicesDialog struct {
+type addServiceData struct {
+	api.ServiceKey
+	Alias  string
+	Params []core.Parameter
+}
+
+type addServiceDialog struct {
 	vecty.Core
-	Protocols *api.ProtocolInfoResult
-	CloseFn   func(action string)
-	protocol  api.ProtocolIdentifier
-	transport api.TransportIdentifier
+	Protocols *api.ProtocolInfoResult `vecty:"prop"`
+	CloseFn   func(ok bool, data *addServiceData)
+	Data      addServiceData
 }
 
-func (ch *addServicesDialog) changeProtocol(value string, index int) {
+func newAddServiceDialog(protocols *api.ProtocolInfoResult, closeFn func(ok bool, data *addServiceData)) *addServiceDialog {
+	return &addServiceDialog{
+		Protocols: protocols, CloseFn: closeFn,
+	}
 }
 
-func (ch *addServicesDialog) changeTransport(value string, index int) {
+func (ch *addServiceDialog) closeDialog(action string, data interface{}) {
+	ch.CloseFn(action == components.MdcDialogActionOK, data.(*addServiceData))
 }
 
-func (ch *addServicesDialog) addParameter() {
+func (ch *addServiceDialog) changeProtocol(value string, index int) {
 }
 
-func (ch *addServicesDialog) Copy() vecty.Component {
+func (ch *addServiceDialog) changeTransport(value string, index int) {
+}
+
+func (ch *addServiceDialog) changeAlias(value string) {
+}
+
+func (ch *addServiceDialog) changeEntry(value string) {
+}
+
+func (ch *addServiceDialog) addParameter() {
+	_, transport := ch.protocolAndTransport()
+	availableParams := ch.availableParameters(transport)
+	if len(availableParams) > 0 {
+		name := availableParams[0]
+		pi, ok := transport.Params[name]
+		if ok {
+			value := ""
+			if pi.DefaultValue != "" {
+				value = pi.DefaultValue
+			} else if pi.Type == api.ParamTypeEnum {
+				value = pi.EnumValues[0]
+			} else if pi.Type == api.ParamTypeBool {
+				value = "false"
+			} else if pi.Type != api.ParamTypeString {
+				value = "0"
+			}
+			ch.Data.Params = append(ch.Data.Params, core.Parameter{Name: name, Value: value})
+			vecty.Rerender(ch)
+		}
+	}
+}
+
+func (ch *addServiceDialog) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
 }
 
-func (ch *addServicesDialog) Render() vecty.ComponentOrHTML {
+func (ch *addServiceDialog) protocolAndTransport() (protocol *api.ProtocolInfoEntry, transport *api.ProtocolTransportInfoEntry) {
+	if ch.Protocols != nil {
+		for _, p := range ch.Protocols.Protocols {
+			if p.ID == ch.Data.Protocol {
+				protocol = p
+				break
+			}
+		}
+		if protocol == nil && len(ch.Protocols.Protocols) > 0 {
+			protocol = ch.Protocols.Protocols[0]
+			ch.Data.Protocol = protocol.ID
+		}
+
+		for _, t := range protocol.Transports {
+			if t.ID == ch.Data.Transport {
+				transport = t
+				break
+			}
+		}
+		if transport == nil && len(protocol.Transports) > 0 {
+			transport = protocol.Transports[0]
+			ch.Data.Transport = transport.ID
+		}
+	}
+	return
+}
+
+func (ch *addServiceDialog) availableParameters(transport *api.ProtocolTransportInfoEntry) []string {
+	var names []string
+ParamLoop:
+	for name := range transport.Params {
+		for _, p := range ch.Data.Params {
+			if name == p.Name {
+				continue ParamLoop
+			}
+		}
+		names = append(names, name)
+	}
+	return names
+}
+
+func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
+	protocol, transport := ch.protocolAndTransport()
+	availableParams := ch.availableParameters(transport)
 	protocolsKey := fmt.Sprintf("sv-add-p-%p", ch.Protocols)
+	transportsKey := fmt.Sprintf("%s-%d", protocolsKey, ch.Data.Protocol)
 
 	return components.NewMdcDialog(
-		"sv-add-service-dialog", "Add Service", true, true, ch.CloseFn,
+		"sv-add-service-dialog", "Add Service", true, true, ch.closeDialog, &ch.Data,
 		[]components.MdcDialogButton{
 			{Label: "Cancel", Action: components.MdcDialogActionClose},
 			{Label: "Add Service", Action: components.MdcDialogActionOK, Default: true, Disabled: false},
 		},
-		ch.RenderProtocols(protocolsKey),
-		ch.RenderTransports(protocolsKey),
-		components.NewMdcTextField("sv-add-service-alias", "Alias", "", false).WithClasses("adjacent-margins").WithKey("text-alias"),
+		ch.RenderProtocols(protocolsKey, protocol),
+		ch.RenderTransports(transportsKey, protocol, transport),
+		components.NewMdcTextField("sv-add-service-alias", "Alias", ch.Data.Alias, false, ch.changeAlias).
+			WithClasses("adjacent-margins").
+			WithKey("text-alias"),
 		elem.Break(
 			vecty.Markup(
 				vecty.Key("br-1"),
 			),
 		),
-		components.NewMdcTextField("sv-add-service-entry", "Entry", "", false).WithClasses("adjacent-margins").WithKey("text-entry"),
+		components.NewMdcTextField("sv-add-service-entry", "Entry", ch.Data.Entry, false, ch.changeEntry).
+			WithClasses("adjacent-margins").
+			WithKey("text-entry"),
 		elem.Div(
 			vecty.Markup(
 				vecty.Key("param-title"),
@@ -158,27 +250,20 @@ func (ch *addServicesDialog) Render() vecty.ComponentOrHTML {
 			),
 			vecty.Text("Parameters"),
 		),
-		components.NewMdcButton("sv-add-service-add-param", "Add Parameter", false, ch.addParameter).WithKey("add-param-btn"),
+		components.NewMdcButton("sv-add-service-add-param", "Add Parameter", len(availableParams) <= 0, ch.addParameter).
+			WithKey("add-param-btn"),
+		ch.RenderParameters(transportsKey, transport, availableParams),
 	)
 }
 
-func (ch *addServicesDialog) RenderProtocols(protocolsKey string) vecty.ComponentOrHTML {
+func (ch *addServiceDialog) RenderProtocols(protocolsKey string, protocol *api.ProtocolInfoEntry) vecty.ComponentOrHTML {
 	var options vecty.List
 	if ch.Protocols != nil {
-		notFound := true
-		for _, protocol := range ch.Protocols.Protocols {
-			selected := protocol.ID == ch.protocol
+		for _, p := range ch.Protocols.Protocols {
 			options = append(options, &components.MdcSelectOption{
-				Name:     fmt.Sprintf("%s (%d)", protocol.Name, protocol.ID),
-				Selected: selected,
+				Name:     fmt.Sprintf("%s (%d)", p.Name, p.ID),
+				Selected: protocol.ID == p.ID,
 			})
-			if selected {
-				notFound = false
-			}
-		}
-		if notFound && len(ch.Protocols.Protocols) > 0 {
-			ch.protocol = ch.Protocols.Protocols[0].ID
-			options[0].(*components.MdcSelectOption).Selected = true
 		}
 	}
 
@@ -187,39 +272,83 @@ func (ch *addServicesDialog) RenderProtocols(protocolsKey string) vecty.Componen
 	).WithKey(protocolsKey)
 }
 
-func (ch *addServicesDialog) RenderTransports(protocolsKey string) vecty.ComponentOrHTML {
-	transportsKey := fmt.Sprintf("%s-%d", protocolsKey, ch.protocol)
-
-	var protocol *api.ProtocolInfoEntry
-	if ch.Protocols != nil {
-		for _, p := range ch.Protocols.Protocols {
-			if p.ID == ch.protocol {
-				protocol = p
-				break
-			}
-		}
-	}
-
+func (ch *addServiceDialog) RenderTransports(transportsKey string, protocol *api.ProtocolInfoEntry, transport *api.ProtocolTransportInfoEntry) vecty.ComponentOrHTML {
 	var options vecty.List
 	if protocol != nil {
-		notFound := true
-		for _, transport := range protocol.Transports {
-			selected := transport.ID == ch.transport
+		for _, t := range protocol.Transports {
 			options = append(options, &components.MdcSelectOption{
-				Name:     fmt.Sprintf("%s (%d)", transport.Name, transport.ID),
-				Selected: selected,
+				Name:     fmt.Sprintf("%s (%d)", t.Name, t.ID),
+				Selected: transport.ID == t.ID,
 			})
-			if selected {
-				notFound = false
-			}
-		}
-		if notFound && len(protocol.Transports) > 0 {
-			ch.transport = protocol.Transports[0].ID
-			options[0].(*components.MdcSelectOption).Selected = true
 		}
 	}
 
 	return components.NewMdcSelect(
 		"sv-add-service-transports", "Transports", false, ch.changeTransport, options,
 	).WithKey(transportsKey)
+}
+
+func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *api.ProtocolTransportInfoEntry, availableParams []string) vecty.KeyedList {
+	key := fmt.Sprintf("%s-p%d", transportsKey, len(ch.Data.Params))
+	var result vecty.List
+	for _, param := range ch.Data.Params {
+		pi, ok := transport.Params[param.Name]
+		if !ok {
+			continue
+		}
+
+		paramKey := fmt.Sprintf("%s-%s", key, param.Name)
+
+		result = append(result, elem.Break(
+			vecty.Markup(
+				vecty.Key("br-"+paramKey),
+			),
+		))
+
+		var options vecty.List
+		options = append(options, &components.MdcSelectOption{Name: param.Name, Selected: true})
+		for _, name := range availableParams {
+			options = append(options, &components.MdcSelectOption{Name: name})
+		}
+
+		paramNameKey := paramKey + "-name"
+		result = append(result,
+			components.NewMdcSelect(paramNameKey, "Parameter", false, func(value string, index int) {}, options).
+				WithKey(paramNameKey).
+				WithClasses("sv-add-service-param-name"),
+		)
+
+		paramValueKey := paramKey + "-value"
+		switch pi.Type {
+		case "enum":
+			var enumOptions vecty.List
+			for _, enumValue := range pi.EnumValues {
+				enumOptions = append(enumOptions, &components.MdcSelectOption{Name: enumValue, Selected: enumValue == param.Value})
+			}
+			result = append(result,
+				components.NewMdcSelect(paramValueKey, "Parameter Value", false, func(value string, index int) {}, enumOptions).
+					WithKey(paramValueKey).
+					WithClasses("sv-add-service-param-value"),
+			)
+		case "bool":
+			result = append(result,
+				components.NewMdcCheckbox(paramValueKey, "True if checked, false otherwise", param.Value == "true" || param.Value == "1", false, func(checked, disabled bool) {}).
+					WithKey(paramValueKey).
+					WithClasses("sv-add-service-param-value"),
+			)
+		default:
+			result = append(result,
+				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, func(value string) {}).
+					WithKey(paramValueKey).
+					WithClasses("sv-add-service-param-value"),
+			)
+		}
+
+		paramDeleteKey := paramKey + "-delete"
+		result = append(result, components.NewMdcIconButton(paramDeleteKey, "Delete Parameter", "delete_forever", "delete_forever", false, func() {}).
+			WithKey(paramDeleteKey).
+			WithClasses("sv-add-service-param-delete"),
+		)
+	}
+	return result.WithKey(key + "-params")
 }

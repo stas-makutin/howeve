@@ -14,13 +14,14 @@ type MdcIconButton struct {
 	core.Keyable
 	ID       string `vecty:"prop"`
 	Icon     string `vecty:"prop"`
+	IconOn   string `vecty:"prop"`
 	Text     string `vecty:"prop"`
 	Disabled bool   `vecty:"prop"`
 	clickFn  func()
 }
 
-func NewMdcIconButton(id, text, icon string, disabled bool, clickFn func()) (r *MdcIconButton) {
-	r = &MdcIconButton{ID: id, Icon: icon, Text: text, Disabled: disabled, clickFn: clickFn}
+func NewMdcIconButton(id, text, icon, iconOn string, disabled bool, clickFn func()) (r *MdcIconButton) {
+	r = &MdcIconButton{ID: id, Icon: icon, IconOn: iconOn, Text: text, Disabled: disabled, clickFn: clickFn}
 	return
 }
 
@@ -47,21 +48,35 @@ func (ch *MdcIconButton) Render() vecty.ComponentOrHTML {
 	return elem.Button(
 		vecty.Markup(
 			prop.ID(ch.ID),
-			vecty.Class("mdc-icon-button", "material-icons"),
+			vecty.Class("mdc-icon-button"),
 			vecty.Attribute("title", ch.Text),
+			vecty.Attribute("aria-label", ch.Text),
+			vecty.Attribute("aria-pressed", "false"),
 			prop.Disabled(ch.Disabled),
 			event.Click(ch.onClick),
+			ch.ApplyClasses(),
 		),
 		elem.Div(
 			vecty.Markup(
-				vecty.Class("mdc-button__ripple"),
+				vecty.Class("mdc-icon-button__ripple"),
 			),
 		),
 		elem.Span(
 			vecty.Markup(
-				vecty.Class("mdc-button__focus-ring"),
+				vecty.Class("mdc-icon-button__focus-ring"),
 			),
 		),
-		vecty.Text(ch.Icon),
+		elem.Italic(
+			vecty.Markup(
+				vecty.Class("material-icons", "mdc-icon-button__icon", "mdc-icon-button__icon--on"),
+			),
+			vecty.Text(ch.IconOn),
+		),
+		elem.Italic(
+			vecty.Markup(
+				vecty.Class("material-icons", "mdc-icon-button__icon"),
+			),
+			vecty.Text(ch.Icon),
+		),
 	)
 }
