@@ -60,11 +60,7 @@ func (ch *MdcCheckbox) Copy() vecty.Component {
 
 func (ch *MdcCheckbox) Render() vecty.ComponentOrHTML {
 	idInput := ch.ID + "---input"
-	return elem.Div(
-		vecty.Markup(
-			vecty.Class("mdc-form-field"),
-			ch.ApplyClasses(),
-		),
+	return NewMdcFormField(
 		elem.Div(
 			vecty.Markup(
 				prop.ID(ch.ID),
@@ -128,5 +124,5 @@ func (ch *MdcCheckbox) Render() vecty.ComponentOrHTML {
 			),
 			vecty.Text(ch.Label),
 		),
-	)
+	).WithClasses(ch.Classes.Classes...)
 }

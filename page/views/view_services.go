@@ -332,9 +332,19 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 			)
 		case "bool":
 			result = append(result,
-				components.NewMdcCheckbox(paramValueKey, "True if checked, false otherwise", param.Value == "true" || param.Value == "1", false, func(checked, disabled bool) {}).
-					WithKey(paramValueKey).
-					WithClasses("sv-add-service-param-value"),
+				elem.Div(
+					vecty.Markup(
+						vecty.Class("sv-add-service-param-value"),
+						vecty.Style("display", "inline-block"),
+						vecty.Key(paramValueKey),
+					),
+					components.NewMdcRadioButton(
+						paramValueKey, "True", paramValueKey, "true", param.Value == "true" || param.Value == "1", false, func() {},
+					),
+					components.NewMdcRadioButton(
+						paramValueKey, "False", paramValueKey, "false", !(param.Value == "true" || param.Value == "1"), false, func() {},
+					),
+				),
 			)
 		default:
 			result = append(result,
