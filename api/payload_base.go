@@ -37,24 +37,24 @@ const (
 	ParamTypeString = "string"
 	ParamTypeEnum   = "enum"
 
-	ParamTypeUInt8Max = ^uint8(0)
-	ParamTypeUInt8Min = 0
-	ParamTypeInt8Max  = int8(ParamTypeUInt8Max >> 1)
+	ParamTypeUint8Max = ^uint8(0)
+	ParamTypeUint8Min = 0
+	ParamTypeInt8Max  = int8(ParamTypeUint8Max >> 1)
 	ParamTypeInt8Min  = -ParamTypeInt8Max - 1
 
-	ParamTypeUInt16Max = ^uint16(0)
-	ParamTypeUInt16Min = 0
-	ParamTypeInt16Max  = int16(ParamTypeUInt16Max >> 1)
+	ParamTypeUint16Max = ^uint16(0)
+	ParamTypeUint16Min = 0
+	ParamTypeInt16Max  = int16(ParamTypeUint16Max >> 1)
 	ParamTypeInt16Min  = -ParamTypeInt16Max - 1
 
-	ParamTypeUInt32Max = ^uint32(0)
-	ParamTypeUInt32Min = 0
-	ParamTypeInt32Max  = int32(ParamTypeUInt32Max >> 1)
+	ParamTypeUint32Max = ^uint32(0)
+	ParamTypeUint32Min = 0
+	ParamTypeInt32Max  = int32(ParamTypeUint32Max >> 1)
 	ParamTypeInt32Min  = -ParamTypeInt32Max - 1
 
-	ParamTypeUInt64Max = ^uint64(0)
-	ParamTypeUInt64Min = 0
-	ParamTypeInt64Max  = int64(ParamTypeUInt64Max >> 1)
+	ParamTypeUint64Max = ^uint64(0)
+	ParamTypeUint64Min = 0
+	ParamTypeInt64Max  = int64(ParamTypeUint64Max >> 1)
 	ParamTypeInt64Min  = -ParamTypeInt64Max - 1
 )
 

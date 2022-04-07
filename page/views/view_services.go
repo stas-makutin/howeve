@@ -2,9 +2,11 @@ package views
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/hexops/vecty/prop"
 	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/page/actions"
 	"github.com/stas-makutin/howeve/page/components"
@@ -291,12 +293,13 @@ func (ch *addServiceDialog) RenderTransports(transportsKey string, protocol *api
 func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *api.ProtocolTransportInfoEntry, availableParams []string) vecty.KeyedList {
 	key := fmt.Sprintf("%s-p%d", transportsKey, len(ch.Data.Params))
 	var result vecty.List
-	for _, param := range ch.Data.Params {
+	for i, param := range ch.Data.Params {
 		pi, ok := transport.Params[param.Name]
 		if !ok {
 			continue
 		}
 
+		paramIndex := i
 		paramKey := fmt.Sprintf("%s-%s", key, param.Name)
 
 		result = append(result, elem.Break(
@@ -346,16 +349,57 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 					),
 				),
 			)
-		default:
+		case "string":
 			result = append(result,
 				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, func(value string) {}).
+					WithKey(paramValueKey).
+					WithClasses("sv-add-service-param-value"),
+			)
+		default:
+			var min, max string
+			switch pi.Type {
+			case api.ParamTypeInt8:
+				min = strconv.FormatInt(int64(api.ParamTypeInt8Min), 10)
+				max = strconv.FormatInt(int64(api.ParamTypeInt8Max), 10)
+			case api.ParamTypeInt16:
+				min = strconv.FormatInt(int64(api.ParamTypeInt16Min), 10)
+				max = strconv.FormatInt(int64(api.ParamTypeInt16Max), 10)
+			case api.ParamTypeInt32:
+				min = strconv.FormatInt(int64(api.ParamTypeInt32Min), 10)
+				max = strconv.FormatInt(int64(api.ParamTypeInt32Max), 10)
+			case api.ParamTypeInt64:
+				min = strconv.FormatInt(int64(api.ParamTypeInt64Min), 10)
+				max = strconv.FormatInt(int64(api.ParamTypeInt64Max), 10)
+			case api.ParamTypeUint16:
+				min = strconv.FormatUint(uint64(api.ParamTypeUint16Min), 10)
+				max = strconv.FormatUint(uint64(api.ParamTypeUint16Max), 10)
+			case api.ParamTypeUint32:
+				min = strconv.FormatUint(uint64(api.ParamTypeUint32Min), 10)
+				max = strconv.FormatUint(uint64(api.ParamTypeUint32Max), 10)
+			case api.ParamTypeUint64:
+				min = strconv.FormatUint(uint64(api.ParamTypeUint64Min), 10)
+				max = strconv.FormatUint(uint64(api.ParamTypeUint64Max), 10)
+			default:
+				min = strconv.FormatUint(uint64(api.ParamTypeUint8Min), 10)
+				max = strconv.FormatUint(uint64(api.ParamTypeUint8Max), 10)
+			}
+
+			result = append(result,
+				components.NewMdcTextField(
+					paramValueKey, "Parameter Value", param.Value, false,
+					func(value string) {},
+					prop.Type(prop.TypeNumber),
+					vecty.Attribute("min", min),
+					vecty.Attribute("max", max),
+				).
 					WithKey(paramValueKey).
 					WithClasses("sv-add-service-param-value"),
 			)
 		}
 
 		paramDeleteKey := paramKey + "-delete"
-		result = append(result, components.NewMdcIconButton(paramDeleteKey, "Delete Parameter", "delete_forever", "delete_forever", false, func() {}).
+
+		result = append(result, components.NewMdcIconButton(paramDeleteKey, "Delete Parameter", "delete_forever", "delete_forever", false, func() { core.Console.Log(fmt.Sprint(paramIndex)) }).
 			WithKey(paramDeleteKey).
 			WithClasses("sv-add-service-param-delete"),
 		)
