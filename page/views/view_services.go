@@ -127,6 +127,7 @@ type addServiceDialog struct {
 	Protocols *api.ProtocolInfoResult `vecty:"prop"`
 	CloseFn   func(ok bool, data *addServiceData)
 	Data      addServiceData
+	renderKey int
 }
 
 func newAddServiceDialog(protocols *api.ProtocolInfoResult, closeFn func(ok bool, data *addServiceData)) *addServiceDialog {
@@ -145,10 +146,12 @@ func (ch *addServiceDialog) changeProtocol(value string, index int) {
 func (ch *addServiceDialog) changeTransport(value string, index int) {
 }
 
-func (ch *addServiceDialog) changeAlias(value string) {
+func (ch *addServiceDialog) changeAlias(value string) string {
+	return "invalid alias!!!"
 }
 
-func (ch *addServiceDialog) changeEntry(value string) {
+func (ch *addServiceDialog) changeEntry(value string) string {
+	return "invalid entry!!!"
 }
 
 func (ch *addServiceDialog) addParameter() {
@@ -156,21 +159,39 @@ func (ch *addServiceDialog) addParameter() {
 	availableParams := ch.availableParameters(transport)
 	if len(availableParams) > 0 {
 		name := availableParams[0]
-		pi, ok := transport.Params[name]
-		if ok {
-			value := ""
-			if pi.DefaultValue != "" {
-				value = pi.DefaultValue
-			} else if pi.Type == api.ParamTypeEnum {
-				value = pi.EnumValues[0]
-			} else if pi.Type == api.ParamTypeBool {
-				value = "false"
-			} else if pi.Type != api.ParamTypeString {
-				value = "0"
+		value, _ := ch.paramDefaultValue(name, transport)
+		ch.Data.Params = append(ch.Data.Params, core.Parameter{Name: name, Value: value})
+		ch.renderKey += 1
+		vecty.Rerender(ch)
+	}
+}
+
+func (ch *addServiceDialog) changeParameter(paramIndex int, name string) {
+	if paramIndex >= 0 && paramIndex < len(ch.Data.Params) {
+		p := &(ch.Data.Params[paramIndex])
+		if p.Name != name {
+			_, transport := ch.protocolAndTransport()
+			if value, ok := ch.paramDefaultValue(name, transport); ok {
+				p.Name = name
+				p.Value = value
+				ch.renderKey += 1
+				vecty.Rerender(ch)
 			}
-			ch.Data.Params = append(ch.Data.Params, core.Parameter{Name: name, Value: value})
-			vecty.Rerender(ch)
 		}
+	}
+}
+
+func (ch *addServiceDialog) changeParameterValue(paramIndex int, value string) {
+	if paramIndex >= 0 && paramIndex < len(ch.Data.Params) {
+		ch.Data.Params[paramIndex].Value = value
+	}
+}
+
+func (ch *addServiceDialog) removeParameter(paramIndex int) {
+	if paramIndex >= 0 && paramIndex < len(ch.Data.Params) {
+		ch.Data.Params = append(ch.Data.Params[:paramIndex], ch.Data.Params[paramIndex+1:]...)
+		ch.renderKey += 1
+		vecty.Rerender(ch)
 	}
 }
 
@@ -218,6 +239,23 @@ ParamLoop:
 		names = append(names, name)
 	}
 	return names
+}
+
+func (ch *addServiceDialog) paramDefaultValue(name string, transport *api.ProtocolTransportInfoEntry) (string, bool) {
+	value := ""
+	pi, ok := transport.Params[name]
+	if ok {
+		if pi.DefaultValue != "" {
+			value = pi.DefaultValue
+		} else if pi.Type == api.ParamTypeEnum {
+			value = pi.EnumValues[0]
+		} else if pi.Type == api.ParamTypeBool {
+			value = "false"
+		} else if pi.Type != api.ParamTypeString {
+			value = "0"
+		}
+	}
+	return value, ok
 }
 
 func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
@@ -291,7 +329,7 @@ func (ch *addServiceDialog) RenderTransports(transportsKey string, protocol *api
 }
 
 func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *api.ProtocolTransportInfoEntry, availableParams []string) vecty.KeyedList {
-	key := fmt.Sprintf("%s-p%d", transportsKey, len(ch.Data.Params))
+	key := fmt.Sprintf("%s-p%d", transportsKey, ch.renderKey)
 	var result vecty.List
 	for i, param := range ch.Data.Params {
 		pi, ok := transport.Params[param.Name]
@@ -316,7 +354,9 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 
 		paramNameKey := paramKey + "-name"
 		result = append(result,
-			components.NewMdcSelect(paramNameKey, "Parameter", false, func(value string, index int) {}, options).
+			components.NewMdcSelect(paramNameKey, "Parameter", false, func(value string, index int) {
+				ch.changeParameter(paramIndex, value)
+			}, options).
 				WithKey(paramNameKey).
 				WithClasses("sv-add-service-param-name"),
 		)
@@ -329,7 +369,9 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 				enumOptions = append(enumOptions, &components.MdcSelectOption{Name: enumValue, Selected: enumValue == param.Value})
 			}
 			result = append(result,
-				components.NewMdcSelect(paramValueKey, "Parameter Value", false, func(value string, index int) {}, enumOptions).
+				components.NewMdcSelect(paramValueKey, "Parameter Value", false, func(value string, index int) {
+					ch.changeParameterValue(paramIndex, value)
+				}, enumOptions).
 					WithKey(paramValueKey).
 					WithClasses("sv-add-service-param-value"),
 			)
@@ -342,16 +384,23 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 						vecty.Key(paramValueKey),
 					),
 					components.NewMdcRadioButton(
-						paramValueKey, "True", paramValueKey, "true", param.Value == "true" || param.Value == "1", false, func() {},
+						paramValueKey, "True", paramValueKey, "true", param.Value == "true" || param.Value == "1", false, func() {
+							ch.changeParameterValue(paramIndex, "true")
+						},
 					),
 					components.NewMdcRadioButton(
-						paramValueKey, "False", paramValueKey, "false", !(param.Value == "true" || param.Value == "1"), false, func() {},
+						paramValueKey, "False", paramValueKey, "false", !(param.Value == "true" || param.Value == "1"), false, func() {
+							ch.changeParameterValue(paramIndex, "false")
+						},
 					),
 				),
 			)
 		case "string":
 			result = append(result,
-				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, func(value string) {}).
+				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, func(value string) string {
+					ch.changeParameterValue(paramIndex, value)
+					return ""
+				}).
 					WithKey(paramValueKey).
 					WithClasses("sv-add-service-param-value"),
 			)
@@ -387,7 +436,10 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 			result = append(result,
 				components.NewMdcTextField(
 					paramValueKey, "Parameter Value", param.Value, false,
-					func(value string) {},
+					func(value string) string {
+						ch.changeParameterValue(paramIndex, value)
+						return ""
+					},
 					prop.Type(prop.TypeNumber),
 					vecty.Attribute("min", min),
 					vecty.Attribute("max", max),
@@ -399,7 +451,10 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 
 		paramDeleteKey := paramKey + "-delete"
 
-		result = append(result, components.NewMdcIconButton(paramDeleteKey, "Delete Parameter", "delete_forever", "delete_forever", false, func() { core.Console.Log(fmt.Sprint(paramIndex)) }).
+		result = append(result, components.NewMdcIconButton(paramDeleteKey, "Delete Parameter", "delete_forever", "delete_forever", false,
+			func() {
+				ch.removeParameter(paramIndex)
+			}).
 			WithKey(paramDeleteKey).
 			WithClasses("sv-add-service-param-delete"),
 		)

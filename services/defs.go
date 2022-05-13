@@ -38,12 +38,12 @@ var protocols = map[api.ProtocolIdentifier]*defs.ProtocolInfo{
 					},
 					defs.ParamNameOpenAttemptsInterval: {
 						Description:  "The time interval between attempts to open serial port, milliseconds",
-						Type:         defs.ParamTypeInt32,
+						Type:         defs.ParamTypeUint32,
 						DefaultValue: "3000",
 					},
 					defs.ParamNameOutgoingMaxTTL: {
 						Description:  "The time to live of outgoing message before it will be sent, milliseconds",
-						Type:         defs.ParamTypeInt32,
+						Type:         defs.ParamTypeUint32,
 						DefaultValue: "10000",
 					},
 				},

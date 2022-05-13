@@ -19,11 +19,11 @@ type MdcTextField struct {
 	Value          string `vecty:"prop"`
 	Disabled       bool   `vecty:"prop"`
 	inputAtributes []vecty.Applyer
-	changeFn       func(value string)
+	changeFn       func(value string) string
 	jsObject       js.Value
 }
 
-func NewMdcTextField(id, label, value string, disabled bool, changeFn func(value string), inputAtributes ...vecty.Applyer) (r *MdcTextField) {
+func NewMdcTextField(id, label, value string, disabled bool, changeFn func(value string) string, inputAtributes ...vecty.Applyer) (r *MdcTextField) {
 	r = &MdcTextField{ID: id, Label: label, Value: value, Disabled: disabled, inputAtributes: inputAtributes, changeFn: changeFn}
 	return
 }
@@ -50,7 +50,7 @@ func (ch *MdcTextField) WithClasses(classes ...string) *MdcTextField {
 }
 
 func (ch *MdcTextField) change(event *vecty.Event) {
-	ch.changeFn(event.Value.String())
+	event.Target.Call("setCustomValidity", ch.changeFn(event.Target.Get("value").String()))
 }
 
 func (ch *MdcTextField) Copy() vecty.Component {
