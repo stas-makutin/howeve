@@ -97,7 +97,7 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 		components.NewMdcGridSingleCellRow(
 			&servicesTable{Services: ch.services},
 		),
-		core.If(ch.addServiceDialog, newAddServiceDialog(ch.protocols, ch.addServiceAction)),
+		core.If(ch.addServiceDialog, newAddServiceDialog(ch.protocols, ch.services, ch.addServiceAction)),
 		core.If(ch.loading, &components.ViewLoading{}),
 	)
 }
@@ -125,14 +125,16 @@ type addServiceData struct {
 type addServiceDialog struct {
 	vecty.Core
 	Protocols *api.ProtocolInfoResult `vecty:"prop"`
+	Services  *api.ListServicesResult `vecty:"prop"`
 	CloseFn   func(ok bool, data *addServiceData)
-	Data      addServiceData
+	Data      *addServiceData
+
 	renderKey int
 }
 
-func newAddServiceDialog(protocols *api.ProtocolInfoResult, closeFn func(ok bool, data *addServiceData)) *addServiceDialog {
+func newAddServiceDialog(protocols *api.ProtocolInfoResult, services *api.ListServicesResult, closeFn func(ok bool, data *addServiceData)) *addServiceDialog {
 	return &addServiceDialog{
-		Protocols: protocols, CloseFn: closeFn,
+		Protocols: protocols, Services: services, CloseFn: closeFn, Data: &addServiceData{},
 	}
 }
 
@@ -141,17 +143,32 @@ func (ch *addServiceDialog) closeDialog(action string, data interface{}) {
 }
 
 func (ch *addServiceDialog) changeProtocol(value string, index int) {
+
 }
 
 func (ch *addServiceDialog) changeTransport(value string, index int) {
 }
 
 func (ch *addServiceDialog) changeAlias(value string) string {
-	return "invalid alias!!!"
+	ch.Data.Alias = value
+	if value != "" {
+		for _, s := range ch.Services.Services {
+			if s.Entry == value {
+				return "Alias already exists"
+			}
+		}
+	}
+	return "aaaa"
 }
 
 func (ch *addServiceDialog) changeEntry(value string) string {
-	return "invalid entry!!!"
+	ch.Data.Entry = value
+	for _, s := range ch.Services.Services {
+		if s.Protocol == ch.Data.Protocol && s.Transport == ch.Data.Transport && s.Entry == value {
+			return "Entry already exists"
+		}
+	}
+	return ""
 }
 
 func (ch *addServiceDialog) addParameter() {
@@ -272,7 +289,7 @@ func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
 		},
 		ch.RenderProtocols(protocolsKey, protocol),
 		ch.RenderTransports(transportsKey, protocol, transport),
-		components.NewMdcTextField("sv-add-service-alias", "Alias", ch.Data.Alias, false, ch.changeAlias).
+		components.NewMdcTextField("sv-add-service-alias", "Alias", ch.Data.Alias, false, false, ch.changeAlias).
 			WithClasses("adjacent-margins").
 			WithKey("text-alias"),
 		elem.Break(
@@ -280,7 +297,7 @@ func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
 				vecty.Key("br-1"),
 			),
 		),
-		components.NewMdcTextField("sv-add-service-entry", "Entry", ch.Data.Entry, false, ch.changeEntry).
+		components.NewMdcTextField("sv-add-service-entry", "Entry", ch.Data.Entry, false, false, ch.changeEntry).
 			WithClasses("adjacent-margins").
 			WithKey("text-entry"),
 		elem.Div(
@@ -397,7 +414,7 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 			)
 		case "string":
 			result = append(result,
-				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, func(value string) string {
+				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, false, func(value string) string {
 					ch.changeParameterValue(paramIndex, value)
 					return ""
 				}).
@@ -435,7 +452,7 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 
 			result = append(result,
 				components.NewMdcTextField(
-					paramValueKey, "Parameter Value", param.Value, false,
+					paramValueKey, "Parameter Value", param.Value, false, false,
 					func(value string) string {
 						ch.changeParameterValue(paramIndex, value)
 						return ""

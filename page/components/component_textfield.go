@@ -18,13 +18,14 @@ type MdcTextField struct {
 	Label          string `vecty:"prop"`
 	Value          string `vecty:"prop"`
 	Disabled       bool   `vecty:"prop"`
+	Invalid        bool   `vecty:"prop"`
 	inputAtributes []vecty.Applyer
 	changeFn       func(value string) string
 	jsObject       js.Value
 }
 
-func NewMdcTextField(id, label, value string, disabled bool, changeFn func(value string) string, inputAtributes ...vecty.Applyer) (r *MdcTextField) {
-	r = &MdcTextField{ID: id, Label: label, Value: value, Disabled: disabled, inputAtributes: inputAtributes, changeFn: changeFn}
+func NewMdcTextField(id, label, value string, disabled bool, invalid bool, changeFn func(value string) string, inputAtributes ...vecty.Applyer) (r *MdcTextField) {
+	r = &MdcTextField{ID: id, Label: label, Value: value, Disabled: disabled, Invalid: invalid, inputAtributes: inputAtributes, changeFn: changeFn}
 	return
 }
 
@@ -64,6 +65,7 @@ func (ch *MdcTextField) Render() vecty.ComponentOrHTML {
 		vecty.Markup(
 			prop.ID(ch.ID),
 			vecty.Class("mdc-text-field", "mdc-text-field--outlined", "mdc-text-field--no-label"),
+			vecty.MarkupIf(ch.Invalid, vecty.Class("mdc-text-field--invalid")),
 			prop.Disabled(ch.Disabled),
 			ch.ApplyClasses(),
 		),

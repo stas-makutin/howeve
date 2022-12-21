@@ -1,17 +1,17 @@
 module github.com/stas-makutin/howeve
 
-go 1.18
+go 1.19
 
 require (
-	github.com/albenik/go-serial/v2 v2.3.0
-	github.com/fsnotify/fsnotify v1.5.1
+	github.com/albenik/go-serial/v2 v2.5.1
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.1.0
-	github.com/kardianos/service v1.2.0
-	golang.org/x/net v0.0.0-20211109214657-ef0fda0de508
-	golang.org/x/sys v0.0.0-20211110154304-99a53858aa08 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	github.com/kardianos/service v1.2.2
+	golang.org/x/net v0.4.0
+	golang.org/x/sys v0.3.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -21,6 +21,6 @@ require (
 
 require (
 	github.com/creack/goselect v0.1.2 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 )
