@@ -143,32 +143,87 @@ func (ch *addServiceDialog) closeDialog(action string, data interface{}) {
 }
 
 func (ch *addServiceDialog) changeProtocol(value string, index int) {
+	if ch.Protocols == nil || index < 0 || index >= len(ch.Protocols.Protocols) {
+		return
+	}
 
+	protocol := ch.Protocols.Protocols[index]
+	if ch.Data.Protocol == protocol.ID {
+		return
+	}
+
+	transportNotSupported := true
+	for _, t := range protocol.Transports {
+		if t.ID == ch.Data.Transport {
+			transportNotSupported = false
+			break
+		}
+	}
+	if transportNotSupported && len(protocol.Transports) > 0 {
+		ch.Data.Transport = protocol.Transports[0].ID
+	}
+	vecty.Rerender(ch)
 }
 
 func (ch *addServiceDialog) changeTransport(value string, index int) {
+	if ch.Protocols == nil || index < 0 || len(ch.Protocols.Protocols) == 0 {
+		return
+	}
+
+	var transports []*api.ProtocolTransportInfoEntry
+	for _, p := range ch.Protocols.Protocols {
+		if p.ID == ch.Data.Protocol {
+			transports = p.Transports
+		}
+	}
+	if index >= len(transports) {
+		return
+	}
+
+	transportID := transports[index].ID
+	if transportID != ch.Data.Transport {
+		ch.Data.Transport = transportID
+		vecty.Rerender(ch)
+	}
 }
 
 func (ch *addServiceDialog) changeAlias(value string) string {
-	ch.Data.Alias = value
-	if value != "" {
-		for _, s := range ch.Services.Services {
-			if s.Entry == value {
-				return "Alias already exists"
-			}
-		}
+	aliasMessage := ""
+	if value != ch.Data.Alias {
+		ch.Data.Alias = value
+		_, aliasMessage = ch.validateEntryAndAlias()
+		vecty.Rerender(ch)
 	}
-	return "aaaa"
+	return aliasMessage
 }
 
 func (ch *addServiceDialog) changeEntry(value string) string {
-	ch.Data.Entry = value
+	entryMessage := ""
+	if value != ch.Data.Entry {
+		ch.Data.Entry = value
+		entryMessage, _ = ch.validateEntryAndAlias()
+		vecty.Rerender(ch)
+	}
+	return entryMessage
+}
+
+func (ch *addServiceDialog) validateEntryAndAlias() (entryMessage, aliasMessage string) {
 	for _, s := range ch.Services.Services {
-		if s.Protocol == ch.Data.Protocol && s.Transport == ch.Data.Transport && s.Entry == value {
-			return "Entry already exists"
+		if s.Alias != "" && s.Alias == ch.Data.Alias {
+			aliasMessage = fmt.Sprintf("Alias %s already exists", s.Alias)
+		}
+		if s.Protocol == ch.Data.Protocol && s.Transport == ch.Data.Transport && s.Entry == ch.Data.Entry {
+			protocolName, transportName := core.ProtocolAndTransportName(s.Protocol, s.Transport, ch.Protocols)
+
+			aliasMessage = fmt.Sprintf(
+				"Entry %s already exists for Protocol %s and Transport %s",
+				s.Entry,
+				protocolName,
+				transportName,
+			)
 		}
 	}
-	return ""
+	return
 }
 
 func (ch *addServiceDialog) addParameter() {
@@ -280,16 +335,20 @@ func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
 	availableParams := ch.availableParameters(transport)
 	protocolsKey := fmt.Sprintf("sv-add-p-%p", ch.Protocols)
 	transportsKey := fmt.Sprintf("%s-%d", protocolsKey, ch.Data.Protocol)
+	entryTooltip, aliasTooltip := ch.validateEntryAndAlias()
 
 	return components.NewMdcDialog(
-		"sv-add-service-dialog", "Add Service", true, true, ch.closeDialog, &ch.Data,
+		"sv-add-service-dialog", "Add Service", true, true, ch.closeDialog, ch.Data,
 		[]components.MdcDialogButton{
 			{Label: "Cancel", Action: components.MdcDialogActionClose},
-			{Label: "Add Service", Action: components.MdcDialogActionOK, Default: true, Disabled: false},
+			{Label: "Add Service", Action: components.MdcDialogActionOK, Default: true, Disabled: aliasTooltip != "" || entryTooltip != ""},
 		},
 		ch.RenderProtocols(protocolsKey, protocol),
 		ch.RenderTransports(transportsKey, protocol, transport),
-		components.NewMdcTextField("sv-add-service-alias", "Alias", ch.Data.Alias, false, false, ch.changeAlias).
+		components.NewMdcTextField(
+			"sv-add-service-alias", "Alias", ch.Data.Alias, false, aliasTooltip != "", ch.changeAlias,
+			vecty.MarkupIf(aliasTooltip != "", vecty.Attribute("title", aliasTooltip)),
+		).
 			WithClasses("adjacent-margins").
 			WithKey("text-alias"),
 		elem.Break(
@@ -297,7 +356,10 @@ func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
 				vecty.Key("br-1"),
 			),
 		),
-		components.NewMdcTextField("sv-add-service-entry", "Entry", ch.Data.Entry, false, false, ch.changeEntry).
+		components.NewMdcTextField(
+			"sv-add-service-entry", "Entry", ch.Data.Entry, false, entryTooltip != "", ch.changeEntry,
+			vecty.MarkupIf(entryTooltip != "", vecty.Attribute("title", entryTooltip)),
+		).
 			WithClasses("adjacent-margins").
 			WithKey("text-entry"),
 		elem.Div(
@@ -335,6 +397,7 @@ func (ch *addServiceDialog) RenderTransports(transportsKey string, protocol *api
 		for _, t := range protocol.Transports {
 			options = append(options, &components.MdcSelectOption{
 				Name:     fmt.Sprintf("%s (%d)", t.Name, t.ID),
+				Value:    strconv.Itoa(int(t.ID)),
 				Selected: transport.ID == t.ID,
 			})
 		}
