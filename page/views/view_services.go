@@ -45,7 +45,65 @@ func (ch *ViewServices) OnChange(event interface{}) {
 		ch.useSockets = store.UseSocket
 		ch.errorMessage = store.Error
 		ch.protocols = store.Protocols
-		ch.services = store.Services
+		//ch.services = store.Services
+		ch.services = &api.ListServicesResult{
+			Services: []api.ListServicesEntry{
+				{
+					ServiceEntry: &api.ServiceEntry{
+						ServiceKey: &api.ServiceKey{
+							Protocol:  api.ProtocolZWave,
+							Transport: api.TransportSerial,
+							Entry:     "",
+						},
+						Params: map[string]string{
+							"param1": "value1",
+							"param2": "value2",
+						},
+					},
+					StatusReply: &api.StatusReply{
+						Success: true,
+					},
+				},
+				{
+					ServiceEntry: &api.ServiceEntry{
+						ServiceKey: &api.ServiceKey{
+							Protocol:  api.ProtocolZWave,
+							Transport: api.TransportSerial,
+							Entry:     "COM2",
+						},
+						Params: map[string]string{
+							"paramA": "valueA",
+							"paramB": "valueB",
+						},
+						Alias: "ZC2",
+					},
+					StatusReply: &api.StatusReply{
+						Success: false,
+						Error: &api.ErrorInfo{
+							Code:    api.ErrorServiceStatusBad,
+							Message: "unable to connect to the service",
+						},
+					},
+				},
+				{
+					ServiceEntry: &api.ServiceEntry{
+						ServiceKey: &api.ServiceKey{
+							Protocol:  api.ProtocolZWave,
+							Transport: api.TransportSerial,
+							Entry:     "COM3",
+						},
+						Params: map[string]string{
+							"paramX": "valueX",
+							"paramY": "valueY",
+							"paramZ": "valueZ",
+						},
+					},
+					StatusReply: &api.StatusReply{
+						Success: true,
+					},
+				},
+			},
+		}
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
@@ -183,43 +241,40 @@ func (ch *addServiceDialog) changeTransport(value string, index int) {
 	transportID := transports[index].ID
 	if transportID != ch.Data.Transport {
 		ch.Data.Transport = transportID
+		ch.renderKey += 1
 		vecty.Rerender(ch)
 	}
 }
 
-func (ch *addServiceDialog) changeAlias(value string) string {
-	aliasMessage := ""
+func (ch *addServiceDialog) changeAlias(value string) {
 	if value != ch.Data.Alias {
 		ch.Data.Alias = value
-		_, aliasMessage = ch.validateEntryAndAlias()
+		ch.renderKey += 1
 		vecty.Rerender(ch)
 	}
-	return aliasMessage
 }
 
-func (ch *addServiceDialog) changeEntry(value string) string {
-	entryMessage := ""
+func (ch *addServiceDialog) changeEntry(value string) {
 	if value != ch.Data.Entry {
 		ch.Data.Entry = value
-		entryMessage, _ = ch.validateEntryAndAlias()
+		ch.renderKey += 1
 		vecty.Rerender(ch)
 	}
-	return entryMessage
 }
 
 func (ch *addServiceDialog) validateEntryAndAlias() (entryMessage, aliasMessage string) {
 	for _, s := range ch.Services.Services {
 		if s.Alias != "" && s.Alias == ch.Data.Alias {
-			aliasMessage = fmt.Sprintf("Alias %s already exists", s.Alias)
+			aliasMessage = fmt.Sprintf("Service with alias '%s' already exists", s.Alias)
 		}
 		if s.Protocol == ch.Data.Protocol && s.Transport == ch.Data.Transport && s.Entry == ch.Data.Entry {
 			protocolName, transportName := core.ProtocolAndTransportName(s.Protocol, s.Transport, ch.Protocols)
 
-			aliasMessage = fmt.Sprintf(
-				"Entry %s already exists for Protocol %s and Transport %s",
+			entryMessage = fmt.Sprintf(
+				"Service with entry '%s' already exists for %s (%v) protocol and %s (%v) transport",
 				s.Entry,
-				protocolName,
-				transportName,
+				protocolName, s.Protocol,
+				transportName, s.Transport,
 			)
 		}
 	}
@@ -256,6 +311,8 @@ func (ch *addServiceDialog) changeParameter(paramIndex int, name string) {
 func (ch *addServiceDialog) changeParameterValue(paramIndex int, value string) {
 	if paramIndex >= 0 && paramIndex < len(ch.Data.Params) {
 		ch.Data.Params[paramIndex].Value = value
+		ch.renderKey += 1
+		vecty.Rerender(ch)
 	}
 }
 
@@ -350,7 +407,7 @@ func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
 			vecty.MarkupIf(aliasTooltip != "", vecty.Attribute("title", aliasTooltip)),
 		).
 			WithClasses("adjacent-margins").
-			WithKey("text-alias"),
+			WithKey(fmt.Sprintf("text-alias-%d", ch.renderKey)),
 		elem.Break(
 			vecty.Markup(
 				vecty.Key("br-1"),
@@ -361,7 +418,7 @@ func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
 			vecty.MarkupIf(entryTooltip != "", vecty.Attribute("title", entryTooltip)),
 		).
 			WithClasses("adjacent-margins").
-			WithKey("text-entry"),
+			WithKey(fmt.Sprintf("text-entry-%d", ch.renderKey)),
 		elem.Div(
 			vecty.Markup(
 				vecty.Key("param-title"),
@@ -477,9 +534,8 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 			)
 		case "string":
 			result = append(result,
-				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, false, func(value string) string {
+				components.NewMdcTextField(paramValueKey, "Parameter Value", param.Value, false, false, func(value string) {
 					ch.changeParameterValue(paramIndex, value)
-					return ""
 				}).
 					WithKey(paramValueKey).
 					WithClasses("sv-add-service-param-value"),
@@ -516,9 +572,8 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 			result = append(result,
 				components.NewMdcTextField(
 					paramValueKey, "Parameter Value", param.Value, false, false,
-					func(value string) string {
+					func(value string) {
 						ch.changeParameterValue(paramIndex, value)
-						return ""
 					},
 					prop.Type(prop.TypeNumber),
 					vecty.Attribute("min", min),

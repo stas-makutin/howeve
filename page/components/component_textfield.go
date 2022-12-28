@@ -20,11 +20,11 @@ type MdcTextField struct {
 	Disabled       bool   `vecty:"prop"`
 	Invalid        bool   `vecty:"prop"`
 	inputAtributes []vecty.Applyer
-	changeFn       func(value string) string
+	changeFn       func(value string)
 	jsObject       js.Value
 }
 
-func NewMdcTextField(id, label, value string, disabled bool, invalid bool, changeFn func(value string) string, inputAtributes ...vecty.Applyer) (r *MdcTextField) {
+func NewMdcTextField(id, label, value string, disabled bool, invalid bool, changeFn func(value string), inputAtributes ...vecty.Applyer) (r *MdcTextField) {
 	r = &MdcTextField{ID: id, Label: label, Value: value, Disabled: disabled, Invalid: invalid, inputAtributes: inputAtributes, changeFn: changeFn}
 	return
 }
@@ -34,6 +34,10 @@ func (ch *MdcTextField) Mount() {
 	ch.jsObject = js.Global().Get("mdc").Get("textField").Get("MDCTextField").Call(
 		"attachTo", js.Global().Get("document").Call("getElementById", ch.ID),
 	)
+	if ch.Invalid {
+		ch.jsObject.Set("useNativeValidation", false)
+		ch.jsObject.Set("valid", false)
+	}
 }
 
 func (ch *MdcTextField) Unmount() {
@@ -51,7 +55,7 @@ func (ch *MdcTextField) WithClasses(classes ...string) *MdcTextField {
 }
 
 func (ch *MdcTextField) change(event *vecty.Event) {
-	event.Target.Call("setCustomValidity", ch.changeFn(event.Target.Get("value").String()))
+	ch.changeFn(event.Target.Get("value").String())
 }
 
 func (ch *MdcTextField) Copy() vecty.Component {
@@ -65,7 +69,6 @@ func (ch *MdcTextField) Render() vecty.ComponentOrHTML {
 		vecty.Markup(
 			prop.ID(ch.ID),
 			vecty.Class("mdc-text-field", "mdc-text-field--outlined", "mdc-text-field--no-label"),
-			vecty.MarkupIf(ch.Invalid, vecty.Class("mdc-text-field--invalid")),
 			prop.Disabled(ch.Disabled),
 			ch.ApplyClasses(),
 		),
