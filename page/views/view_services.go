@@ -271,7 +271,7 @@ func (ch *addServiceDialog) validateEntryAndAlias() (entryMessage, aliasMessage 
 			protocolName, transportName := core.ProtocolAndTransportName(s.Protocol, s.Transport, ch.Protocols)
 
 			entryMessage = fmt.Sprintf(
-				"Service with entry '%s' already exists for %s (%v) protocol and %s (%v) transport",
+				"Service with '%s' entry already exists for %s (%v) protocol and %s (%v) transport",
 				s.Entry,
 				protocolName, s.Protocol,
 				transportName, s.Transport,
@@ -541,43 +541,124 @@ func (ch *addServiceDialog) RenderParameters(transportsKey string, transport *ap
 					WithClasses("sv-add-service-param-value"),
 			)
 		default:
-			var min, max string
+			var min, max, msg string
 			switch pi.Type {
 			case api.ParamTypeInt8:
-				min = strconv.FormatInt(int64(api.ParamTypeInt8Min), 10)
-				max = strconv.FormatInt(int64(api.ParamTypeInt8Max), 10)
+				l := int64(api.ParamTypeInt8Min)
+				u := int64(api.ParamTypeInt8Max)
+				v, err := strconv.ParseInt(param.Value, 10, 8)
+				min = strconv.FormatInt(l, 10)
+				max = strconv.FormatInt(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			case api.ParamTypeInt16:
-				min = strconv.FormatInt(int64(api.ParamTypeInt16Min), 10)
-				max = strconv.FormatInt(int64(api.ParamTypeInt16Max), 10)
+				l := int64(api.ParamTypeInt16Min)
+				u := int64(api.ParamTypeInt16Max)
+				v, err := strconv.ParseInt(param.Value, 10, 16)
+				min = strconv.FormatInt(l, 10)
+				max = strconv.FormatInt(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			case api.ParamTypeInt32:
-				min = strconv.FormatInt(int64(api.ParamTypeInt32Min), 10)
-				max = strconv.FormatInt(int64(api.ParamTypeInt32Max), 10)
+				l := int64(api.ParamTypeInt32Min)
+				u := int64(api.ParamTypeInt32Max)
+				v, err := strconv.ParseInt(param.Value, 10, 32)
+				min = strconv.FormatInt(l, 10)
+				max = strconv.FormatInt(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			case api.ParamTypeInt64:
-				min = strconv.FormatInt(int64(api.ParamTypeInt64Min), 10)
-				max = strconv.FormatInt(int64(api.ParamTypeInt64Max), 10)
+				l := int64(api.ParamTypeInt64Min)
+				u := int64(api.ParamTypeInt64Max)
+				v, err := strconv.ParseInt(param.Value, 10, 64)
+				min = strconv.FormatInt(l, 10)
+				max = strconv.FormatInt(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			case api.ParamTypeUint16:
-				min = strconv.FormatUint(uint64(api.ParamTypeUint16Min), 10)
-				max = strconv.FormatUint(uint64(api.ParamTypeUint16Max), 10)
+				l := uint64(api.ParamTypeUint16Min)
+				u := uint64(api.ParamTypeUint16Max)
+				v, err := strconv.ParseUint(param.Value, 10, 16)
+				min = strconv.FormatUint(l, 10)
+				max = strconv.FormatUint(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			case api.ParamTypeUint32:
-				min = strconv.FormatUint(uint64(api.ParamTypeUint32Min), 10)
-				max = strconv.FormatUint(uint64(api.ParamTypeUint32Max), 10)
+				l := uint64(api.ParamTypeUint32Min)
+				u := uint64(api.ParamTypeUint32Max)
+				v, err := strconv.ParseUint(param.Value, 10, 32)
+				min = strconv.FormatUint(l, 10)
+				max = strconv.FormatUint(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			case api.ParamTypeUint64:
-				min = strconv.FormatUint(uint64(api.ParamTypeUint64Min), 10)
-				max = strconv.FormatUint(uint64(api.ParamTypeUint64Max), 10)
+				l := uint64(api.ParamTypeUint64Min)
+				u := uint64(api.ParamTypeUint64Max)
+				v, err := strconv.ParseUint(param.Value, 10, 64)
+				min = strconv.FormatUint(l, 10)
+				max = strconv.FormatUint(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			default:
-				min = strconv.FormatUint(uint64(api.ParamTypeUint8Min), 10)
-				max = strconv.FormatUint(uint64(api.ParamTypeUint8Max), 10)
+				l := uint64(api.ParamTypeUint8Min)
+				u := uint64(api.ParamTypeUint8Max)
+				v, err := strconv.ParseUint(param.Value, 10, 8)
+				min = strconv.FormatUint(l, 10)
+				max = strconv.FormatUint(u, 10)
+				if err != nil {
+					msg = err.Error()
+				} else if v < l {
+					msg = fmt.Sprintf("The value must be equal or greater than %d", l)
+				} else if v > u {
+					msg = fmt.Sprintf("The value must be equal or less than %d", u)
+				}
 			}
 
 			result = append(result,
 				components.NewMdcTextField(
-					paramValueKey, "Parameter Value", param.Value, false, false,
+					paramValueKey, "Parameter Value", param.Value, false, msg != "",
 					func(value string) {
 						ch.changeParameterValue(paramIndex, value)
 					},
 					prop.Type(prop.TypeNumber),
 					vecty.Attribute("min", min),
 					vecty.Attribute("max", max),
+					vecty.MarkupIf(msg != "", vecty.Attribute("title", msg)),
 				).
 					WithKey(paramValueKey).
 					WithClasses("sv-add-service-param-value"),
