@@ -83,4 +83,7 @@ body {
 	position: relative;
 	top: 0.2em;
 }
+.sv-service-table-remove-cell {
+	text-align: center;
+}
 `

@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/hexops/vecty"
@@ -20,7 +21,7 @@ type ViewServices struct {
 	loading          bool
 	useSockets       bool
 	errorMessage     string
-	protocols        *api.ProtocolInfoResult
+	protocols        *core.ProtocolsWrapper
 	services         *api.ListServicesResult
 }
 
@@ -32,7 +33,7 @@ func NewViewServices() (r *ViewServices) {
 		loading:          store.Loading > 0,
 		useSockets:       store.UseSocket,
 		errorMessage:     store.Error,
-		protocols:        store.Protocols,
+		protocols:        core.NewProtocolsWrapper(store.Protocols),
 		services:         store.Services,
 	}
 	actions.Subscribe(r)
@@ -44,7 +45,7 @@ func (ch *ViewServices) OnChange(event interface{}) {
 		ch.loading = store.Loading > 0
 		ch.useSockets = store.UseSocket
 		ch.errorMessage = store.Error
-		ch.protocols = store.Protocols
+		ch.protocols = core.NewProtocolsWrapper(store.Protocols)
 		//ch.services = store.Services
 		ch.services = &api.ListServicesResult{
 			Services: []api.ListServicesEntry{
@@ -153,7 +154,7 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 		)),
 		&components.SectionTitle{Text: "Services"},
 		components.NewMdcGridSingleCellRow(
-			&servicesTable{Services: ch.services},
+			&servicesTable{Protocols: ch.protocols, Services: ch.services},
 		),
 		core.If(ch.addServiceDialog, newAddServiceDialog(ch.protocols, ch.services, ch.addServiceAction)),
 		core.If(ch.loading, &components.ViewLoading{}),
@@ -162,7 +163,8 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 
 type servicesTable struct {
 	vecty.Core
-	Services *api.ListServicesResult `vecty:"prop"`
+	Protocols *core.ProtocolsWrapper  `vecty:"prop"`
+	Services  *api.ListServicesResult `vecty:"prop"`
 }
 
 func (ch *servicesTable) Copy() vecty.Component {
@@ -170,13 +172,129 @@ func (ch *servicesTable) Copy() vecty.Component {
 	return &cpy
 }
 
+func (ch *servicesTable) headerColumn(name string, classes ...string) vecty.ComponentOrHTML {
+	return elem.TableHeader(
+		vecty.Markup(
+			vecty.Class(append([]string{"mdc-data-table__header-cell"}, classes...)...),
+			vecty.Attribute("role", "columnheader"),
+			vecty.Attribute("scope", "col"),
+		),
+		vecty.Text(name),
+	)
+}
+
+func (ch *servicesTable) tableBody() vecty.ComponentOrHTML {
+	if ch.Services == nil || len(ch.Services.Services) <= 0 {
+		return nil
+	}
+
+	var content vecty.List
+	for _, service := range ch.Services.Services {
+		content = append(content, ch.tableRow(&service))
+	}
+
+	return elem.TableBody(
+		vecty.Markup(
+			vecty.Class("mdc-data-table__content"),
+		),
+		content,
+	)
+}
+
+func (ch *servicesTable) parametersTable(params api.RawParamValues) vecty.ComponentOrHTML {
+	if len(params) <= 0 {
+		return vecty.Text("None")
+	}
+
+	names := make([]string, 0, len(params))
+	for name := range params {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
+		for _, name := range names {
+			builder.AddKeyValueRow(name, params[name])
+		}
+	})
+
+}
+
+func (ch *servicesTable) tableRow(service *api.ListServicesEntry) vecty.ComponentOrHTML {
+	pi, pti := ch.Protocols.ProtocolAndTransport(service.Protocol, service.Transport)
+	protocolName := strconv.Itoa(int(service.Protocol))
+	if pi != nil {
+		protocolName = pi.Name + " (" + protocolName + ")"
+	}
+	transportName := strconv.Itoa(int(service.Transport))
+	if pti != nil {
+		transportName = pti.Name + " (" + transportName + ")"
+	}
+
+	return elem.TableRow(
+		vecty.Markup(
+			vecty.Class("mdc-data-table__row"),
+		),
+		ch.tableColumn(vecty.Text(service.Alias)),
+		ch.tableColumn(vecty.Text(protocolName), "mdc-data-table__cell--numeric"),
+		ch.tableColumn(vecty.Text(transportName), "mdc-data-table__cell--numeric"),
+		ch.tableColumn(vecty.Text(service.Entry)),
+		ch.tableColumn(ch.parametersTable(service.Params)),
+		ch.tableColumn(vecty.Text("service status")),
+		ch.tableColumn(components.NewMdcIconButton("", "Remove Service", "delete_forever", "delete_forever", false,
+			func() {},
+		), "sv-service-table-remove-cell"),
+	)
+}
+
+func (ch *servicesTable) tableColumn(content vecty.MarkupOrChild, classes ...string) vecty.ComponentOrHTML {
+	return elem.TableData(
+		vecty.Markup(
+			vecty.Class(append([]string{"mdc-data-table__cell", "data-table-cell--top"}, classes...)...),
+			vecty.Attribute("role", "columnheader"),
+			vecty.Attribute("scope", "col"),
+		),
+		content,
+	)
+}
+
 func (ch *servicesTable) Render() vecty.ComponentOrHTML {
-	return nil
+	return elem.Div(
+		vecty.Markup(
+			vecty.Class("mdc-data-table"),
+		),
+		elem.Div(
+			vecty.Markup(
+				vecty.Class("mdc-data-table__table-container"),
+			),
+			elem.Table(
+				vecty.Markup(
+					vecty.Class("mdc-data-table__table"),
+					vecty.Attribute("aria-label", "Protocols"),
+				),
+				elem.TableHead(
+					elem.TableRow(
+						vecty.Markup(
+							vecty.Class("mdc-data-table__header-row"),
+						),
+						ch.headerColumn("Alias"),
+						ch.headerColumn("Protocol"),
+						ch.headerColumn("Transport"),
+						ch.headerColumn("Entry"),
+						ch.headerColumn("Parameters"),
+						ch.headerColumn("Status"),
+						ch.headerColumn("Remove Service"),
+					),
+				),
+				ch.tableBody(),
+			),
+		),
+	)
 }
 
 type addServiceDialog struct {
 	vecty.Core
-	Protocols *api.ProtocolInfoResult `vecty:"prop"`
+	Protocols *core.ProtocolsWrapper  `vecty:"prop"`
 	Services  *api.ListServicesResult `vecty:"prop"`
 	CloseFn   func(ok bool, data *core.ServiceEntryData)
 	Data      *core.ServiceEntryData
@@ -184,10 +302,7 @@ type addServiceDialog struct {
 	renderKey int
 }
 
-func newAddServiceDialog(protocols *api.ProtocolInfoResult, services *api.ListServicesResult, closeFn func(ok bool, data *core.ServiceEntryData)) *addServiceDialog {
-	if protocols == nil {
-		protocols = &api.ProtocolInfoResult{}
-	}
+func newAddServiceDialog(protocols *core.ProtocolsWrapper, services *api.ListServicesResult, closeFn func(ok bool, data *core.ServiceEntryData)) *addServiceDialog {
 	if services == nil {
 		services = &api.ListServicesResult{}
 	}
@@ -212,7 +327,7 @@ func (ch *addServiceDialog) changeProtocol(value string, index int) {
 }
 
 func (ch *addServiceDialog) changeTransport(value string, index int) {
-	if ch.Data.ChangeTransport(ch.Protocols.Protocols, index) {
+	if ch.Data.ChangeTransport(ch.Protocols, index) {
 		ch.reRender()
 	}
 }
@@ -232,7 +347,7 @@ func (ch *addServiceDialog) changeEntry(value string) {
 }
 
 func (ch *addServiceDialog) addParameter() {
-	_, transport := ch.Data.ProtocolAndTransport(ch.Protocols.Protocols)
+	_, transport := ch.Data.ProtocolAndTransport(ch.Protocols)
 	if params, ok := ch.Data.Params.AppendAvailable(transport); ok {
 		ch.Data.Params = params
 		ch.reRender()
@@ -240,7 +355,7 @@ func (ch *addServiceDialog) addParameter() {
 }
 
 func (ch *addServiceDialog) changeParameter(paramIndex int, name string) {
-	_, transport := ch.Data.ProtocolAndTransport(ch.Protocols.Protocols)
+	_, transport := ch.Data.ProtocolAndTransport(ch.Protocols)
 	if ch.Data.Params.Replace(paramIndex, name, transport) {
 		ch.reRender()
 	}
@@ -265,10 +380,10 @@ func (ch *addServiceDialog) Copy() vecty.Component {
 }
 
 func (ch *addServiceDialog) Render() vecty.ComponentOrHTML {
-	protocol, transport := ch.Data.ProtocolAndTransport(ch.Protocols.Protocols)
+	protocol, transport := ch.Data.ProtocolAndTransport(ch.Protocols)
 	availableParams := ch.Data.Params.AvailableNames(transport)
 	renderParams, paramsValid := ch.Data.Params.ToRender(transport)
-	entryMessage, aliasMessage := ch.Data.ValidateEntryAndAlias(ch.Services.Services, ch.Protocols.Protocols)
+	entryMessage, aliasMessage := ch.Data.ValidateEntryAndAlias(ch.Services.Services, ch.Protocols)
 	dataValid := aliasMessage == "" && entryMessage == "" && paramsValid
 
 	return components.NewMdcDialog(

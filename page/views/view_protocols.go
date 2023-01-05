@@ -200,50 +200,23 @@ func (ch *protocolsTable) parametersTable(params map[string]*api.ParamInfoEntry)
 	}
 	sort.Strings(names)
 
-	var rows vecty.List
-	makeRow := func(name, value string) {
-		rows = append(rows,
-			elem.TableRow(
-				elem.TableData(
-					vecty.Text(name),
-				),
-				elem.TableData(
-					vecty.Markup(
-						vecty.Style("white-space", "break-spaces"),
-					),
-					elem.Italic(
-						vecty.Text(value),
-					),
-				),
-			),
-		)
-	}
-	for _, name := range names {
-		info := params[name]
-		if len(rows) > 0 {
-			rows = append(rows, elem.TableData(
-				vecty.Markup(
-					vecty.Attribute("colspan", "2"),
-					vecty.Style("border-top", "1px solid gainsboro"),
-				),
-			))
+	return components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
+		for i, name := range names {
+			info := params[name]
+			if i > 0 {
+				builder.AddDelimiterRow()
+			}
+			builder.AddKeyValueRow("Name", name)
+			if info.Description != "" {
+				builder.AddKeyValueRow("Description", info.Description)
+			}
+			builder.AddKeyValueRow("Type", info.Type)
+			if info.DefaultValue != "" {
+				builder.AddKeyValueRow("Default Value", info.DefaultValue)
+			}
+			if info.Type == "enum" {
+				builder.AddKeyValueRow("Allowed Values", strings.Join(info.EnumValues, ", "))
+			}
 		}
-		makeRow("Name", name)
-		if info.Description != "" {
-			makeRow("Description", info.Description)
-		}
-		makeRow("Type", info.Type)
-		if info.DefaultValue != "" {
-			makeRow("Default Value", info.DefaultValue)
-		}
-		if info.Type == "enum" {
-			makeRow("Allowed Values", strings.Join(info.EnumValues, ", "))
-		}
-	}
-
-	return elem.Table(
-		elem.TableBody(
-			rows,
-		),
-	)
+	})
 }

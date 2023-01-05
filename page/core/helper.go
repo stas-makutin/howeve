@@ -6,6 +6,53 @@ import (
 	"github.com/stas-makutin/howeve/api"
 )
 
+type ProtocolsInfoWrapper struct {
+	Info         *api.ProtocolInfoEntry
+	transportIDs map[api.TransportIdentifier]*api.ProtocolTransportInfoEntry
+}
+
+type ProtocolsWrapper struct {
+	Protocols   []*api.ProtocolInfoEntry
+	protocolIDs map[api.ProtocolIdentifier]*ProtocolsInfoWrapper
+}
+
+func NewProtocolsWrapper(protocols *api.ProtocolInfoResult) *ProtocolsWrapper {
+	result := &ProtocolsWrapper{}
+	if protocols != nil {
+		result.Protocols = protocols.Protocols
+		result.protocolIDs = make(map[api.ProtocolIdentifier]*ProtocolsInfoWrapper)
+		for _, protocol := range protocols.Protocols {
+			p := &ProtocolsInfoWrapper{Info: protocol, transportIDs: make(map[api.TransportIdentifier]*api.ProtocolTransportInfoEntry)}
+			result.protocolIDs[protocol.ID] = p
+			for _, transport := range protocol.Transports {
+				p.transportIDs[transport.ID] = transport
+			}
+		}
+	}
+	return result
+}
+
+func (pw *ProtocolsWrapper) ProtocolAndTransport(protocolID api.ProtocolIdentifier, transportID api.TransportIdentifier) (protocol *api.ProtocolInfoEntry, transport *api.ProtocolTransportInfoEntry) {
+	if p, ok := pw.protocolIDs[protocolID]; ok {
+		protocol = p.Info
+		if t, ok := p.transportIDs[transportID]; ok {
+			transport = t
+		}
+	}
+	return
+}
+
+func (pw *ProtocolsWrapper) ProtocolAndTransportNames(protocolID api.ProtocolIdentifier, transportID api.TransportIdentifier) (protocolName, transportName string) {
+	pi, ti := pw.ProtocolAndTransport(protocolID, transportID)
+	if pi != nil {
+		protocolName = pi.Name
+	}
+	if ti != nil {
+		transportName = ti.Name
+	}
+	return
+}
+
 type ServiceEntryData struct {
 	api.ServiceKey
 	Alias  string
@@ -47,22 +94,20 @@ func (sed *ServiceEntryData) ChangeProtocol(protocols []*api.ProtocolInfoEntry, 
 	return true
 }
 
-func (sed *ServiceEntryData) ChangeTransport(protocols []*api.ProtocolInfoEntry, index int) bool {
-	if index < 0 || len(protocols) == 0 {
+func (sed *ServiceEntryData) ChangeTransport(protocols *ProtocolsWrapper, index int) bool {
+	if index < 0 || len(protocols.Protocols) == 0 {
 		return false
 	}
 
-	var transports []*api.ProtocolTransportInfoEntry
-	for _, p := range protocols {
-		if p.ID == sed.Protocol {
-			transports = p.Transports
-		}
+	piw, ok := protocols.protocolIDs[sed.Protocol]
+	if !ok {
+		return false
 	}
-	if index >= len(transports) {
+	if index >= len(piw.Info.Transports) {
 		return false
 	}
 
-	transportID := transports[index].ID
+	transportID := piw.Info.Transports[index].ID
 	if transportID == sed.Transport {
 		return false
 	}
@@ -71,7 +116,7 @@ func (sed *ServiceEntryData) ChangeTransport(protocols []*api.ProtocolInfoEntry,
 	return true
 }
 
-func (sed *ServiceEntryData) ValidateEntryAndAlias(services []api.ListServicesEntry, protocols []*api.ProtocolInfoEntry) (entryMessage, aliasMessage string) {
+func (sed *ServiceEntryData) ValidateEntryAndAlias(services []api.ListServicesEntry, protocols *ProtocolsWrapper) (entryMessage, aliasMessage string) {
 	for _, s := range services {
 		if s.Alias != "" && s.Alias == sed.Alias {
 			aliasMessage = fmt.Sprintf("Service with alias '%s' already exists", s.Alias)
@@ -96,18 +141,6 @@ func (sed *ServiceEntryData) ValidateEntryAndAlias(services []api.ListServicesEn
 	return
 }
 
-func (sed *ServiceEntryData) ProtocolAndTransport(protocols []*api.ProtocolInfoEntry) (protocol *api.ProtocolInfoEntry, transport *api.ProtocolTransportInfoEntry) {
-	for _, p := range protocols {
-		if p.ID == sed.Protocol {
-			protocol = p
-			for _, t := range protocol.Transports {
-				if t.ID == sed.Transport {
-					transport = t
-					break
-				}
-			}
-			break
-		}
-	}
-	return
+func (sed *ServiceEntryData) ProtocolAndTransport(protocols *ProtocolsWrapper) (*api.ProtocolInfoEntry, *api.ProtocolTransportInfoEntry) {
+	return protocols.ProtocolAndTransport(sed.Protocol, sed.Transport)
 }
