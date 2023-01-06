@@ -2,11 +2,11 @@ package views
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
+	"github.com/hexops/vecty/event"
 	"github.com/hexops/vecty/prop"
 	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/page/actions"
@@ -91,7 +91,7 @@ func (ch *ViewServices) OnChange(event interface{}) {
 						ServiceKey: &api.ServiceKey{
 							Protocol:  api.ProtocolZWave,
 							Transport: api.TransportSerial,
-							Entry:     "COM3",
+							Entry:     "https://github.com/material-components/material-components-web/blob/8f0a11e32895f998c326ab4a10601a2e4d5e18db/packages/mdc-textfield/README.md",
 						},
 						Params: map[string]string{
 							"paramX": "valueX",
@@ -172,6 +172,22 @@ func (ch *servicesTable) Copy() vecty.Component {
 	return &cpy
 }
 
+func (ch *servicesTable) changeAlias(service api.ServiceKey) {
+	core.Console.Log(fmt.Sprintf("changeAlias: %d %d %s", service.Protocol, service.Transport, service.Entry))
+}
+
+func (ch *servicesTable) viewParameters(service api.ServiceKey) {
+	core.Console.Log(fmt.Sprintf("viewParameters: %d %d %s", service.Protocol, service.Transport, service.Entry))
+}
+
+func (ch *servicesTable) viewStatus(service api.ServiceKey) {
+	core.Console.Log(fmt.Sprintf("viewStatus: %d %d %s", service.Protocol, service.Transport, service.Entry))
+}
+
+func (ch *servicesTable) removeService(service api.ServiceKey) {
+	core.Console.Log(fmt.Sprintf("removeService: %d %d %s", service.Protocol, service.Transport, service.Entry))
+}
+
 func (ch *servicesTable) headerColumn(name string, classes ...string) vecty.ComponentOrHTML {
 	return elem.TableHeader(
 		vecty.Markup(
@@ -201,26 +217,9 @@ func (ch *servicesTable) tableBody() vecty.ComponentOrHTML {
 	)
 }
 
-func (ch *servicesTable) parametersTable(params api.RawParamValues) vecty.ComponentOrHTML {
-	if len(params) <= 0 {
-		return vecty.Text("None")
-	}
-
-	names := make([]string, 0, len(params))
-	for name := range params {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	return components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
-		for _, name := range names {
-			builder.AddKeyValueRow(name, params[name])
-		}
-	})
-
-}
-
 func (ch *servicesTable) tableRow(service *api.ListServicesEntry) vecty.ComponentOrHTML {
+	serviceKey := *service.ServiceKey // copy for call enclosures
+
 	pi, pti := ch.Protocols.ProtocolAndTransport(service.Protocol, service.Transport)
 	protocolName := strconv.Itoa(int(service.Protocol))
 	if pi != nil {
@@ -231,18 +230,55 @@ func (ch *servicesTable) tableRow(service *api.ListServicesEntry) vecty.Componen
 		transportName = pti.Name + " (" + transportName + ")"
 	}
 
+	var status *vecty.HTML
+	if service.Success {
+		status = elem.Span(
+			vecty.Markup(
+				vecty.Class("sv-service-table-status-healthy"),
+			),
+			vecty.Text("OK"),
+		)
+	} else {
+		status = elem.Anchor(
+			vecty.Markup(
+				vecty.Class("sv-service-table-status-unhealthy"),
+				prop.Href("#"),
+				event.Click(func(e *vecty.Event) { ch.viewStatus(serviceKey) }).PreventDefault(),
+			),
+			vecty.Text("Unhealthy"),
+		)
+	}
+
 	return elem.TableRow(
 		vecty.Markup(
 			vecty.Class("mdc-data-table__row"),
 		),
 		ch.tableColumn(vecty.Text(service.Alias)),
-		ch.tableColumn(vecty.Text(protocolName), "mdc-data-table__cell--numeric"),
-		ch.tableColumn(vecty.Text(transportName), "mdc-data-table__cell--numeric"),
-		ch.tableColumn(vecty.Text(service.Entry)),
-		ch.tableColumn(ch.parametersTable(service.Params)),
-		ch.tableColumn(vecty.Text("service status")),
+		ch.tableColumn(vecty.Text(protocolName)),
+		ch.tableColumn(vecty.Text(transportName)),
+		ch.tableColumn(vecty.Text(service.Entry), "sv-service-table-entry-cell"),
+		ch.tableColumn(vecty.List{
+			elem.Anchor(
+				vecty.Markup(
+					vecty.Class("sv-service-table-action"),
+					prop.Href("#"),
+					event.Click(func(e *vecty.Event) { ch.changeAlias(serviceKey) }).PreventDefault(),
+				),
+				vecty.Text("Change Alias"),
+			),
+			vecty.Text(", "),
+			elem.Anchor(
+				vecty.Markup(
+					vecty.Class("sv-service-table-action"),
+					prop.Href("#"),
+					event.Click(func(e *vecty.Event) { ch.viewParameters(serviceKey) }).PreventDefault(),
+				),
+				vecty.Text("View Parameters"),
+			),
+		}, "sv-service-table-action-cell"),
+		ch.tableColumn(status),
 		ch.tableColumn(components.NewMdcIconButton("", "Remove Service", "delete_forever", "delete_forever", false,
-			func() {},
+			func() { ch.removeService(serviceKey) },
 		), "sv-service-table-remove-cell"),
 	)
 }
@@ -281,9 +317,9 @@ func (ch *servicesTable) Render() vecty.ComponentOrHTML {
 						ch.headerColumn("Protocol"),
 						ch.headerColumn("Transport"),
 						ch.headerColumn("Entry"),
-						ch.headerColumn("Parameters"),
+						ch.headerColumn("Actions"),
 						ch.headerColumn("Status"),
-						ch.headerColumn("Remove Service"),
+						ch.headerColumn("Remove"),
 					),
 				),
 				ch.tableBody(),

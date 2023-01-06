@@ -83,6 +83,23 @@ body {
 	position: relative;
 	top: 0.2em;
 }
+.sv-service-table-entry-cell {
+	min-width: 10em;
+	word-break: break-word;
+	white-space: break-spaces;
+}
+.sv-service-table-action-cell {
+	white-space: break-spaces;
+}
+.sv-service-table-action {
+	white-space: nowrap;
+}
+.sv-service-table-status-healthy {
+	color: green;
+}
+.sv-service-table-status-unhealthy {
+	color: red;
+}
 .sv-service-table-remove-cell {
 	text-align: center;
 }
