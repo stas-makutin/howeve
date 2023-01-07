@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/stas-makutin/howeve/api"
 )
@@ -49,6 +50,19 @@ func (pw *ProtocolsWrapper) ProtocolAndTransportNames(protocolID api.ProtocolIde
 	}
 	if ti != nil {
 		transportName = ti.Name
+	}
+	return
+}
+
+func (pw *ProtocolsWrapper) ProtocolAndTransportFullNames(protocolID api.ProtocolIdentifier, transportID api.TransportIdentifier) (protocolName, transportName string) {
+	protocolName = strconv.Itoa(int(protocolID))
+	transportName = strconv.Itoa(int(transportID))
+	pi, ti := pw.ProtocolAndTransport(protocolID, transportID)
+	if pi != nil && pi.Name != "" {
+		protocolName = pi.Name + " (" + protocolName + ")"
+	}
+	if ti != nil && ti.Name != "" {
+		transportName = ti.Name + " (" + transportName + ")"
 	}
 	return
 }
