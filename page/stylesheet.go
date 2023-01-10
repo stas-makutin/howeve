@@ -1,6 +1,10 @@
 package main
 
-var stylesheet = `
+import "github.com/stas-makutin/howeve/page/core"
+
+func init() {
+	// global styles
+	core.AppendStyles(`
 body { 
 	margin: 0; 
 }
@@ -103,4 +107,6 @@ body {
 .sv-service-table-remove-cell {
 	text-align: center;
 }
-`
+`,
+	)
+}

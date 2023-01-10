@@ -14,6 +14,73 @@ import (
 	"github.com/stas-makutin/howeve/page/core"
 )
 
+func init() {
+	core.AppendStyles(`
+#sv-add-service-dialog---content {
+	min-height: 15em;
+}
+#sv-add-service-protocols {
+	min-width: 18em;
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+#sv-add-service-transports {
+	min-width: 18em;
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+#sv-add-service-alias {
+	min-width: 18em;
+	margin-top: 0.5em;
+}
+#sv-add-service-entry {
+	min-width: 16em;
+	width: 100%;
+	margin-top: 0.5em;
+}
+#sv-add-service-add-param {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+.sv-add-service-param-name {
+	min-width: 15%;
+	width: 25%;
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+.sv-add-service-param-value {
+	min-width: 15%;
+	width: 55%;
+	margin-top: 0.5em;
+}
+.sv-add-service-param-delete {
+	position: relative;
+	top: 0.2em;
+}
+.sv-service-table-entry-cell {
+	min-width: 10em;
+	word-break: break-word;
+	white-space: break-spaces;
+}
+.sv-service-table-action-cell {
+	white-space: break-spaces;
+}
+.sv-service-table-action {
+	white-space: nowrap;
+}
+.sv-service-table-status-healthy {
+	color: green;
+}
+.sv-service-table-status-unhealthy {
+	color: red;
+}
+.sv-service-table-remove-cell {
+	text-align: center;
+}
+`,
+	)
+}
+
 const (
 	ServicesDialog_None = iota
 	ServicesDialog_AddService
@@ -694,13 +761,11 @@ func (ch *removeServiceDialog) Render() vecty.ComponentOrHTML {
 			{Label: "Cancel", Action: components.MdcDialogActionClose, Default: true},
 			{Label: "Remove", Action: components.MdcDialogActionOK},
 		},
-		components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
-			builder.AddKeyValueRow("Protocol", protocolName)
-			builder.AddKeyValueRow("Transport", transportName)
-			builder.AddKeyValueRow("Entry", ch.Service.Entry)
-			if ch.Service.Alias != "" {
-				builder.AddKeyValueRow("Alias", ch.Service.Alias)
-			}
-		}),
+		components.NewPillBox(
+			&components.Capsule{Label: "Protocol", Text: protocolName},
+			&components.Capsule{Label: "Transport", Text: transportName},
+			vecty.If(ch.Service.Alias != "", &components.Capsule{Label: "Alias", Text: ch.Service.Alias}),
+			&components.Capsule{Label: "Entry", Text: ch.Service.Entry},
+		),
 	)
 }

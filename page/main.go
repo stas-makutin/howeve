@@ -49,7 +49,7 @@ func addStyles() {
 	vecty.AddStylesheet("./material-icons.css")
 
 	style := js.Global().Get("document").Call("createElement", "style")
-	style.Set("innerHTML", stylesheet)
+	style.Set("innerHTML", core.Stylesheet())
 	js.Global().Get("document").Get("head").Call("appendChild", style)
 }
 
