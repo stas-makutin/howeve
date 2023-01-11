@@ -1,7 +1,6 @@
 package views
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
@@ -194,11 +193,7 @@ func (ch *protocolsTable) parametersTable(params map[string]*api.ParamInfoEntry)
 		return vecty.Text("None")
 	}
 
-	names := make([]string, 0, len(params))
-	for name := range params {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+	names := core.ArrangeParams(params)
 
 	return components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
 		for i, name := range names {

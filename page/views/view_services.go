@@ -77,6 +77,10 @@ func init() {
 .sv-service-table-remove-cell {
 	text-align: center;
 }
+.sv-change-alias-edit-field {
+	margin-top: 0.8em;
+	width: 100%;
+}
 `,
 	)
 }
@@ -99,7 +103,7 @@ type ViewServices struct {
 	errorMessage   string
 	protocols      *core.ProtocolsWrapper
 	services       *api.ListServicesResult
-	currentService *api.ServiceEntry `vecty:"prop"`
+	currentService api.ListServicesEntry `vecty:"prop"`
 }
 
 func NewViewServices() (r *ViewServices) {
@@ -134,8 +138,46 @@ func (ch *ViewServices) OnChange(event interface{}) {
 							Entry:     "",
 						},
 						Params: map[string]string{
-							"param1": "value1",
-							"param2": "value2",
+							"param01":                               "value01",
+							"param02":                               "value02",
+							"param03":                               "value03",
+							"param04":                               "value04",
+							"param05":                               "value05",
+							"param06":                               "value06",
+							"param07":                               "value07",
+							"param08":                               "value08",
+							"param09":                               "value09",
+							"param10":                               "value10",
+							"param11":                               "value11",
+							"param12":                               "value12",
+							"param13":                               "value13",
+							"param14":                               "value14",
+							"param15":                               "value15",
+							"param16":                               "value16",
+							"param17":                               "value17",
+							"param18":                               "value18",
+							"param19":                               "value19",
+							"param20":                               "value20",
+							"param21":                               "value21",
+							"param22":                               "value22",
+							"param23":                               "value23",
+							"param24":                               "value24",
+							"param25":                               "value25",
+							"param26":                               "value26",
+							"param27":                               "value27",
+							"param28":                               "value28 - very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-long",
+							"param29":                               "value29",
+							"param30":                               "value30",
+							"param31":                               "value31",
+							"param32":                               "value32",
+							"param33-very-very-very-very-very-long": "value33",
+							"param34":                               "value34",
+							"param35":                               "value35",
+							"param36":                               "value36",
+							"param37":                               "value37",
+							"param38":                               "value38",
+							"param39":                               "value39",
+							"param40":                               "value40",
 						},
 					},
 					StatusReply: &api.StatusReply{
@@ -230,11 +272,11 @@ func (ch *ViewServices) toggleDialog(dialog int) {
 }
 
 func (ch *ViewServices) openServiceDialog(dialog int, service api.ServiceKey) {
-	ch.currentService = nil
+	ch.currentService.ServiceEntry = nil
 	if ch.services != nil && len(ch.services.Services) > 0 {
 		for _, s := range ch.services.Services {
 			if s.Protocol == service.Protocol && s.Transport == service.Transport && s.Entry == service.Entry {
-				ch.currentService = s.ServiceEntry
+				ch.currentService = s
 				ch.toggleDialog(dialog)
 			}
 		}
@@ -264,17 +306,17 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 			&servicesTable{Protocols: ch.protocols, Services: ch.services, OpenDialog: ch.openServiceDialog},
 		),
 		core.If(ch.renderDialog == ServicesDialog_AddService, newAddServiceDialog(ch.protocols, ch.services, ch.addService)),
-		core.If(ch.currentService != nil && ch.renderDialog == ServicesDialog_ChangeAlias,
-			&changeServiceAliasDialog{Protocols: ch.protocols, Service: ch.currentService, CloseFn: ch.changeAlias},
+		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_ChangeAlias,
+			newChangeServiceAliasDialog(ch.protocols, ch.services, ch.currentService.ServiceEntry, ch.changeAlias),
 		),
-		core.If(ch.currentService != nil && ch.renderDialog == ServicesDialog_ViewParameters,
-			&viewServiceParametersDialog{Protocols: ch.protocols, Service: ch.currentService, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
+		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_ViewParameters,
+			&viewServiceParametersDialog{Protocols: ch.protocols, Service: ch.currentService.ServiceEntry, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
 		),
-		core.If(ch.currentService != nil && ch.renderDialog == ServicesDialog_ViewStatus,
-			&viewServiceParametersDialog{Protocols: ch.protocols, Service: ch.currentService, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
+		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_ViewStatus,
+			&viewServiceStatusDialog{Protocols: ch.protocols, Service: &ch.currentService, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
 		),
-		core.If(ch.currentService != nil && ch.renderDialog == ServicesDialog_RemoveService,
-			&removeServiceDialog{Protocols: ch.protocols, Service: ch.currentService, CloseFn: ch.removeService},
+		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_RemoveService,
+			&removeServiceDialog{Protocols: ch.protocols, Service: ch.currentService.ServiceEntry, CloseFn: ch.removeService},
 		),
 		core.If(ch.loading, &components.ViewLoading{}),
 	)
@@ -690,9 +732,32 @@ func (ch *addServiceDialog) RenderParameters(renderParams []*core.RenderParamete
 
 type changeServiceAliasDialog struct {
 	vecty.Core
-	Protocols *core.ProtocolsWrapper `vecty:"prop"`
-	Service   *api.ServiceEntry      `vecty:"prop"`
+	Protocols *core.ProtocolsWrapper  `vecty:"prop"`
+	Services  *api.ListServicesResult `vecty:"prop"`
+	Service   *api.ServiceEntry       `vecty:"prop"`
+	NewAlias  string                  `vecty:"prop"`
 	CloseFn   func(ok bool, newAlias string, data *api.ServiceEntry)
+}
+
+func newChangeServiceAliasDialog(
+	protocols *core.ProtocolsWrapper, services *api.ListServicesResult, service *api.ServiceEntry,
+	closeFn func(ok bool, newAlias string, data *api.ServiceEntry)) (dialog *changeServiceAliasDialog) {
+	dialog = &changeServiceAliasDialog{Protocols: protocols, Services: services, Service: service, CloseFn: closeFn}
+	if service != nil {
+		dialog.NewAlias = service.Alias
+	}
+	return
+}
+
+func (ch *changeServiceAliasDialog) closeDialog(action string, data interface{}) {
+	ch.CloseFn(action == components.MdcDialogActionOK, ch.NewAlias, ch.Service)
+}
+
+func (ch *changeServiceAliasDialog) changeAlias(value string) {
+	if value != ch.NewAlias {
+		ch.NewAlias = value
+		vecty.Rerender(ch)
+	}
 }
 
 func (ch *changeServiceAliasDialog) Copy() vecty.Component {
@@ -701,7 +766,35 @@ func (ch *changeServiceAliasDialog) Copy() vecty.Component {
 }
 
 func (ch *changeServiceAliasDialog) Render() vecty.ComponentOrHTML {
-	return nil
+	protocolName, transportName := ch.Protocols.ProtocolAndTransportFullNames(ch.Service.Protocol, ch.Service.Transport)
+	aliasMessage := ""
+	for _, s := range ch.Services.Services {
+		if s.Alias != "" && s.Alias != ch.Service.Alias && s.Alias == ch.NewAlias {
+			aliasMessage = fmt.Sprintf("Service with alias '%s' already exists", s.Alias)
+			break
+		}
+	}
+	disableChange := ch.Service.Alias == ch.NewAlias || aliasMessage != ""
+
+	return components.NewMdcDialog(
+		"sv-remove-service-dialog", "Change Service Alias", false, false, ch.closeDialog, nil,
+		[]components.MdcDialogButton{
+			{Label: "Cancel", Action: components.MdcDialogActionClose, Default: true},
+			{Label: "Change Alias", Action: components.MdcDialogActionOK, Disabled: disableChange},
+		},
+		components.NewPillBox(
+			&components.Capsule{Label: "Protocol", Text: protocolName},
+			&components.Capsule{Label: "Transport", Text: transportName},
+			vecty.If(ch.Service.Alias != "", &components.Capsule{Label: "Alias", Text: ch.Service.Alias}),
+			&components.Capsule{Label: "Entry", Text: ch.Service.Entry},
+		),
+		components.NewMdcTextField(
+			"sv-change-service-alias", "New Alias", ch.NewAlias, false, aliasMessage != "", ch.changeAlias,
+			vecty.MarkupIf(aliasMessage != "", vecty.Attribute("title", aliasMessage)),
+		).
+			WithClasses("sv-change-alias-edit-field").
+			WithKey("sv-change-alias-"+ch.NewAlias),
+	)
 }
 
 type viewServiceParametersDialog struct {
@@ -711,29 +804,100 @@ type viewServiceParametersDialog struct {
 	CloseFn   func()
 }
 
+func (ch *viewServiceParametersDialog) closeDialog(action string, data interface{}) {
+	ch.CloseFn()
+}
+
 func (ch *viewServiceParametersDialog) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
 }
 
 func (ch *viewServiceParametersDialog) Render() vecty.ComponentOrHTML {
-	return nil
+	protocolName, transportName := ch.Protocols.ProtocolAndTransportFullNames(ch.Service.Protocol, ch.Service.Transport)
+	names := core.ArrangeParams(ch.Service.Params)
+
+	return components.NewMdcDialog(
+		"sv-remove-service-dialog", "Service Parameters", false, false, ch.closeDialog, nil,
+		[]components.MdcDialogButton{
+			{Label: "Close", Action: components.MdcDialogActionClose, Default: true},
+		},
+		components.NewPillBox(
+			&components.Capsule{Label: "Protocol", Text: protocolName},
+			&components.Capsule{Label: "Transport", Text: transportName},
+			vecty.If(ch.Service.Alias != "", &components.Capsule{Label: "Alias", Text: ch.Service.Alias}),
+			&components.Capsule{Label: "Entry", Text: ch.Service.Entry},
+		),
+		components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
+			builder.AddDelimiterRow()
+			builder.AddMarkupKeyValueRow(
+				elem.Bold(vecty.Text("Name")), elem.Bold(vecty.Text("Value")),
+			)
+			for _, name := range names {
+				builder.AddKeyValueRow(name, ch.Service.Params[name])
+			}
+			builder.AddDelimiterRow()
+		}),
+	)
 }
 
-type viewServiceStatus struct {
+type viewServiceStatusDialog struct {
 	vecty.Core
 	Protocols *core.ProtocolsWrapper `vecty:"prop"`
-	Service   *api.ServiceEntry      `vecty:"prop"`
+	Service   *api.ListServicesEntry `vecty:"prop"`
 	CloseFn   func()
 }
 
-func (ch *viewServiceStatus) Copy() vecty.Component {
+func (ch *viewServiceStatusDialog) closeDialog(action string, data interface{}) {
+	ch.CloseFn()
+}
+
+func (ch *viewServiceStatusDialog) Copy() vecty.Component {
 	cpy := *ch
 	return &cpy
 }
 
-func (ch *viewServiceStatus) Render() vecty.ComponentOrHTML {
-	return nil
+func (ch *viewServiceStatusDialog) Render() vecty.ComponentOrHTML {
+	protocolName, transportName := ch.Protocols.ProtocolAndTransportFullNames(ch.Service.Protocol, ch.Service.Transport)
+
+	return components.NewMdcDialog(
+		"sv-remove-service-dialog", "Service Error", false, false, ch.closeDialog, nil,
+		[]components.MdcDialogButton{
+			{Label: "Close", Action: components.MdcDialogActionClose, Default: true},
+		},
+		components.NewPillBox(
+			&components.Capsule{Label: "Protocol", Text: protocolName},
+			&components.Capsule{Label: "Transport", Text: transportName},
+			vecty.If(ch.Service.Alias != "", &components.Capsule{Label: "Alias", Text: ch.Service.Alias}),
+			&components.Capsule{Label: "Entry", Text: ch.Service.Entry},
+		),
+		components.NewKeyValueTable(func(builder components.KeyValueTableBuilder) {
+			builder.AddDelimiterRow()
+			builder.AddMarkupKeyValueRow(
+				elem.Bold(vecty.Text("Code")),
+				elem.Span(
+					vecty.Markup(
+						vecty.Style("white-space", "break-spaces"),
+					),
+					vecty.Text(
+						strconv.FormatInt(int64(ch.Service.Error.Code), 10),
+					),
+				),
+			)
+			builder.AddMarkupKeyValueRow(
+				elem.Bold(vecty.Text("Message")),
+				elem.Span(
+					vecty.Markup(
+						vecty.Style("white-space", "break-spaces"),
+					),
+					vecty.Text(
+						ch.Service.Error.Message,
+					),
+				),
+			)
+			builder.AddDelimiterRow()
+		}),
+	)
 }
 
 type removeServiceDialog struct {

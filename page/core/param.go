@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/stas-makutin/howeve/api"
@@ -38,6 +39,15 @@ type ParameterEnumOption struct {
 }
 
 type Parameters []Parameter
+
+func ArrangeParams[T any](params map[string]T) []string {
+	names := make([]string, 0, len(params))
+	for name := range params {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
 
 func ParamDefaultValue(pi *api.ParamInfoEntry) string {
 	if pi.DefaultValue != "" {

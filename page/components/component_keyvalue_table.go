@@ -9,6 +9,7 @@ import (
 type KeyValueTableBuilder interface {
 	AddDelimiterRow()
 	AddKeyValueRow(key, value string)
+	AddMarkupKeyValueRow(key, value vecty.MarkupOrChild)
 }
 
 type keyValueTableRows struct {
@@ -42,6 +43,15 @@ func (r *keyValueTableRows) AddKeyValueRow(key, value string) {
 					vecty.Text(value),
 				),
 			),
+		),
+	)
+}
+
+func (r *keyValueTableRows) AddMarkupKeyValueRow(key, value vecty.MarkupOrChild) {
+	r.rows = append(r.rows,
+		elem.TableRow(
+			elem.TableData(key),
+			elem.TableData(value),
 		),
 	)
 }
