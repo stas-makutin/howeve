@@ -12,6 +12,10 @@ func init() {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.2em;
+	padding: 0.4em;
+	border: 1px solid gainsboro;
+	border-radius: var(--mdc-shape-small, 4px); 
+	transform: scale(0.92);
 }
 `,
 	)
