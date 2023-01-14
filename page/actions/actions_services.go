@@ -11,7 +11,11 @@ func init() {
 
 // actions
 
+// ServicesUseSocket action
+
 type ServicesUseSocket bool
+
+// ServicesLoad and triggered action
 
 type ServicesLoad struct {
 	Force     bool
@@ -75,6 +79,46 @@ func servicesLoad(force, useSocket bool) bool {
 	}
 	return true
 }
+
+// ServiceAdd and triggered action
+
+type ServiceAdd struct {
+	UseSocket bool
+	Service   *core.ServiceEntryData
+}
+
+type ServiceAddResult struct {
+	Status *api.StatusReply
+}
+
+type ServiceAddFailed string
+
+// ServiceRemove and triggered action
+
+type ServiceRemove struct {
+	UseSocket bool
+	Service   *api.ServiceKey
+}
+
+type ServiceRemoveResult struct {
+	Status *api.StatusReply
+}
+
+type ServiceRemoveFailed string
+
+// ServiceChangeAlias and triggered action
+
+type ServiceChangeAlias struct {
+	UseSocket bool
+	Service   *api.ServiceKey
+	NewAlias  string
+}
+
+type ServiceChangeResult struct {
+	Status *api.StatusReply
+}
+
+type ServiceChangeFailed string
 
 // store
 

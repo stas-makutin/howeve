@@ -23,8 +23,8 @@ func NewViewConfig() (r *ViewConfig) {
 		rendered:     false,
 		loading:      store.Loading,
 		useSockets:   store.UseSocket,
-		errorMessage: store.Error,
-		config:       store.Config,
+		errorMessage: store.DisplayError,
+		config:       store.ConfigValue(),
 	}
 	actions.Subscribe(r)
 	return
@@ -34,8 +34,8 @@ func (ch *ViewConfig) OnChange(event interface{}) {
 	if store, ok := event.(*actions.ConfigViewStore); ok {
 		ch.loading = store.Loading
 		ch.useSockets = store.UseSocket
-		ch.errorMessage = store.Error
-		ch.config = store.Config
+		ch.errorMessage = store.DisplayError
+		ch.config = store.ConfigValue()
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
