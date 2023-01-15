@@ -13,7 +13,7 @@ type ViewConfig struct {
 	rendered     bool
 	loading      bool
 	useSockets   bool
-	errorMessage string
+	errorMessage []vecty.MarkupOrChild
 	config       string
 }
 
@@ -23,7 +23,7 @@ func NewViewConfig() (r *ViewConfig) {
 		rendered:     false,
 		loading:      store.Loading,
 		useSockets:   store.UseSocket,
-		errorMessage: store.DisplayError,
+		errorMessage: core.FormatMultilineText(store.DisplayError),
 		config:       store.ConfigValue(),
 	}
 	actions.Subscribe(r)
@@ -34,7 +34,7 @@ func (ch *ViewConfig) OnChange(event interface{}) {
 	if store, ok := event.(*actions.ConfigViewStore); ok {
 		ch.loading = store.Loading
 		ch.useSockets = store.UseSocket
-		ch.errorMessage = store.DisplayError
+		ch.errorMessage = core.FormatMultilineText(store.DisplayError)
 		ch.config = store.ConfigValue()
 		if ch.rendered {
 			vecty.Rerender(ch)
@@ -70,8 +70,8 @@ func (ch *ViewConfig) Render() vecty.ComponentOrHTML {
 			components.NewMdcButton("cf-refresh", "Refresh", false, ch.refresh),
 			components.NewMdcCheckbox("cf-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
-		core.If(ch.errorMessage != "", components.NewMdcGridSingleCellRow(
-			components.NewMdcBanner("cf-error-banner", ch.errorMessage, "Retry", ch.refresh),
+		core.If(len(ch.errorMessage) > 0, components.NewMdcGridSingleCellRow(
+			components.NewMdcBanner("cf-error-banner", "Refresh", true, ch.refresh, ch.errorMessage...),
 		)),
 		&components.SectionTitle{Text: "Configuration"},
 		components.NewMdcGridSingleCellRow(

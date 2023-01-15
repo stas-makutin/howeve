@@ -103,7 +103,7 @@ type ViewServices struct {
 	renderDialog   int
 	loading        bool
 	useSockets     bool
-	errorMessage   string
+	errorMessage   []vecty.MarkupOrChild
 	protocols      *core.ProtocolsWrapper
 	services       *api.ListServicesResult
 	currentService api.ListServicesEntry `vecty:"prop"`
@@ -116,9 +116,9 @@ func NewViewServices() (r *ViewServices) {
 		renderDialog: ServicesDialog_None,
 		loading:      store.Loading > 0,
 		useSockets:   store.UseSocket,
-		errorMessage: store.Error,
-		protocols:    core.NewProtocolsWrapper(store.Protocols),
-		services:     store.Services,
+		errorMessage: core.FormatMultilineText(store.DisplayError),
+		protocols:    core.NewProtocolsWrapper(store.Protocols.Value),
+		services:     store.Services.Value,
 	}
 	actions.Subscribe(r)
 	return
@@ -128,9 +128,9 @@ func (ch *ViewServices) OnChange(event interface{}) {
 	if store, ok := event.(*actions.ServicesViewStore); ok {
 		ch.loading = store.Loading > 0
 		ch.useSockets = store.UseSocket
-		ch.errorMessage = store.Error
-		ch.protocols = core.NewProtocolsWrapper(store.Protocols)
-		ch.services = store.Services
+		ch.errorMessage = core.FormatMultilineText(store.DisplayError)
+		ch.protocols = core.NewProtocolsWrapper(store.Protocols.Value)
+		ch.services = store.Services.Value
 		/*
 			ch.services = &api.ListServicesResult{
 				Services: []api.ListServicesEntry{
@@ -303,8 +303,8 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 			components.NewMdcButton("sv-refresh", "Refresh", false, ch.refresh),
 			components.NewMdcCheckbox("sv-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
-		core.If(ch.errorMessage != "", components.NewMdcGridSingleCellRow(
-			components.NewMdcBanner("sv-error-banner", ch.errorMessage, "Retry", ch.refresh),
+		core.If(len(ch.errorMessage) > 0, components.NewMdcGridSingleCellRow(
+			components.NewMdcBanner("sv-error-banner", "Refresh", true, ch.refresh, ch.errorMessage...),
 		)),
 		&components.SectionTitle{Text: "Services"},
 		components.NewMdcGridSingleCellRow(

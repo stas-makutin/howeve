@@ -14,15 +14,16 @@ type MdcBanner struct {
 	vecty.Core
 	core.Classes
 	core.Keyable
-	ID         string `vecty:"prop"`
-	Message    string `vecty:"prop"`
-	ButtonText string `vecty:"prop"`
+	ID         string                `vecty:"prop"`
+	ButtonText string                `vecty:"prop"`
+	Content    []vecty.MarkupOrChild `vecty:"prop"`
+	fullWidth  bool
 	clickFn    func()
 	jsObject   js.Value
 }
 
-func NewMdcBanner(id, message, buttonText string, clickFn func()) (r *MdcBanner) {
-	r = &MdcBanner{ID: id, Message: message, ButtonText: buttonText, clickFn: clickFn}
+func NewMdcBanner(id, buttonText string, fullWidth bool, clickFn func(), content ...vecty.MarkupOrChild) (r *MdcBanner) {
+	r = &MdcBanner{ID: id, ButtonText: buttonText, fullWidth: fullWidth, clickFn: clickFn, Content: content}
 	return
 }
 
@@ -70,6 +71,7 @@ func (ch *MdcBanner) Render() vecty.ComponentOrHTML {
 				vecty.Class("mdc-banner__content"),
 				vecty.Attribute("role", "alertdialog"),
 				vecty.Attribute("aria-live", "assertive"),
+				vecty.MarkupIf(ch.fullWidth, vecty.Style("max-width", "none")),
 			),
 			elem.Div(
 				vecty.Markup(
@@ -79,7 +81,7 @@ func (ch *MdcBanner) Render() vecty.ComponentOrHTML {
 					vecty.Markup(
 						vecty.Class("mdc-banner__text", "mdc-theme--error"),
 					),
-					vecty.Text(ch.Message),
+					elem.Slot(ch.Content...),
 				),
 			),
 			elem.Div(

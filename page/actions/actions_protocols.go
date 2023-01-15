@@ -9,87 +9,19 @@ func init() {
 	core.DispatcherSubscribe(pvAction)
 }
 
-// actions
-
-type ProtocolsUseSocket bool
-
-type ProtocolsLoad struct {
-	Force     bool
-	UseSocket bool
-}
-
-type ProtocolsLoaded struct {
-	Protocols *api.ProtocolInfoResult
-}
-
-type ProtocolsLoadFailed string
-
-func protocolsProcessResponse(r *api.Query) {
-	if r.Payload == nil {
-		core.Dispatch(&ProtocolsLoaded{&api.ProtocolInfoResult{}})
-	} else if p, ok := r.Payload.(*api.ProtocolInfoResult); ok {
-		core.Dispatch(&ProtocolsLoaded{p})
-	} else {
-		core.Dispatch(ProtocolsLoadFailed("Protocols: unexpected response type"))
-	}
-}
-
-func protocolsLoadSockets() {
-	core.FetchQueryWithSocket(
-		&api.Query{Type: api.QueryProtocolInfo},
-		func(r *api.Query) {
-			protocolsProcessResponse(r)
-		},
-		func(err string) {
-			core.Dispatch(ProtocolsLoadFailed("Protocols: " + err))
-		},
-	)
-}
-
-func protocolsLoadFetch() {
-	core.FetchQuery(
-		core.HTTPUrl("/protocolInfo"), nil,
-		func(r *api.Query) {
-			protocolsProcessResponse(r)
-		},
-		func(err string) {
-			core.Dispatch(ProtocolsLoadFailed(err))
-		},
-	)
-}
-
-func protocolsLoad(force, useSocket bool) bool {
-	if force || (pvStore.Protocols == nil && pvStore.Error == "") {
-		if useSocket {
-			protocolsLoadSockets()
-		} else {
-			protocolsLoadFetch()
-		}
-		return false
-	}
-	// restore saved state
-	if pvStore.Error != "" {
-		core.Dispatch(ProtocolsLoadFailed(pvStore.Error))
-	} else {
-		core.Dispatch(&ProtocolsLoaded{pvStore.Protocols})
-	}
-	return true
-}
-
 // store
 
 type ProtocolViewStore struct {
-	Loading   bool
-	UseSocket bool
-	Error     string
-	Protocols *api.ProtocolInfoResult
+	Loading      bool
+	UseSocket    bool
+	Protocols    core.CachedQuery[api.ProtocolInfoResult]
+	DisplayError string
 }
 
 var pvStore = &ProtocolViewStore{
 	Loading:   true,
 	UseSocket: true,
 }
-var pvStoreChanging = false
 
 func GetProtocolViewStore() *ProtocolViewStore {
 	return pvStore
@@ -103,22 +35,53 @@ func pvAction(event interface{}) {
 		pvStore.UseSocket = bool(e)
 	case *ProtocolsLoad:
 		pvStore.Loading = true
-		pvStore.Error = ""
+		pvStore.DisplayError = ""
 		if protocolsLoad(e.Force, e.UseSocket) {
 			return
 		}
-	case *ProtocolsLoaded:
+	case ProtocolsLoaded:
 		pvStore.Loading = false
-		pvStore.Error = ""
-		pvStore.Protocols = e.Protocols
+		pvStore.DisplayError = ""
 	case ProtocolsLoadFailed:
 		pvStore.Loading = false
-		pvStore.Error = string(e)
-		if pvStore.Error == "" {
-			pvStore.Error = "Protocols: unable to load"
-		}
+		pvStore.DisplayError = "Protocols: " + string(e)
 	default:
 		return
 	}
 	core.Dispatch(ChangeEvent{pvStore})
+}
+
+// actions
+
+type ProtocolsUseSocket bool
+
+type ProtocolsLoad struct {
+	Force     bool
+	UseSocket bool
+}
+
+type ProtocolsLoaded *api.ProtocolInfoResult
+
+type ProtocolsLoadFailed string
+
+func protocolsLoad(force, useSocket bool) bool {
+	return pvStore.Protocols.Query(
+		useSocket, force,
+		&api.Query{Type: api.QueryProtocolInfo},
+		func(r *api.Query) (*api.ProtocolInfoResult, string) {
+			if r.Payload == nil {
+				return &api.ProtocolInfoResult{}, ""
+			}
+			if p, ok := r.Payload.(*api.ProtocolInfoResult); ok {
+				return p, ""
+			}
+			return nil, "Unexpected response type"
+		},
+		func(v *api.ProtocolInfoResult) {
+			core.Dispatch(ProtocolsLoaded(v))
+		},
+		func(v string) {
+			core.Dispatch(ProtocolsLoadFailed(v))
+		},
+	)
 }

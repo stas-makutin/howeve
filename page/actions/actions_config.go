@@ -57,7 +57,7 @@ func cvAction(event interface{}) {
 		cvStore.DisplayError = ""
 	case ConfigLoadFailed:
 		cvStore.Loading = false
-		cvStore.DisplayError = cvStore.Config.Error
+		cvStore.DisplayError = "Config: " + string(e)
 	default:
 		return
 	}
@@ -73,9 +73,9 @@ type ConfigLoad struct {
 	UseSocket bool
 }
 
-type ConfigLoaded struct{}
+type ConfigLoaded string
 
-type ConfigLoadFailed struct{}
+type ConfigLoadFailed string
 
 func configLoad(force, useSocket bool) bool {
 	return cvStore.Config.Query(
@@ -90,14 +90,11 @@ func configLoad(force, useSocket bool) bool {
 			}
 			return nil, "Unexpected response type"
 		},
-		func(s string) string {
-			return "Config: " + s
+		func(v *ConfigString) {
+			core.Dispatch(ConfigLoaded(v.Value))
 		},
-		func(*ConfigString) {
-			core.Dispatch(ConfigLoaded{})
-		},
-		func(string) {
-			core.Dispatch(ConfigLoadFailed{})
+		func(v string) {
+			core.Dispatch(ConfigLoadFailed(v))
 		},
 	)
 }

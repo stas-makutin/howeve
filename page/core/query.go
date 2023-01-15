@@ -116,21 +116,19 @@ type CachedQuery[T any] struct {
 	Error string
 }
 
-func (cq *CachedQuery[T]) Query(useSocket, force bool, r *api.Query, handle func(*api.Query) (*T, string), format func(string) string, success func(*T), failure func(err string)) bool {
+func (cq *CachedQuery[T]) Query(useSocket, force bool, r *api.Query, handle func(*api.Query) (*T, string), success func(*T), failure func(err string)) bool {
 	if force || (cq.Value == nil && cq.Error == "") {
 		Query(
 			useSocket, r,
 			func(q *api.Query) {
 				cq.Value, cq.Error = handle(q)
 				if cq.Error != "" {
-					cq.Error = format(cq.Error)
 					failure(cq.Error)
 				} else {
 					success(cq.Value)
 				}
 			},
 			func(err string) {
-				cq.Error = format(err)
 				failure(cq.Error)
 			},
 		)

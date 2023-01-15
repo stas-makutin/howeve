@@ -17,7 +17,7 @@ type ViewProtocols struct {
 	rendered     bool
 	loading      bool
 	useSockets   bool
-	errorMessage string
+	errorMessage []vecty.MarkupOrChild
 	protocols    *api.ProtocolInfoResult
 }
 
@@ -27,8 +27,8 @@ func NewViewProtocols() (r *ViewProtocols) {
 		rendered:     false,
 		loading:      store.Loading,
 		useSockets:   store.UseSocket,
-		errorMessage: store.Error,
-		protocols:    store.Protocols,
+		errorMessage: core.FormatMultilineText(store.DisplayError),
+		protocols:    store.Protocols.Value,
 	}
 	actions.Subscribe(r)
 	return
@@ -38,8 +38,8 @@ func (ch *ViewProtocols) OnChange(event interface{}) {
 	if store, ok := event.(*actions.ProtocolViewStore); ok {
 		ch.loading = store.Loading
 		ch.useSockets = store.UseSocket
-		ch.errorMessage = store.Error
-		ch.protocols = store.Protocols
+		ch.errorMessage = core.FormatMultilineText(store.DisplayError)
+		ch.protocols = store.Protocols.Value
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
@@ -70,8 +70,8 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 			components.NewMdcButton("pt-refresh", "Refresh", false, ch.refresh),
 			components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
-		core.If(ch.errorMessage != "", components.NewMdcGridSingleCellRow(
-			components.NewMdcBanner("pt-error-banner", ch.errorMessage, "Retry", ch.refresh),
+		core.If(len(ch.errorMessage) > 0, components.NewMdcGridSingleCellRow(
+			components.NewMdcBanner("pt-error-banner", "Refresh", true, ch.refresh, ch.errorMessage...),
 		)),
 		&components.SectionTitle{Text: "Protocols"},
 		components.NewMdcGridSingleCellRow(
