@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/stas-makutin/howeve/api"
@@ -18,7 +19,8 @@ type ServicesViewStore struct {
 	UseSocket    bool
 	Protocols    core.CachedQuery[api.ProtocolInfoResult]
 	Services     core.CachedQuery[api.ListServicesResult]
-	CRUDError    string
+	LastOp       *api.Query
+	OpError      string
 	DisplayError string
 }
 
@@ -42,10 +44,13 @@ func svAction(event interface{}) {
 			svStore.Loading -= 1
 		}
 	}
-	appendDisplayError := func(message string) {
+	appendDisplayError := func(message, prefix string) {
 		if len(message) > 0 {
 			if errorBuilder.Len() > 0 {
 				errorBuilder.WriteString("\n")
+			}
+			if len(prefix) > 0 {
+				errorBuilder.WriteString(prefix)
 			}
 			errorBuilder.WriteString(message)
 		}
@@ -73,13 +78,56 @@ func svAction(event interface{}) {
 		svStore.Protocols.Error = string(e)
 	case ServicesLoaded, ServicesLoadFailed:
 		decreaseLoadingCount()
+	case *ServicesAdd:
+		svStore.Loading = 1
+		serviceOpRun(svStore.UseSocket,
+			&api.Query{
+				Type: api.QueryAddService,
+				Payload: &api.ServiceEntry{
+					ServiceKey: &e.Service.ServiceKey, Params: e.Service.Params.RawParams(), Alias: e.Service.Alias,
+				},
+			},
+		)
+	case *ServicesChangeAlias:
+		svStore.Loading = 1
+		core.Console.Log(fmt.Sprintf("new alias: %s", e.NewAlias))
+		serviceOpRun(svStore.UseSocket,
+			&api.Query{
+				Type: api.QueryChangeServiceAlias,
+				Payload: &api.ChangeServiceAlias{
+					ServiceID: &api.ServiceID{ServiceKey: e.Service}, NewAlias: e.NewAlias,
+				},
+			},
+		)
+	case *ServicesRemove:
+		svStore.Loading = 1
+		serviceOpRun(svStore.UseSocket,
+			&api.Query{
+				Type:    api.QueryRemoveService,
+				Payload: &api.ServiceID{ServiceKey: e.Service},
+			},
+		)
+	case ServicesOpRetry:
+		svStore.Loading = 1
+		if serviceOpRun(svStore.UseSocket, svStore.LastOp) {
+			core.Dispatch(&ServicesLoad{Force: true, UseSocket: svStore.UseSocket})
+		}
+	case ServicesOpSucceeded:
+		decreaseLoadingCount()
+		svStore.LastOp = nil
+		svStore.OpError = ""
+		core.Dispatch(&ServicesLoad{Force: true, UseSocket: svStore.UseSocket})
+	case ServicesOpFailed:
+		decreaseLoadingCount()
+		svStore.OpError = string(e)
+		core.Dispatch(&ServicesLoad{Force: true, UseSocket: svStore.UseSocket})
 	default:
 		return
 	}
 
-	appendDisplayError(svStore.CRUDError)
-	appendDisplayError(svStore.Protocols.Error)
-	appendDisplayError(svStore.Services.Error)
+	appendDisplayError(svStore.OpError, "")
+	appendDisplayError(svStore.Protocols.Error, "Protocols: ")
+	appendDisplayError(svStore.Services.Error, "Services: ")
 	svStore.DisplayError = errorBuilder.String()
 
 	core.Dispatch(ChangeEvent{svStore})
@@ -124,36 +172,69 @@ func servicesLoad(force, useSocket bool) bool {
 	)
 }
 
-// ServiceAdd and triggered action
+// Operations (Add Service, Change Service Alias, Remove Service) action
 
-type ServiceAdd struct {
+type ServicesOpRetry struct{}
+
+type ServicesOpSucceeded struct{}
+
+type ServicesOpFailed string
+
+func serviceOpRun(useSocket bool, query *api.Query) bool {
+	if query != nil {
+		svStore.LastOp = query
+		errorPrefix := ""
+		switch query.Type {
+		case api.QueryAddService:
+			errorPrefix = "Add Service: "
+		case api.QueryChangeServiceAlias:
+			errorPrefix = "Change Service Alias: "
+		case api.QueryRemoveService:
+			errorPrefix = "Remove Service: "
+		}
+		core.Console.Log(fmt.Sprint(query))
+		core.Query(
+			useSocket, query,
+			func(q *api.Query) {
+				core.Console.Log("op - response")
+				if status, ok := q.Payload.(*api.StatusReply); ok {
+					if status.Success {
+						core.Dispatch(ServicesOpSucceeded{})
+					} else {
+						core.Dispatch(ServicesOpFailed(fmt.Sprintf("%s[%d] %s", errorPrefix, status.Error.Code, status.Error.Message)))
+					}
+					return
+				}
+				core.Dispatch(ServicesOpFailed(errorPrefix + "Unexpected response type"))
+			},
+			func(err string) {
+				core.Console.Log("op - error")
+				core.Dispatch(ServicesOpFailed(errorPrefix + err))
+			},
+		)
+		return false
+	}
+	return true
+}
+
+// ServicesAdd action
+
+type ServicesAdd struct {
 	UseSocket bool
 	Service   *core.ServiceEntryData
 }
 
-type ServiceAddSuccess struct{}
+// ServicesRemove action
 
-type ServiceAddFailed string
-
-// ServiceRemove and triggered action
-
-type ServiceRemove struct {
+type ServicesRemove struct {
 	UseSocket bool
 	Service   *api.ServiceKey
 }
 
-type ServiceRemoveSuccess struct{}
+// ServicesChangeAlias action
 
-type ServiceRemoveFailed string
-
-// ServiceChangeAlias and triggered action
-
-type ServiceChangeAlias struct {
+type ServicesChangeAlias struct {
 	UseSocket bool
 	Service   *api.ServiceKey
 	NewAlias  string
 }
-
-type ServiceChangeSuccess struct{}
-
-type ServiceChangeFailed string

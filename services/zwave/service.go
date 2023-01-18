@@ -55,8 +55,8 @@ type Service struct {
 func NewService(transport defs.Transport, entry string, params api.ParamValues) (defs.Service, error) {
 	// explicitly override timeouts, they must be 0 for non-blocking read/write operations
 	pv := params.Copy()
-	pv[serial.ParamNameReadTimeout] = 0
-	pv[serial.ParamNameWriteTimeout] = 0
+	pv[serial.ParamNameReadTimeout] = uint32(0)
+	pv[serial.ParamNameWriteTimeout] = uint32(0)
 
 	return &Service{
 		transport: transport,

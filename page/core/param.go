@@ -166,6 +166,14 @@ func (params Parameters) ToRender(transport *api.ProtocolTransportInfoEntry) ([]
 	return result, valid
 }
 
+func (params Parameters) RawParams() api.RawParamValues {
+	rawParams := make(api.RawParamValues)
+	for _, p := range params {
+		rawParams[p.Name] = p.Value
+	}
+	return rawParams
+}
+
 func makeParameterIntData(value string, pi *api.ParamInfoEntry) *ParameterIntData {
 	switch pi.Type {
 	case api.ParamTypeInt8:

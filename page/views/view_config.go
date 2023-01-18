@@ -71,7 +71,7 @@ func (ch *ViewConfig) Render() vecty.ComponentOrHTML {
 			components.NewMdcCheckbox("cf-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
 		core.If(len(ch.errorMessage) > 0, components.NewMdcGridSingleCellRow(
-			components.NewMdcBanner("cf-error-banner", "Refresh", true, ch.refresh, ch.errorMessage...),
+			components.NewMdcBanner("cf-error-banner", "Retry", true, ch.refresh, ch.errorMessage...),
 		)),
 		&components.SectionTitle{Text: "Configuration"},
 		components.NewMdcGridSingleCellRow(

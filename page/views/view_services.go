@@ -247,28 +247,32 @@ func (ch *ViewServices) refresh() {
 	core.Dispatch(&actions.ServicesLoad{Force: true, UseSocket: ch.useSockets})
 }
 
+func (ch *ViewServices) retry() {
+	core.Dispatch(actions.ServicesOpRetry{})
+}
+
 func (ch *ViewServices) addService(ok bool, service *core.ServiceEntryData) {
 	ch.renderDialog = ServicesDialog_None
-	if ok {
-		core.Console.Log(fmt.Sprintf("add %d: %d: %s", service.Protocol, service.Transport, service.Entry))
-	}
 	vecty.Rerender(ch)
+	if ok {
+		core.Dispatch(&actions.ServicesAdd{UseSocket: ch.useSockets, Service: service})
+	}
 }
 
 func (ch *ViewServices) changeAlias(ok bool, newAlias string, service *api.ServiceEntry) {
 	ch.renderDialog = ServicesDialog_None
-	if ok {
-		core.Console.Log(fmt.Sprintf("alias %d: %d: %s -> %s", service.Protocol, service.Transport, service.Entry, newAlias))
-	}
 	vecty.Rerender(ch)
+	if ok {
+		core.Dispatch(&actions.ServicesChangeAlias{UseSocket: ch.useSockets, Service: service.ServiceKey, NewAlias: newAlias})
+	}
 }
 
 func (ch *ViewServices) removeService(ok bool, service *api.ServiceEntry) {
 	ch.renderDialog = ServicesDialog_None
-	if ok {
-		core.Console.Log(fmt.Sprintf("remove %d: %d: %s", service.Protocol, service.Transport, service.Entry))
-	}
 	vecty.Rerender(ch)
+	if ok {
+		core.Dispatch(&actions.ServicesRemove{UseSocket: ch.useSockets, Service: service.ServiceKey})
+	}
 }
 
 func (ch *ViewServices) toggleDialog(dialog int) {
@@ -304,7 +308,7 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 			components.NewMdcCheckbox("sv-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
 		core.If(len(ch.errorMessage) > 0, components.NewMdcGridSingleCellRow(
-			components.NewMdcBanner("sv-error-banner", "Refresh", true, ch.refresh, ch.errorMessage...),
+			components.NewMdcBanner("sv-error-banner", "Retry", true, ch.retry, ch.errorMessage...),
 		)),
 		&components.SectionTitle{Text: "Services"},
 		components.NewMdcGridSingleCellRow(

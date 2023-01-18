@@ -80,7 +80,7 @@ func handleServiceStatus(event *ServiceStatus) {
 }
 
 func handleListServices(event *ListServices) {
-	r := &ListServicesResult{ResponseHeader: event.Associate()}
+	r := &ListServicesResult{ResponseHeader: event.Associate(), ListServicesResult: &api.ListServicesResult{}}
 	defs.Services.List(func(key *api.ServiceKey, alias string, status defs.ServiceStatus, params api.ParamValues) bool {
 		found := 0b1111
 		if len(event.Protocols) > 0 {

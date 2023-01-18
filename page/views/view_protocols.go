@@ -71,7 +71,7 @@ func (ch *ViewProtocols) Render() vecty.ComponentOrHTML {
 			components.NewMdcCheckbox("pt-socket-check", "Use WebSocket", ch.useSockets, false, ch.changeUseSocket),
 		),
 		core.If(len(ch.errorMessage) > 0, components.NewMdcGridSingleCellRow(
-			components.NewMdcBanner("pt-error-banner", "Refresh", true, ch.refresh, ch.errorMessage...),
+			components.NewMdcBanner("pt-error-banner", "Retry", true, ch.refresh, ch.errorMessage...),
 		)),
 		&components.SectionTitle{Text: "Protocols"},
 		components.NewMdcGridSingleCellRow(
