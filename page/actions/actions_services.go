@@ -90,7 +90,6 @@ func svAction(event interface{}) {
 		)
 	case *ServicesChangeAlias:
 		svStore.Loading = 1
-		core.Console.Log(fmt.Sprintf("new alias: %s", e.NewAlias))
 		serviceOpRun(svStore.UseSocket,
 			&api.Query{
 				Type: api.QueryChangeServiceAlias,
@@ -192,11 +191,9 @@ func serviceOpRun(useSocket bool, query *api.Query) bool {
 		case api.QueryRemoveService:
 			errorPrefix = "Remove Service: "
 		}
-		core.Console.Log(fmt.Sprint(query))
 		core.Query(
 			useSocket, query,
 			func(q *api.Query) {
-				core.Console.Log("op - response")
 				if status, ok := q.Payload.(*api.StatusReply); ok {
 					if status.Success {
 						core.Dispatch(ServicesOpSucceeded{})
@@ -208,7 +205,6 @@ func serviceOpRun(useSocket bool, query *api.Query) bool {
 				core.Dispatch(ServicesOpFailed(errorPrefix + "Unexpected response type"))
 			},
 			func(err string) {
-				core.Console.Log("op - error")
 				core.Dispatch(ServicesOpFailed(errorPrefix + err))
 			},
 		)
