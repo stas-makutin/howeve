@@ -131,104 +131,6 @@ func (ch *ViewServices) OnChange(event interface{}) {
 		ch.errorMessage = core.FormatMultilineText(store.DisplayError)
 		ch.protocols = core.NewProtocolsWrapper(store.Protocols.Value)
 		ch.services = store.Services.Value
-		/*
-			ch.services = &api.ListServicesResult{
-				Services: []api.ListServicesEntry{
-					{
-						ServiceEntry: &api.ServiceEntry{
-							ServiceKey: &api.ServiceKey{
-								Protocol:  api.ProtocolZWave,
-								Transport: api.TransportSerial,
-								Entry:     "",
-							},
-							Params: map[string]string{
-								"param01":                               "value01",
-								"param02":                               "value02",
-								"param03":                               "value03",
-								"param04":                               "value04",
-								"param05":                               "value05",
-								"param06":                               "value06",
-								"param07":                               "value07",
-								"param08":                               "value08",
-								"param09":                               "value09",
-								"param10":                               "value10",
-								"param11":                               "value11",
-								"param12":                               "value12",
-								"param13":                               "value13",
-								"param14":                               "value14",
-								"param15":                               "value15",
-								"param16":                               "value16",
-								"param17":                               "value17",
-								"param18":                               "value18",
-								"param19":                               "value19",
-								"param20":                               "value20",
-								"param21":                               "value21",
-								"param22":                               "value22",
-								"param23":                               "value23",
-								"param24":                               "value24",
-								"param25":                               "value25",
-								"param26":                               "value26",
-								"param27":                               "value27",
-								"param28":                               "value28 - very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-long",
-								"param29":                               "value29",
-								"param30":                               "value30",
-								"param31":                               "value31",
-								"param32":                               "value32",
-								"param33-very-very-very-very-very-long": "value33",
-								"param34":                               "value34",
-								"param35":                               "value35",
-								"param36":                               "value36",
-								"param37":                               "value37",
-								"param38":                               "value38",
-								"param39":                               "value39",
-								"param40":                               "value40",
-							},
-						},
-						StatusReply: &api.StatusReply{
-							Success: true,
-						},
-					},
-					{
-						ServiceEntry: &api.ServiceEntry{
-							ServiceKey: &api.ServiceKey{
-								Protocol:  api.ProtocolZWave,
-								Transport: api.TransportSerial,
-								Entry:     "COM2",
-							},
-							Params: map[string]string{
-								"paramA": "valueA",
-								"paramB": "valueB",
-							},
-							Alias: "ZC2",
-						},
-						StatusReply: &api.StatusReply{
-							Success: false,
-							Error: &api.ErrorInfo{
-								Code:    api.ErrorServiceStatusBad,
-								Message: "unable to connect to the service",
-							},
-						},
-					},
-					{
-						ServiceEntry: &api.ServiceEntry{
-							ServiceKey: &api.ServiceKey{
-								Protocol:  api.ProtocolZWave,
-								Transport: api.TransportSerial,
-								Entry:     "https://github.com/material-components/material-components-web/blob/8f0a11e32895f998c326ab4a10601a2e4d5e18db/packages/mdc-textfield/README.md",
-							},
-							Params: map[string]string{
-								"paramX": "valueX",
-								"paramY": "valueY",
-								"paramZ": "valueZ",
-							},
-						},
-						StatusReply: &api.StatusReply{
-							Success: true,
-						},
-					},
-				},
-			}
-		*/
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
@@ -315,17 +217,20 @@ func (ch *ViewServices) Render() vecty.ComponentOrHTML {
 			&servicesTable{Protocols: ch.protocols, Services: ch.services, OpenDialog: ch.openServiceDialog},
 		),
 		core.If(ch.renderDialog == ServicesDialog_AddService, newAddServiceDialog(ch.protocols, ch.services, ch.addService)),
-		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_ChangeAlias,
-			newChangeServiceAliasDialog(ch.protocols, ch.services, ch.currentService.ServiceEntry, ch.changeAlias),
-		),
-		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_ViewParameters,
-			&viewServiceParametersDialog{Protocols: ch.protocols, Service: ch.currentService.ServiceEntry, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
-		),
-		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_ViewStatus,
-			&viewServiceStatusDialog{Protocols: ch.protocols, Service: &ch.currentService, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
-		),
-		core.If(ch.currentService.ServiceEntry != nil && ch.renderDialog == ServicesDialog_RemoveService,
-			&removeServiceDialog{Protocols: ch.protocols, Service: ch.currentService.ServiceEntry, CloseFn: ch.removeService},
+		core.If(
+			ch.currentService.ServiceEntry != nil,
+			core.If(ch.renderDialog == ServicesDialog_ChangeAlias,
+				newChangeServiceAliasDialog(ch.protocols, ch.services, ch.currentService.ServiceEntry, ch.changeAlias),
+			),
+			core.If(ch.renderDialog == ServicesDialog_ViewParameters,
+				&viewServiceParametersDialog{Protocols: ch.protocols, Service: ch.currentService.ServiceEntry, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
+			),
+			core.If(ch.renderDialog == ServicesDialog_ViewStatus,
+				&viewServiceStatusDialog{Protocols: ch.protocols, Service: &ch.currentService, CloseFn: func() { ch.toggleDialog(ServicesDialog_None) }},
+			),
+			core.If(ch.renderDialog == ServicesDialog_RemoveService,
+				&removeServiceDialog{Protocols: ch.protocols, Service: ch.currentService.ServiceEntry, CloseFn: ch.removeService},
+			),
 		),
 		core.If(ch.loading, &components.ViewLoading{}),
 	)
@@ -784,9 +689,10 @@ func (ch *changeServiceAliasDialog) Render() vecty.ComponentOrHTML {
 		}
 	}
 	disableChange := ch.Service.Alias == ch.NewAlias || aliasMessage != ""
+	key := fmt.Sprintf("sv-change-alias-%d-%d-%s-%s", ch.Service.Protocol, ch.Service.Transport, ch.Service.Entry, ch.NewAlias)
 
 	return components.NewMdcDialog(
-		"sv-remove-service-dialog", "Change Service Alias", false, false, ch.closeDialog, nil,
+		"sv-change-service-alias-dialog", "Change Service Alias", false, false, ch.closeDialog, nil,
 		[]components.MdcDialogButton{
 			{Label: "Cancel", Action: components.MdcDialogActionClose, Default: true},
 			{Label: "Change Alias", Action: components.MdcDialogActionOK, Disabled: disableChange},
@@ -802,7 +708,7 @@ func (ch *changeServiceAliasDialog) Render() vecty.ComponentOrHTML {
 			vecty.MarkupIf(aliasMessage != "", vecty.Attribute("title", aliasMessage)),
 		).
 			WithClasses("sv-change-alias-edit-field").
-			WithKey("sv-change-alias-"+ch.NewAlias),
+			WithKey(key),
 	)
 }
 
@@ -825,9 +731,10 @@ func (ch *viewServiceParametersDialog) Copy() vecty.Component {
 func (ch *viewServiceParametersDialog) Render() vecty.ComponentOrHTML {
 	protocolName, transportName := ch.Protocols.ProtocolAndTransportFullNames(ch.Service.Protocol, ch.Service.Transport)
 	names := core.ArrangeParams(ch.Service.Params)
+	key := fmt.Sprintf("sv-view-service-param-%d-%d-%s", ch.Service.Protocol, ch.Service.Transport, ch.Service.Entry)
 
 	return components.NewMdcDialog(
-		"sv-remove-service-dialog", "Service Parameters", false, false, ch.closeDialog, nil,
+		"sv-view-service-params-dialog", "Service Parameters", false, false, ch.closeDialog, nil,
 		[]components.MdcDialogButton{
 			{Label: "Close", Action: components.MdcDialogActionClose, Default: true},
 		},
@@ -847,7 +754,7 @@ func (ch *viewServiceParametersDialog) Render() vecty.ComponentOrHTML {
 			}
 			builder.AddDelimiterRow()
 		}).WithClasses("sv-dialogs-center"),
-	)
+	).WithKey(key)
 }
 
 type viewServiceStatusDialog struct {
@@ -868,9 +775,10 @@ func (ch *viewServiceStatusDialog) Copy() vecty.Component {
 
 func (ch *viewServiceStatusDialog) Render() vecty.ComponentOrHTML {
 	protocolName, transportName := ch.Protocols.ProtocolAndTransportFullNames(ch.Service.Protocol, ch.Service.Transport)
+	key := fmt.Sprintf("sv-view-service-status-%d-%d-%s", ch.Service.Protocol, ch.Service.Transport, ch.Service.Entry)
 
 	return components.NewMdcDialog(
-		"sv-remove-service-dialog", "Service Error", false, false, ch.closeDialog, nil,
+		"sv-view-service-status-dialog", "Service Error", false, false, ch.closeDialog, nil,
 		[]components.MdcDialogButton{
 			{Label: "Close", Action: components.MdcDialogActionClose, Default: true},
 		},
@@ -889,7 +797,7 @@ func (ch *viewServiceStatusDialog) Render() vecty.ComponentOrHTML {
 						vecty.Style("white-space", "break-spaces"),
 					),
 					vecty.Text(
-						strconv.FormatInt(int64(ch.Service.Error.Code), 10),
+						fmt.Sprintf("%d (%s)", ch.Service.Error.Code, core.ApiErrorName(ch.Service.Error.Code)),
 					),
 				),
 			)
@@ -906,7 +814,7 @@ func (ch *viewServiceStatusDialog) Render() vecty.ComponentOrHTML {
 			)
 			builder.AddDelimiterRow()
 		}).WithClasses("sv-dialogs-center"),
-	)
+	).WithKey(key)
 }
 
 type removeServiceDialog struct {
@@ -927,6 +835,7 @@ func (ch *removeServiceDialog) Copy() vecty.Component {
 
 func (ch *removeServiceDialog) Render() vecty.ComponentOrHTML {
 	protocolName, transportName := ch.Protocols.ProtocolAndTransportFullNames(ch.Service.Protocol, ch.Service.Transport)
+	key := fmt.Sprintf("sv-remove-service-%d-%d-%s", ch.Service.Protocol, ch.Service.Transport, ch.Service.Entry)
 
 	return components.NewMdcDialog(
 		"sv-remove-service-dialog", "Remove the Service?", false, false, ch.closeDialog, nil,
@@ -940,5 +849,5 @@ func (ch *removeServiceDialog) Render() vecty.ComponentOrHTML {
 			vecty.If(ch.Service.Alias != "", &components.Capsule{Label: "Alias", Text: ch.Service.Alias}),
 			&components.Capsule{Label: "Entry", Text: ch.Service.Entry},
 		),
-	)
+	).WithKey(key)
 }

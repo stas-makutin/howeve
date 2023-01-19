@@ -2,10 +2,45 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/stas-makutin/howeve/api"
 )
+
+var errorCodeToName map[api.ErrorCode]string = map[api.ErrorCode]string{
+	api.ErrorUnknownProtocol:          "Unknown Protocol",
+	api.ErrorUnknownTransport:         "Unknown Transport",
+	api.ErrorInvalidProtocolTransport: "Invalid Protocol's Transport",
+	api.ErrorUnknownParameter:         "Unknown Parameter",
+	api.ErrorInvalidParameterValue:    "Invalid Parameter Value",
+	api.ErrorNoRequiredParameter:      "No Required Parameter",
+	api.ErrorNoDiscovery:              "No Discovery",
+	api.ErrorDiscoveryBusy:            "Discovery Busy",
+	api.ErrorNoDiscoveryID:            "No Discovery ID",
+	api.ErrorDiscoveryPending:         "Discovery Pending",
+	api.ErrorDiscoveryFailed:          "Discovery Failed",
+	api.ErrorServiceNoKey:             "Service No Key",
+	api.ErrorServiceNoID:              "Service No ID",
+	api.ErrorServiceExists:            "Service Exists",
+	api.ErrorServiceAliasExists:       "Service Alias Exists",
+	api.ErrorServiceInitialize:        "Service Initialize",
+	api.ErrorServiceKeyNotExists:      "Service Key Not Exists",
+	api.ErrorServiceAliasNotExists:    "Service Alias Not Exists",
+	api.ErrorServiceStatusBad:         "Service Status Bad",
+	api.ErrorServiceBadPayload:        "Service Bad Payload",
+	api.ErrorServiceSendBusy:          "Service Send Busy",
+	api.ErrorOtherError:               "Other Error",
+}
+
+func ApiErrorName(code api.ErrorCode) string {
+	name, ok := errorCodeToName[code]
+	if ok {
+		return name
+	}
+	return "Unknown"
+}
 
 type ProtocolsInfoWrapper struct {
 	Info         *api.ProtocolInfoEntry
@@ -65,6 +100,27 @@ func (pw *ProtocolsWrapper) ProtocolAndTransportFullNames(protocolID api.Protoco
 		transportName = ti.Name + " (" + transportName + ")"
 	}
 	return
+}
+
+func ArrangeServices(services []api.ListServicesEntry) {
+	sort.SliceStable(services, func(i, j int) bool {
+		if services[i].Protocol < services[j].Protocol {
+			return true
+		}
+		if services[i].Protocol == services[j].Protocol {
+			if services[i].Transport < services[j].Transport {
+				return true
+			}
+			if services[i].Transport == services[j].Transport {
+				if c := strings.Compare(services[i].Alias, services[j].Alias); c > 0 {
+					return true
+				} else if c == 0 {
+					return strings.Compare(services[i].Entry, services[j].Entry) < 0
+				}
+			}
+		}
+		return false
+	})
 }
 
 type ServiceEntryData struct {

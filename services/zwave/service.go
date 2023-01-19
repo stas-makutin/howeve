@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/stas-makutin/howeve/api"
 	"github.com/stas-makutin/howeve/defs"
 	"github.com/stas-makutin/howeve/log"
 	"github.com/stas-makutin/howeve/services/serial"
+	"github.com/stas-makutin/howeve/utils/syncutil"
 	zw "github.com/stas-makutin/howeve/zwave"
 )
 
@@ -44,7 +45,7 @@ type Service struct {
 
 	sendQueue chan *api.Message
 
-	status atomic.Value
+	status syncutil.RLocked[error]
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -99,7 +100,11 @@ PurgeLoop:
 }
 
 func (svc *Service) Status() defs.ServiceStatus {
-	return svc.status.Load().(defs.ServiceStatus)
+	err := svc.status.Load()
+	if err == nil {
+		return defs.ServiceStatus(defs.ErrStatusGood)
+	}
+	return err.(defs.ServiceStatus)
 }
 
 func (svc *Service) Send(payload []byte) (*api.Message, error) {
@@ -181,7 +186,7 @@ ServiceLoop:
 			expectReply = false
 			rb = re
 			if err := svc.transport.Open(svc.key.Entry, svc.params); err != nil {
-				svc.status.Store(err)
+				svc.status.Store(fmt.Errorf("unable to open transport: %s", err.Error()))
 				svc.log(zwOcTransportOpen, zwOsFailure, err.Error())
 				select {
 				case <-svc.ctx.Done():
@@ -214,7 +219,7 @@ ServiceLoop:
 				if outgoingMaxTTL > 0 && time.Now().UTC().Sub(message.Time) > outgoingMaxTTL {
 					defs.Messages.UpdateState(message.ID, api.OutgoingTimedOut)
 				} else if n, err := svc.transport.Write(message.Payload); err != nil || n != len(message.Payload) {
-					svc.status.Store(err)
+					svc.status.Store(fmt.Errorf("unable to write using transport: %s", err.Error()))
 					svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteQueue, err.Error())
 					defs.Messages.UpdateState(message.ID, api.OutgoingFailed)
 					open = true
@@ -237,7 +242,7 @@ ServiceLoop:
 			break ServiceLoop
 		}
 		if err != nil {
-			svc.status.Store(err)
+			svc.status.Store(fmt.Errorf("unable to read using transport: %s", err.Error()))
 			svc.log(zwOcTransportRead, zwOsFailure, err.Error())
 			open = true
 		} else if n > 0 {
@@ -278,7 +283,7 @@ ServiceLoop:
 					if len(reply) > 0 {
 						message := defs.Messages.Register(svc.key, reply, api.OutgoingPending)
 						if n, err := svc.transport.Write(reply); err != nil || n != len(reply) {
-							svc.status.Store(err)
+							svc.status.Store(fmt.Errorf("unable to write using transport: %s", err.Error()))
 							svc.log(zwOcTransportWrite, zwOsFailure, zwOfWriteReply, err.Error())
 							defs.Messages.UpdateState(message.ID, api.OutgoingFailed)
 							open = true

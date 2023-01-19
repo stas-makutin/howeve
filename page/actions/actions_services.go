@@ -76,7 +76,10 @@ func svAction(event interface{}) {
 		decreaseLoadingCount()
 		svStore.Protocols.Value = nil
 		svStore.Protocols.Error = string(e)
-	case ServicesLoaded, ServicesLoadFailed:
+	case ServicesLoaded:
+		decreaseLoadingCount()
+		core.ArrangeServices(svStore.Services.Value.Services)
+	case ServicesLoadFailed:
 		decreaseLoadingCount()
 	case *ServicesAdd:
 		svStore.Loading = 1
