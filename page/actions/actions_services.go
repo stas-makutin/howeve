@@ -28,7 +28,6 @@ var svStore = &ServicesViewStore{
 	Loading:   1,
 	UseSocket: true,
 }
-var svStoreChanging = false
 
 func GetServicesViewStore() *ServicesViewStore {
 	return svStore

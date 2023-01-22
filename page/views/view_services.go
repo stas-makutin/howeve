@@ -359,7 +359,7 @@ func (ch *servicesTable) Render() vecty.ComponentOrHTML {
 			elem.Table(
 				vecty.Markup(
 					vecty.Class("mdc-data-table__table"),
-					vecty.Attribute("aria-label", "Protocols"),
+					vecty.Attribute("aria-label", "Services"),
 				),
 				elem.TableHead(
 					elem.TableRow(
