@@ -22,9 +22,11 @@ func SafeJSDestroy(v *js.Value, fn func(v *js.Value)) {
 	}
 }
 
-func ReleaseJSFunc(fn *js.Func) {
+func ReleaseJSFunc(fn *js.Func) bool {
 	if !(fn.Value.IsUndefined() || fn.Value.IsNull()) {
 		fn.Release()
 		*fn = js.Func{}
+		return true
 	}
+	return false
 }

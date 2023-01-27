@@ -7,6 +7,11 @@ import (
 	"github.com/stas-makutin/howeve/api"
 )
 
+const (
+	querySocketConnectTimeout = 3000
+	querySocketSendTimeout    = 3000
+)
+
 var queryTypeToPath = map[api.QueryType]string{
 	api.QueryRestart:            "/restart",
 	api.QueryGetConfig:          "/cfg",
@@ -75,10 +80,18 @@ func FetchQueryWithSocket(r *api.Query, then func(r *api.Query), catch func(err 
 		return
 	}
 	socket := NewWebSocket(WebSocketUrl())
+	timeout := &Timeout{}
+	timeout.Set(func() {
+		socket.Close()
+		timeout.Clear()
+		catch("Unable to collect the requested data: timeout")
+	}, querySocketConnectTimeout)
 	socket.OnOpen(func() {
+		timeout.Reset(querySocketSendTimeout)
 		socket.Send(request)
 	})
 	socket.OnMessage(func(data string) {
+		timeout.Clear()
 		socket.Close()
 		if q, err := StringToQuery(data); err == nil {
 			then(q)
@@ -87,6 +100,7 @@ func FetchQueryWithSocket(r *api.Query, then func(r *api.Query), catch func(err 
 		}
 	})
 	socket.OnError(func() {
+		timeout.Clear()
 		socket.Close()
 		catch("Unable to collect the requested data")
 	})
@@ -129,6 +143,7 @@ func (cq *CachedQuery[T]) Query(useSocket, force bool, r *api.Query, handle func
 				}
 			},
 			func(err string) {
+				cq.Error = err
 				failure(cq.Error)
 			},
 		)
@@ -141,4 +156,40 @@ func (cq *CachedQuery[T]) Query(useSocket, force bool, r *api.Query, handle func
 		success(cq.Value)
 	}
 	return true
+}
+
+var mainSocket *SharedSocket
+
+func MainSocket() *SharedSocket {
+	if mainSocket == nil {
+		mainSocket = newSharedSocket()
+	}
+	return mainSocket
+}
+
+type SharedSocket struct {
+	socket *WebSocket
+}
+
+func newSharedSocket() *SharedSocket {
+	s := &SharedSocket{
+		socket: NewWebSocket(WebSocketUrl()),
+	}
+	s.socket.OnOpen(s.onOpen)
+	s.socket.OnClose(s.onClose)
+	s.socket.OnError(s.onError)
+	s.socket.OnMessage(s.onMessage)
+	return s
+}
+
+func (ms *SharedSocket) onOpen() {
+}
+
+func (ms *SharedSocket) onClose() {
+}
+
+func (ms *SharedSocket) onError() {
+}
+
+func (ms *SharedSocket) onMessage(data string) {
 }
