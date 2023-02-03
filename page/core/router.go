@@ -58,6 +58,9 @@ func init() {
 	}
 	httpUrlBase += "//" + host
 	wsUrl += host + "/socket"
+
+	// create main socket
+	MainSocket()
 }
 
 func HTTPUrl(path string) string {

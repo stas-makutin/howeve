@@ -45,6 +45,13 @@ func pvAction(event interface{}) {
 	case ProtocolsLoadFailed:
 		pvStore.Loading = false
 		pvStore.DisplayError = "Protocols: " + string(e)
+	case core.MainSocketMessage:
+		if e.Type == api.QueryProtocolInfoResult {
+			if p, ok := e.Payload.(*api.ProtocolInfoResult); ok {
+				core.Dispatch(ProtocolsLoaded(p))
+			}
+		}
+		return
 	default:
 		return
 	}
@@ -84,4 +91,8 @@ func protocolsLoad(force, useSocket bool) bool {
 			core.Dispatch(ProtocolsLoadFailed(v))
 		},
 	)
+}
+
+func protocolsLoadWithMainSocket() (string, bool) {
+	return core.MainSocket().Send(&api.Query{Type: api.QueryProtocolInfo})
 }

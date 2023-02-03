@@ -23,17 +23,19 @@ type ViewDiscovery struct {
 }
 
 func NewViewDiscovery() (r *ViewDiscovery) {
-	// store := actions.GetDiscoveryViewStore()
+	store := actions.GetDiscoveryViewStore()
 	r = &ViewDiscovery{
 		rendered:     false,
 		renderDialog: DiscoveryDialog_None,
+		protocols:    core.NewProtocolsWrapper(store.Protocols),
 	}
 	actions.Subscribe(r)
 	return
 }
 
 func (ch *ViewDiscovery) OnChange(event interface{}) {
-	if /*store*/ _, ok := event.(*actions.ServicesViewStore); ok {
+	if store, ok := event.(*actions.DiscoveryViewStore); ok {
+		ch.protocols = core.NewProtocolsWrapper(store.Protocols)
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
@@ -41,7 +43,7 @@ func (ch *ViewDiscovery) OnChange(event interface{}) {
 }
 
 func (ch *ViewDiscovery) Mount() {
-	// core.Dispatch(&actions.ServicesLoad{Force: false, UseSocket: ch.useSockets})
+	core.Dispatch(actions.DiscoveryLoad{})
 }
 
 func (ch *ViewDiscovery) retry() {

@@ -3,6 +3,8 @@ package core
 import (
 	"encoding/json"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/stas-makutin/howeve/api"
 )
@@ -167,29 +169,93 @@ func MainSocket() *SharedSocket {
 	return mainSocket
 }
 
+type MainSocketOpened struct{}
+type MainSocketMessage *api.Query
+type MainSocketError string
+
 type SharedSocket struct {
-	socket *WebSocket
+	socket      *WebSocket
+	openTimeout *Timeout
+	ready       bool
+	lastID      int
 }
 
 func newSharedSocket() *SharedSocket {
-	s := &SharedSocket{
-		socket: NewWebSocket(WebSocketUrl()),
+	s := &SharedSocket{}
+	s.openTimeout = &Timeout{}
+	s.init()
+	return s
+}
+
+func (s *SharedSocket) init() {
+	if s.socket != nil {
+		s.close()
 	}
+	s.socket = NewWebSocket(WebSocketUrl())
+	s.openTimeout.Set(func() {
+		Dispatch(MainSocketError("The communication with server timed out"))
+		s.init()
+	}, querySocketConnectTimeout)
+
 	s.socket.OnOpen(s.onOpen)
 	s.socket.OnClose(s.onClose)
 	s.socket.OnError(s.onError)
 	s.socket.OnMessage(s.onMessage)
-	return s
 }
 
-func (ms *SharedSocket) onOpen() {
+func (s *SharedSocket) Send(r *api.Query) (string, bool) {
+	success := false
+	id := r.ID
+	if id == "" {
+		s.lastID += 1
+		id = strconv.Itoa(s.lastID)
+		r.ID = id
+	}
+	if s.ready {
+		request, err := QueryToString(r)
+		if err == nil {
+			s.socket.Send(request)
+			success = true
+		} else {
+			Dispatch(MainSocketError("Unexpected request format: " + err.Error()))
+		}
+	} else {
+		Dispatch(MainSocketError("The communication with server not established"))
+	}
+	return id, success
 }
 
-func (ms *SharedSocket) onClose() {
+func (s *SharedSocket) close() {
+	s.openTimeout.Clear()
+	s.socket.Close()
+	s.ready = false
+	s.lastID = 0
+
 }
 
-func (ms *SharedSocket) onError() {
+func (s *SharedSocket) onOpen() {
+	s.openTimeout.Clear()
+	s.ready = true
+	Dispatch(MainSocketOpened{})
 }
 
-func (ms *SharedSocket) onMessage(data string) {
+func (s *SharedSocket) onClose() {
+	Dispatch(MainSocketError("The communication with server closed"))
+	time.Sleep(500)
+	s.init()
+}
+
+func (s *SharedSocket) onError() {
+	Dispatch(MainSocketError("The communication with server failed"))
+	time.Sleep(500)
+	s.init()
+}
+
+func (s *SharedSocket) onMessage(data string) {
+	s.openTimeout.Clear()
+	if q, err := StringToQuery(data); err == nil {
+		Dispatch(MainSocketMessage(q))
+	} else {
+		Dispatch(MainSocketError("Unexpected response format: " + err.Error()))
+	}
 }
