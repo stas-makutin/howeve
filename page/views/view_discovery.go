@@ -26,24 +26,30 @@ func NewViewDiscovery() (r *ViewDiscovery) {
 	store := actions.GetDiscoveryViewStore()
 	r = &ViewDiscovery{
 		rendered:     false,
+		loading:      store.Loading,
 		renderDialog: DiscoveryDialog_None,
 		protocols:    core.NewProtocolsWrapper(store.Protocols),
 	}
 	actions.Subscribe(r)
+	r.load()
 	return
 }
 
 func (ch *ViewDiscovery) OnChange(event interface{}) {
 	if store, ok := event.(*actions.DiscoveryViewStore); ok {
+		ch.loading = store.Loading
 		ch.protocols = core.NewProtocolsWrapper(store.Protocols)
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
 	}
+	ch.load()
 }
 
-func (ch *ViewDiscovery) Mount() {
-	core.Dispatch(actions.DiscoveryLoad{})
+func (ch *ViewDiscovery) load() {
+	if ch.protocols == nil && !ch.loading {
+		core.Dispatch(actions.DiscoveryLoad{})
+	}
 }
 
 func (ch *ViewDiscovery) retry() {

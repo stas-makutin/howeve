@@ -94,5 +94,9 @@ func protocolsLoad(force, useSocket bool) bool {
 }
 
 func protocolsLoadWithMainSocket() (string, bool) {
+	if pvStore.Protocols.Value != nil {
+		core.Dispatch(ProtocolsLoaded(pvStore.Protocols.Value))
+		return "", true
+	}
 	return core.MainSocket().Send(&api.Query{Type: api.QueryProtocolInfo})
 }
