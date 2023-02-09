@@ -224,6 +224,8 @@ func handleProtocolDiscovery(event *ProtocolDiscovery) {
 			errorInfo = newErrorInfo(api.ErrorNoDiscoveryID, err, event.ID)
 		case defs.ErrDiscoveryPending:
 			errorInfo = newErrorInfo(api.ErrorDiscoveryPending, err, event.ID)
+		default:
+			errorInfo = newErrorInfo(api.ErrorDiscoveryFailed, err)
 		}
 		r.Error = errorInfo
 	}

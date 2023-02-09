@@ -31,7 +31,7 @@ func NewViewDiscovery() (r *ViewDiscovery) {
 		protocols:    core.NewProtocolsWrapper(store.Protocols),
 	}
 	actions.Subscribe(r)
-	r.load()
+	core.Dispatch(actions.DiscoveryLoad{})
 	return
 }
 
@@ -42,8 +42,8 @@ func (ch *ViewDiscovery) OnChange(event interface{}) {
 		if ch.rendered {
 			vecty.Rerender(ch)
 		}
+		core.Dispatch(actions.DiscoveryLoad{})
 	}
-	ch.load()
 }
 
 func (ch *ViewDiscovery) load() {

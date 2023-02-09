@@ -16,6 +16,7 @@ func init() {
 
 type DiscoveryViewStore struct {
 	Loading      bool
+	Initialized  bool
 	Protocols    *api.ProtocolInfoResult
 	Discoveries  map[uuid.UUID]*DiscoveryData
 	DisplayError string
@@ -24,6 +25,7 @@ type DiscoveryViewStore struct {
 
 var dvStore = &DiscoveryViewStore{
 	Loading:     true,
+	Initialized: false,
 	Discoveries: make(map[uuid.UUID]*DiscoveryData),
 	sendTimeout: &core.Timeout{},
 }
@@ -37,32 +39,46 @@ func GetDiscoveryViewStore() *DiscoveryViewStore {
 func dvAction(event interface{}) {
 	switch e := event.(type) {
 	case DiscoveryLoad:
+		if dvStore.Initialized {
+			return
+		}
+		dvStore.Initialized = true
 		loadDiscoveries()
 		protocolsLoadWithMainSocket()
 	case ProtocolsLoaded:
 		dvStore.Protocols = e
 		queryDiscoveryStatus()
 	case ProtocolsLoadFailed:
-		pvStore.Loading = true
+		dvStore.Loading = true
+		dvStore.Initialized = false
 		// TODO
 	case core.MainSocketOpened:
-		pvStore.Loading = false
+		dvStore.Loading = false
 	case core.MainSocketMessage:
 		switch e.Type {
 		case api.QueryProtocolDiscoveryResult:
-			if _, ok := e.Payload.(*api.ProtocolDiscoveryResult); ok {
-				// TODO
+			if p, ok := e.Payload.(*api.ProtocolDiscoveryResult); ok {
+				if p.Error != nil && p.Error.Code == api.ErrorNoDiscoveryID {
+					delete(dvStore.Discoveries, p.ID)
+				} else {
+					findOrAddDiscovery(p.ID).Result = p
+				}
 			}
 			queryDiscoveryStatus()
 		case api.QueryProtocolDiscoveryStarted:
-			// TODO
+			if p, ok := e.Payload.(*api.ProtocolDiscoveryStarted); ok {
+				findOrAddDiscovery(p.ID).Input = &p.ProtocolDiscover
+			}
 		case api.QueryProtocolDiscoveryFinished:
-			// TODO
+			if p, ok := e.Payload.(*api.ProtocolDiscoveryResult); ok {
+				findOrAddDiscovery(p.ID).Result = p
+			}
 		default:
 			return
 		}
 	case core.MainSocketError:
-		pvStore.Loading = true
+		dvStore.Loading = true
+		dvStore.Initialized = false
 		// TODO
 	}
 	core.Dispatch(ChangeEvent{dvStore})
@@ -79,13 +95,19 @@ type DiscoveryData struct {
 
 const localStorageDiscoveryKey = "hw-discoveries"
 
+func findOrAddDiscovery(id uuid.UUID) (r *DiscoveryData) {
+	if r, ok := dvStore.Discoveries[id]; !ok {
+		r = &DiscoveryData{}
+		dvStore.Discoveries[id] = r
+	}
+	return
+}
+
 func loadDiscoveries() {
 	if value, ok := core.LocalStorageGet(localStorageDiscoveryKey); ok {
 		for _, idString := range strings.Fields(value) {
 			if id, err := uuid.Parse(idString); err == nil {
-				if _, ok := dvStore.Discoveries[id]; !ok {
-					dvStore.Discoveries[id] = &DiscoveryData{}
-				}
+				findOrAddDiscovery(id)
 			}
 		}
 	}
