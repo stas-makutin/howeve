@@ -86,7 +86,7 @@ func FetchQueryWithSocket(r *api.Query, then func(r *api.Query), catch func(err 
 	timeout.Set(func() {
 		socket.Close()
 		timeout.Clear()
-		catch("Unable to collect the requested data: timeout")
+		catch("The request to the server timed out")
 	}, querySocketConnectTimeout)
 	socket.OnOpen(func() {
 		timeout.Reset(querySocketSendTimeout)
@@ -221,6 +221,19 @@ func (s *SharedSocket) Send(r *api.Query) (string, bool) {
 		}
 	} else {
 		Dispatch(MainSocketError("The communication with server not established"))
+	}
+	return id, success
+}
+
+func (s *SharedSocket) SendWithTimeout(r *api.Query, t *Timeout) (string, bool) {
+	t.Set(func() {
+		Dispatch(MainSocketError("The communication with server timed out"))
+		time.Sleep(500)
+		s.init()
+	}, querySocketSendTimeout)
+	id, success := s.Send(r)
+	if !success {
+		t.Clear()
 	}
 	return id, success
 }

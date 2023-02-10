@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	core.DispatcherSubscribe(cvAction)
+	core.DispatcherSubscribe(GetConfigViewStore().action)
 }
 
 type ConfigString struct {
@@ -42,26 +42,26 @@ func (vs *ConfigViewStore) ConfigValue() (v string) {
 
 // reducer
 
-func cvAction(event interface{}) {
+func (s *ConfigViewStore) action(event interface{}) {
 	switch e := event.(type) {
 	case ConfigUseSocket:
-		cvStore.UseSocket = bool(e)
+		s.UseSocket = bool(e)
 	case *ConfigLoad:
-		cvStore.Loading = true
-		cvStore.DisplayError = ""
-		if configLoad(e.Force, e.UseSocket) {
+		s.Loading = true
+		s.DisplayError = ""
+		if s.configLoad(e.Force, e.UseSocket) {
 			return
 		}
 	case ConfigLoaded:
-		cvStore.Loading = false
-		cvStore.DisplayError = ""
+		s.Loading = false
+		s.DisplayError = ""
 	case ConfigLoadFailed:
-		cvStore.Loading = false
-		cvStore.DisplayError = "Config: " + string(e)
+		s.Loading = false
+		s.DisplayError = "Config: " + string(e)
 	default:
 		return
 	}
-	core.Dispatch(ChangeEvent{cvStore})
+	core.Dispatch(ChangeEvent{s})
 }
 
 // actions
@@ -77,8 +77,8 @@ type ConfigLoaded string
 
 type ConfigLoadFailed string
 
-func configLoad(force, useSocket bool) bool {
-	return cvStore.Config.Query(
+func (s *ConfigViewStore) configLoad(force, useSocket bool) bool {
+	return s.Config.Query(
 		useSocket, force,
 		&api.Query{Type: api.QueryGetConfig},
 		func(r *api.Query) (*ConfigString, string) {

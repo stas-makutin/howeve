@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	core.DispatcherSubscribe(svAction)
+	core.DispatcherSubscribe(GetServicesViewStore().action)
 }
 
 // store
@@ -35,12 +35,12 @@ func GetServicesViewStore() *ServicesViewStore {
 
 // reducer
 
-func svAction(event interface{}) {
+func (s *ServicesViewStore) action(event interface{}) {
 	var errorBuilder strings.Builder
 
 	decreaseLoadingCount := func() {
-		if svStore.Loading > 0 {
-			svStore.Loading -= 1
+		if s.Loading > 0 {
+			s.Loading -= 1
 		}
 	}
 	appendDisplayError := func(message, prefix string) {
@@ -57,32 +57,32 @@ func svAction(event interface{}) {
 
 	switch e := event.(type) {
 	case ServicesUseSocket:
-		svStore.UseSocket = bool(e)
+		s.UseSocket = bool(e)
 	case *ServicesLoad:
-		svStore.Loading = 2
-		svStore.Protocols.Error = ""
-		svStore.Services.Error = ""
-		cachedProtocols := protocolsLoad(e.Force, e.UseSocket)
-		cachedServices := servicesLoad(e.Force, e.UseSocket)
+		s.Loading = 2
+		s.Protocols.Error = ""
+		s.Services.Error = ""
+		cachedProtocols := GetProtocolViewStore().protocolsLoad(e.Force, e.UseSocket)
+		cachedServices := s.servicesLoad(e.Force, e.UseSocket)
 		if cachedProtocols && cachedServices {
 			return
 		}
 	case ProtocolsLoaded:
 		decreaseLoadingCount()
-		svStore.Protocols.Value = e
-		svStore.Protocols.Error = ""
+		s.Protocols.Value = e
+		s.Protocols.Error = ""
 	case ProtocolsLoadFailed:
 		decreaseLoadingCount()
-		svStore.Protocols.Value = nil
-		svStore.Protocols.Error = string(e)
+		s.Protocols.Value = nil
+		s.Protocols.Error = string(e)
 	case ServicesLoaded:
 		decreaseLoadingCount()
-		core.ArrangeServices(svStore.Services.Value.Services)
+		core.ArrangeServices(s.Services.Value.Services)
 	case ServicesLoadFailed:
 		decreaseLoadingCount()
 	case *ServicesAdd:
-		svStore.Loading = 1
-		serviceOpRun(svStore.UseSocket,
+		s.Loading = 1
+		s.serviceOpRun(s.UseSocket,
 			&api.Query{
 				Type: api.QueryAddService,
 				Payload: &api.ServiceEntry{
@@ -91,8 +91,8 @@ func svAction(event interface{}) {
 			},
 		)
 	case *ServicesChangeAlias:
-		svStore.Loading = 1
-		serviceOpRun(svStore.UseSocket,
+		s.Loading = 1
+		s.serviceOpRun(s.UseSocket,
 			&api.Query{
 				Type: api.QueryChangeServiceAlias,
 				Payload: &api.ChangeServiceAlias{
@@ -101,37 +101,37 @@ func svAction(event interface{}) {
 			},
 		)
 	case *ServicesRemove:
-		svStore.Loading = 1
-		serviceOpRun(svStore.UseSocket,
+		s.Loading = 1
+		s.serviceOpRun(s.UseSocket,
 			&api.Query{
 				Type:    api.QueryRemoveService,
 				Payload: &api.ServiceID{ServiceKey: e.Service},
 			},
 		)
 	case ServicesOpRetry:
-		svStore.Loading = 1
-		if serviceOpRun(svStore.UseSocket, svStore.LastOp) {
-			core.Dispatch(&ServicesLoad{Force: true, UseSocket: svStore.UseSocket})
+		s.Loading = 1
+		if s.serviceOpRun(s.UseSocket, s.LastOp) {
+			core.Dispatch(&ServicesLoad{Force: true, UseSocket: s.UseSocket})
 		}
 	case ServicesOpSucceeded:
 		decreaseLoadingCount()
-		svStore.LastOp = nil
-		svStore.OpError = ""
-		core.Dispatch(&ServicesLoad{Force: true, UseSocket: svStore.UseSocket})
+		s.LastOp = nil
+		s.OpError = ""
+		core.Dispatch(&ServicesLoad{Force: true, UseSocket: s.UseSocket})
 	case ServicesOpFailed:
 		decreaseLoadingCount()
-		svStore.OpError = string(e)
-		core.Dispatch(&ServicesLoad{Force: true, UseSocket: svStore.UseSocket})
+		s.OpError = string(e)
+		core.Dispatch(&ServicesLoad{Force: true, UseSocket: s.UseSocket})
 	default:
 		return
 	}
 
-	appendDisplayError(svStore.OpError, "")
-	appendDisplayError(svStore.Protocols.Error, "Protocols: ")
-	appendDisplayError(svStore.Services.Error, "Services: ")
-	svStore.DisplayError = errorBuilder.String()
+	appendDisplayError(s.OpError, "")
+	appendDisplayError(s.Protocols.Error, "Protocols: ")
+	appendDisplayError(s.Services.Error, "Services: ")
+	s.DisplayError = errorBuilder.String()
 
-	core.Dispatch(ChangeEvent{svStore})
+	core.Dispatch(ChangeEvent{s})
 }
 
 // actions
@@ -151,8 +151,8 @@ type ServicesLoaded *api.ListServicesResult
 
 type ServicesLoadFailed string
 
-func servicesLoad(force, useSocket bool) bool {
-	return svStore.Services.Query(
+func (s *ServicesViewStore) servicesLoad(force, useSocket bool) bool {
+	return s.Services.Query(
 		useSocket, force,
 		&api.Query{Type: api.QueryListServices},
 		func(r *api.Query) (*api.ListServicesResult, string) {
@@ -181,9 +181,9 @@ type ServicesOpSucceeded struct{}
 
 type ServicesOpFailed string
 
-func serviceOpRun(useSocket bool, query *api.Query) bool {
+func (s *ServicesViewStore) serviceOpRun(useSocket bool, query *api.Query) bool {
 	if query != nil {
-		svStore.LastOp = query
+		s.LastOp = query
 		errorPrefix := ""
 		switch query.Type {
 		case api.QueryAddService:

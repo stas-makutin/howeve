@@ -6,21 +6,23 @@ import (
 )
 
 func init() {
-	core.DispatcherSubscribe(pvAction)
+	core.DispatcherSubscribe(GetProtocolViewStore().action)
 }
 
 // store
 
 type ProtocolViewStore struct {
-	Loading      bool
-	UseSocket    bool
-	Protocols    core.CachedQuery[api.ProtocolInfoResult]
-	DisplayError string
+	Loading       bool
+	UseSocket     bool
+	Protocols     core.CachedQuery[api.ProtocolInfoResult]
+	DisplayError  string
+	SocketTimeout *core.Timeout
 }
 
 var pvStore = &ProtocolViewStore{
-	Loading:   true,
-	UseSocket: true,
+	Loading:       true,
+	UseSocket:     true,
+	SocketTimeout: &core.Timeout{},
 }
 
 func GetProtocolViewStore() *ProtocolViewStore {
@@ -29,22 +31,22 @@ func GetProtocolViewStore() *ProtocolViewStore {
 
 // reducer
 
-func pvAction(event interface{}) {
+func (s *ProtocolViewStore) action(event interface{}) {
 	switch e := event.(type) {
 	case ProtocolsUseSocket:
-		pvStore.UseSocket = bool(e)
+		s.UseSocket = bool(e)
 	case *ProtocolsLoad:
-		pvStore.Loading = true
-		pvStore.DisplayError = ""
-		if protocolsLoad(e.Force, e.UseSocket) {
+		s.Loading = true
+		s.DisplayError = ""
+		if s.protocolsLoad(e.Force, e.UseSocket) {
 			return
 		}
 	case ProtocolsLoaded:
-		pvStore.Loading = false
-		pvStore.DisplayError = ""
+		s.Loading = false
+		s.DisplayError = ""
 	case ProtocolsLoadFailed:
-		pvStore.Loading = false
-		pvStore.DisplayError = "Protocols: " + string(e)
+		s.Loading = false
+		s.DisplayError = "Protocols: " + string(e)
 	case core.MainSocketMessage:
 		if e.Type == api.QueryProtocolInfoResult {
 			if p, ok := e.Payload.(*api.ProtocolInfoResult); ok {
@@ -55,7 +57,7 @@ func pvAction(event interface{}) {
 	default:
 		return
 	}
-	core.Dispatch(ChangeEvent{pvStore})
+	core.Dispatch(ChangeEvent{s})
 }
 
 // actions
@@ -71,14 +73,11 @@ type ProtocolsLoaded *api.ProtocolInfoResult
 
 type ProtocolsLoadFailed string
 
-func protocolsLoad(force, useSocket bool) bool {
-	return pvStore.Protocols.Query(
+func (s *ProtocolViewStore) protocolsLoad(force, useSocket bool) bool {
+	return s.Protocols.Query(
 		useSocket, force,
 		&api.Query{Type: api.QueryProtocolInfo},
 		func(r *api.Query) (*api.ProtocolInfoResult, string) {
-			if r.Payload == nil {
-				return &api.ProtocolInfoResult{}, ""
-			}
 			if p, ok := r.Payload.(*api.ProtocolInfoResult); ok {
 				return p, ""
 			}
@@ -93,10 +92,10 @@ func protocolsLoad(force, useSocket bool) bool {
 	)
 }
 
-func protocolsLoadWithMainSocket() (string, bool) {
-	if pvStore.Protocols.Value != nil {
-		core.Dispatch(ProtocolsLoaded(pvStore.Protocols.Value))
+func (s *ProtocolViewStore) protocolsLoadWithMainSocket() (string, bool) {
+	if s.Protocols.Value != nil {
+		core.Dispatch(ProtocolsLoaded(s.Protocols.Value))
 		return "", true
 	}
-	return core.MainSocket().Send(&api.Query{Type: api.QueryProtocolInfo})
+	return core.MainSocket().SendWithTimeout(&api.Query{Type: api.QueryProtocolInfo}, s.SocketTimeout)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	core.DispatcherSubscribe(dvAction)
+	core.DispatcherSubscribe(GetDiscoveryViewStore().action)
 }
 
 // store
@@ -20,14 +20,16 @@ type DiscoveryViewStore struct {
 	Protocols    *api.ProtocolInfoResult
 	Discoveries  map[uuid.UUID]*DiscoveryData
 	DisplayError string
-	sendTimeout  *core.Timeout
+	initTimeout  *core.Timeout
+	opTimeout    *core.Timeout
 }
 
 var dvStore = &DiscoveryViewStore{
 	Loading:     true,
 	Initialized: false,
 	Discoveries: make(map[uuid.UUID]*DiscoveryData),
-	sendTimeout: &core.Timeout{},
+	initTimeout: &core.Timeout{},
+	opTimeout:   &core.Timeout{},
 }
 
 func GetDiscoveryViewStore() *DiscoveryViewStore {
@@ -36,52 +38,52 @@ func GetDiscoveryViewStore() *DiscoveryViewStore {
 
 // reducer
 
-func dvAction(event interface{}) {
+func (s *DiscoveryViewStore) action(event interface{}) {
 	switch e := event.(type) {
 	case DiscoveryLoad:
-		if dvStore.Initialized {
+		if s.Initialized {
 			return
 		}
-		dvStore.Initialized = true
-		loadDiscoveries()
-		protocolsLoadWithMainSocket()
+		s.Initialized = true
+		s.loadDiscoveries()
+		GetProtocolViewStore().protocolsLoadWithMainSocket()
 	case ProtocolsLoaded:
-		dvStore.Protocols = e
-		queryDiscoveryStatus()
+		s.Protocols = e
+		s.queryDiscoveryStatus()
 	case ProtocolsLoadFailed:
-		dvStore.Loading = true
-		dvStore.Initialized = false
+		s.Loading = true
+		s.Initialized = false
 		// TODO
 	case core.MainSocketOpened:
-		dvStore.Loading = false
+		s.Loading = false
 	case core.MainSocketMessage:
 		switch e.Type {
 		case api.QueryProtocolDiscoveryResult:
 			if p, ok := e.Payload.(*api.ProtocolDiscoveryResult); ok {
 				if p.Error != nil && p.Error.Code == api.ErrorNoDiscoveryID {
-					delete(dvStore.Discoveries, p.ID)
+					delete(s.Discoveries, p.ID)
 				} else {
-					findOrAddDiscovery(p.ID).Result = p
+					s.findOrAddDiscovery(p.ID).Result = p
 				}
 			}
-			queryDiscoveryStatus()
+			s.queryDiscoveryStatus()
 		case api.QueryProtocolDiscoveryStarted:
 			if p, ok := e.Payload.(*api.ProtocolDiscoveryStarted); ok {
-				findOrAddDiscovery(p.ID).Input = &p.ProtocolDiscover
+				s.findOrAddDiscovery(p.ID).Input = &p.ProtocolDiscover
 			}
 		case api.QueryProtocolDiscoveryFinished:
 			if p, ok := e.Payload.(*api.ProtocolDiscoveryResult); ok {
-				findOrAddDiscovery(p.ID).Result = p
+				s.findOrAddDiscovery(p.ID).Result = p
 			}
 		default:
 			return
 		}
 	case core.MainSocketError:
-		dvStore.Loading = true
-		dvStore.Initialized = false
+		s.Loading = true
+		s.Initialized = false
 		// TODO
 	}
-	core.Dispatch(ChangeEvent{dvStore})
+	core.Dispatch(ChangeEvent{s})
 }
 
 // actions
@@ -95,27 +97,27 @@ type DiscoveryData struct {
 
 const localStorageDiscoveryKey = "hw-discoveries"
 
-func findOrAddDiscovery(id uuid.UUID) (r *DiscoveryData) {
-	if r, ok := dvStore.Discoveries[id]; !ok {
+func (s *DiscoveryViewStore) findOrAddDiscovery(id uuid.UUID) (r *DiscoveryData) {
+	if r, ok := s.Discoveries[id]; !ok {
 		r = &DiscoveryData{}
-		dvStore.Discoveries[id] = r
+		s.Discoveries[id] = r
 	}
 	return
 }
 
-func loadDiscoveries() {
+func (s *DiscoveryViewStore) loadDiscoveries() {
 	if value, ok := core.LocalStorageGet(localStorageDiscoveryKey); ok {
 		for _, idString := range strings.Fields(value) {
 			if id, err := uuid.Parse(idString); err == nil {
-				findOrAddDiscovery(id)
+				s.findOrAddDiscovery(id)
 			}
 		}
 	}
 }
 
-func saveDiscoveries() {
+func (s *DiscoveryViewStore) saveDiscoveries() {
 	var sb strings.Builder
-	for id := range dvStore.Discoveries {
+	for id := range s.Discoveries {
 		if sb.Len() > 0 {
 			sb.WriteString(" ")
 		}
@@ -124,10 +126,13 @@ func saveDiscoveries() {
 	core.LocalStorageSet(localStorageDiscoveryKey, sb.String())
 }
 
-func queryDiscoveryStatus() {
-	for id, data := range dvStore.Discoveries {
+func (s *DiscoveryViewStore) queryDiscoveryStatus() {
+	for id, data := range s.Discoveries {
 		if data.Result == nil {
-			core.MainSocket().Send(&api.Query{Type: api.QueryProtocolDiscovery, Payload: &api.ProtocolDiscovery{ID: id}})
+			core.MainSocket().SendWithTimeout(
+				&api.Query{Type: api.QueryProtocolDiscovery, Payload: &api.ProtocolDiscovery{ID: id}},
+				s.initTimeout,
+			)
 			break
 		}
 	}
