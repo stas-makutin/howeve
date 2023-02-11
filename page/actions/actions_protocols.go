@@ -16,13 +16,13 @@ type ProtocolViewStore struct {
 	UseSocket     bool
 	Protocols     core.CachedQuery[api.ProtocolInfoResult]
 	DisplayError  string
-	SocketTimeout *core.Timeout
+	socketTimeout *core.Timeout
 }
 
 var pvStore = &ProtocolViewStore{
 	Loading:       true,
 	UseSocket:     true,
-	SocketTimeout: &core.Timeout{},
+	socketTimeout: &core.Timeout{},
 }
 
 func GetProtocolViewStore() *ProtocolViewStore {
@@ -54,6 +54,12 @@ func (s *ProtocolViewStore) action(event interface{}) {
 			}
 		}
 		return
+	case core.MainSocketError:
+		s.socketTimeout.Clear()
+	case core.MainSocketTimeout:
+		if uint(e) == s.socketTimeout.ID {
+			s.socketTimeout.Clear()
+		}
 	default:
 		return
 	}
@@ -97,5 +103,5 @@ func (s *ProtocolViewStore) protocolsLoadWithMainSocket() (string, bool) {
 		core.Dispatch(ProtocolsLoaded(s.Protocols.Value))
 		return "", true
 	}
-	return core.MainSocket().SendWithTimeout(&api.Query{Type: api.QueryProtocolInfo}, s.SocketTimeout)
+	return core.MainSocket().SendWithTimeout(&api.Query{Type: api.QueryProtocolInfo}, s.socketTimeout)
 }

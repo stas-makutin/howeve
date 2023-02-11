@@ -59,6 +59,7 @@ func (s *DiscoveryViewStore) action(event interface{}) {
 	case core.MainSocketMessage:
 		switch e.Type {
 		case api.QueryProtocolDiscoveryResult:
+			s.initTimeout.Clear()
 			if p, ok := e.Payload.(*api.ProtocolDiscoveryResult); ok {
 				if p.Error != nil && p.Error.Code == api.ErrorNoDiscoveryID {
 					delete(s.Discoveries, p.ID)
@@ -81,7 +82,18 @@ func (s *DiscoveryViewStore) action(event interface{}) {
 	case core.MainSocketError:
 		s.Loading = true
 		s.Initialized = false
+		s.initTimeout.Clear()
+		s.opTimeout.Clear()
 		// TODO
+	case core.MainSocketTimeout:
+		switch uint(e) {
+		case s.initTimeout.ID:
+			s.initTimeout.Clear()
+			// TODO
+		case s.opTimeout.ID:
+			s.opTimeout.Clear()
+			// TODO
+		}
 	}
 	core.Dispatch(ChangeEvent{s})
 }

@@ -172,6 +172,7 @@ func MainSocket() *SharedSocket {
 type MainSocketOpened struct{}
 type MainSocketMessage *api.Query
 type MainSocketError string
+type MainSocketTimeout uint
 
 type SharedSocket struct {
 	socket      *WebSocket
@@ -227,9 +228,9 @@ func (s *SharedSocket) Send(r *api.Query) (string, bool) {
 
 func (s *SharedSocket) SendWithTimeout(r *api.Query, t *Timeout) (string, bool) {
 	t.Set(func() {
-		Dispatch(MainSocketError("The communication with server timed out"))
-		time.Sleep(500)
-		s.init()
+		if t.ID > 0 {
+			Dispatch(MainSocketTimeout(t.ID))
+		}
 	}, querySocketSendTimeout)
 	id, success := s.Send(r)
 	if !success {
