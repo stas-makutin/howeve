@@ -1,6 +1,7 @@
 package views
 
 import (
+	"github.com/google/uuid"
 	"github.com/hexops/vecty"
 	"github.com/hexops/vecty/elem"
 	"github.com/stas-makutin/howeve/page/actions"
@@ -19,6 +20,7 @@ type ViewDiscovery struct {
 	loading      bool
 	renderDialog int
 	protocols    *core.ProtocolsWrapper
+	discoveries  map[uuid.UUID]*actions.DiscoveryData
 	errorMessage []vecty.MarkupOrChild
 }
 
@@ -29,6 +31,7 @@ func NewViewDiscovery() (r *ViewDiscovery) {
 		loading:      store.Loading,
 		renderDialog: DiscoveryDialog_None,
 		protocols:    core.NewProtocolsWrapper(store.Protocols),
+		discoveries:  store.Discoveries,
 	}
 	actions.Subscribe(r)
 	core.Dispatch(actions.DiscoveryLoad{})
